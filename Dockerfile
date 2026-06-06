@@ -1,7 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Copia os csproj e restaura dependências (cache de layers)
+# Copia NuGet.Config limpo primeiro
+COPY ["NuGet.Config", "."]
+
 COPY ["Sinchrony.Api/Sinchrony.Api.csproj", "Sinchrony.Api/"]
 COPY ["Sinchrony.Application/Sinchrony.Application.csproj", "Sinchrony.Application/"]
 COPY ["Sinchrony.Domain/Sinchrony.Domain.csproj", "Sinchrony.Domain/"]
@@ -9,8 +11,8 @@ COPY ["Sinchrony.Infrastructure/Sinchrony.Infrastructure.csproj", "Sinchrony.Inf
 
 RUN dotnet restore "Sinchrony.Api/Sinchrony.Api.csproj"
 
-# Copia tudo e publica
 COPY . .
+
 RUN dotnet publish "Sinchrony.Api/Sinchrony.Api.csproj" \
     -c Release \
     -o /app/publish \
