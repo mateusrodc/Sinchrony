@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/.git
+**/.vs
+**/*.user
+**/*.suo
+**/node_modules
+**/.gitignore
+**/README.md
+Sinchrony.Tests/
+**/nuget.config
