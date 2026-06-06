@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Sinchrony.Api/Sinchrony.Api.csproj" />
+  <Project Path="Sinchrony.Application/Sinchrony.Application.csproj" />
+  <Project Path="Sinchrony.Domain/Sinchrony.Domain.csproj" />
+  <Project Path="Sinchrony.Infrastructure/Sinchrony.Infrastructure.csproj" />
+  <Project Path="Sinchrony.Tests/Sinchrony.Tests.csproj" />
+</Solution>

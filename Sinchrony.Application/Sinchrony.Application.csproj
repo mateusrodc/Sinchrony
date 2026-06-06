@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sinchrony.Domain\Sinchrony.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Auth\Commands\ForgotPassword\" />
+    <Folder Include="Auth\Queries\GetPermissions\" />
+    <Folder Include="Bikes\" />
+    <Folder Include="Classes\Commands\" />
+    <Folder Include="ClassTypes\" />
+    <Folder Include="Settings\" />
+    <Folder Include="Reports\" />
+    <Folder Include="Studios\" />
+    <Folder Include="Students\" />
+    <Folder Include="Teachers\" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

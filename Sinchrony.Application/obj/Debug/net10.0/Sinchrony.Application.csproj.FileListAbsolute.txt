@@ -1,0 +1,15 @@
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\bin\Debug\net10.0\Sinchrony.Application.deps.json
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\bin\Debug\net10.0\Sinchrony.Application.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\bin\Debug\net10.0\Sinchrony.Application.pdb
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\bin\Debug\net10.0\Sinchrony.Domain.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\bin\Debug\net10.0\Sinchrony.Domain.pdb
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.csproj.AssemblyReference.cache
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.AssemblyInfoInputs.cache
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.AssemblyInfo.cs
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.csproj.CoreCompileInputs.cache
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchron.4337E2E6.Up2Date
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\refint\Sinchrony.Application.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.pdb
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\ref\Sinchrony.Application.dll
