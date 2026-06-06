@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -12,6 +14,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpStudiosController(IStudioRepository studioRepository) : ControllerBase
 {
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(StudioListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var studios = await studioRepository.ListAsync(ct);
@@ -19,6 +22,7 @@ public class ErpStudiosController(IStudioRepository studioRepository) : Controll
     }
 
     [HttpGet("{id}")]
+    [SwaggerResponseExample(200, typeof(StudioListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var studio = await studioRepository.GetByIdAsync(id, ct)

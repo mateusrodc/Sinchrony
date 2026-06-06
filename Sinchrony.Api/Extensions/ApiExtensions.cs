@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Extensions;
 
@@ -63,20 +64,26 @@ public static class ApiExtensions
             });
 
             c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
             {
+                Reference = new OpenApiReference
                 {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
                 }
-            });
+            },
+            Array.Empty<string>()
+        }
+    });
+
+            // Habilita exemplos
+            c.ExampleFilters();
         });
+
+        // Registra os exemplos
+        services.AddSwaggerExamplesFromAssemblyOf<Program>();
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

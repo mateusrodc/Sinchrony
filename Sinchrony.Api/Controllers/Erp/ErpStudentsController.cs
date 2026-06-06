@@ -1,11 +1,13 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -18,6 +20,7 @@ public class ErpStudentsController(
     IPasswordService passwordService) : ControllerBase
 {
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(StudentListResponseExample))]
     public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
     {
         var students = await userRepository.ListStudentsAsync(status, ct);
@@ -25,6 +28,7 @@ public class ErpStudentsController(
     }
 
     [HttpGet("{id}")]
+    [SwaggerResponseExample(200, typeof(StudentDetailResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var student = await userRepository.GetByIdAsync(id, ct);
@@ -34,6 +38,7 @@ public class ErpStudentsController(
     }
 
     [HttpGet("{id}/history")]
+    [SwaggerResponseExample(200, typeof(StudentHistoryResponseExample))]
     public async Task<IActionResult> History(Guid id, CancellationToken ct)
     {
         var student = await userRepository.GetByIdAsync(id, ct);

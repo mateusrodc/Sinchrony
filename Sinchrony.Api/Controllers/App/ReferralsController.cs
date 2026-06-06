@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Referrals;
 using Sinchrony.Application.Referrals.Queries.GetReferral;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -15,6 +17,7 @@ public class ReferralsController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(ReferralResponseExample))]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
         var result = await mediator.Send(new GetReferralQuery(UserId), ct);

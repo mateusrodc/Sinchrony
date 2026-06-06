@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -14,6 +16,7 @@ public class ErpDashboardController(
 {
     [HttpGet("admin/dashboard")]
     [HttpGet("api/dashboard")]
+    [SwaggerResponseExample(200, typeof(DashboardResponseExample))]
     public async Task<IActionResult> Dashboard(CancellationToken ct)
     {
         var now = DateTime.UtcNow;

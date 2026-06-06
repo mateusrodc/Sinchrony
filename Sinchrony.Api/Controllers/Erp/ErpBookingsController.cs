@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -11,6 +13,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpBookingsController(IBookingRepository bookingRepository) : ControllerBase
 {
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(ErpBookingListResponseExample))]
     public async Task<IActionResult> List(
         [FromQuery] Guid? classId, [FromQuery] Guid? studentId,
         [FromQuery] string? status, CancellationToken ct)
@@ -34,6 +37,7 @@ public class ErpBookingsController(IBookingRepository bookingRepository) : Contr
     }
 
     [HttpGet("{id}")]
+    [SwaggerResponseExample(200, typeof(ErpBookingDetailResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var booking = await bookingRepository.GetByIdAsync(id, ct)

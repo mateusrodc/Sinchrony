@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Bookings;
 using Sinchrony.Application.Bookings.Commands.CreateBooking;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -15,6 +17,7 @@ public class BookingsController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(BookingListResponseExample))]
     public async Task<IActionResult> List(
         [FromQuery] string? status,
         [FromQuery] bool history = false,

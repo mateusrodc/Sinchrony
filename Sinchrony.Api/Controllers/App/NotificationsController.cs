@@ -1,10 +1,12 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Notifications;
 using Sinchrony.Application.Notifications.Commands.UpdateEmail;
 using Sinchrony.Application.Notifications.Commands.UpdatePreference;
 using Sinchrony.Application.Notifications.Commands.UpdatePush;
 using Sinchrony.Application.Notifications.Queries.GetNotificationPreferences;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -18,6 +20,7 @@ public class NotificationsController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet("preferences")]
+    [SwaggerResponseExample(200, typeof(NotificationPreferencesResponseExample))]
     public async Task<IActionResult> GetPreferences(CancellationToken ct)
     {
         var result = await mediator.Send(new GetNotificationPreferencesQuery(UserId), ct);

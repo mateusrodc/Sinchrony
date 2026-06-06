@@ -1,11 +1,13 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Application.Auth.Commands.Login;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -39,6 +41,7 @@ public class ErpAuthController(IMediator mediator, IUserRepository userRepositor
 
     [Authorize]
     [HttpGet("validate")]
+    [SwaggerResponseExample(200, typeof(ErpAuthValidateResponseExample))]
     public async Task<IActionResult> Validate(CancellationToken ct)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

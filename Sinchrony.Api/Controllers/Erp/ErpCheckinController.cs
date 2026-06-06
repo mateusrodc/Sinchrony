@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -15,6 +17,7 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(CheckinListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var all = await attendanceRepository.ListAllAsync(ct);
@@ -22,6 +25,7 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
     }
 
     [HttpGet("class/{classId}")]
+    [SwaggerResponseExample(200, typeof(CheckinListResponseExample))]
     public async Task<IActionResult> ByClass(Guid classId, CancellationToken ct)
     {
         var records = await attendanceRepository.ListByClassAsync(classId, ct);
@@ -40,6 +44,7 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
     }
 
     [HttpGet("summary")]
+    [SwaggerResponseExample(200, typeof(CheckinSummaryResponseExample))]
     public async Task<IActionResult> Summary([FromQuery] Guid classId, CancellationToken ct)
     {
         var records = (await attendanceRepository.ListByClassAsync(classId, ct)).ToList();

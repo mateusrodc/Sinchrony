@@ -1,12 +1,14 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Auth;
 using Sinchrony.Application.Auth.Commands.ChangePassword;
 using Sinchrony.Application.Auth.Commands.Login;
 using Sinchrony.Application.Auth.Commands.Logout;
 using Sinchrony.Application.Auth.Commands.RefreshToken;
 using Sinchrony.Application.Auth.Commands.Register;
 using Sinchrony.Application.Auth.Queries.GetMe;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -19,6 +21,7 @@ public class AuthController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpPost("login")]
+    [SwaggerResponseExample(200, typeof(LoginResponseExample))]
     public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new LoginCommand(req.email, req.password), ct);
@@ -56,6 +59,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
+    [SwaggerResponseExample(200, typeof(MeResponseExample))]
     public async Task<IActionResult> Me(CancellationToken ct)
     {
         var result = await mediator.Send(new GetMeQuery(UserId), ct);
@@ -64,6 +68,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
     [Authorize]
     [HttpGet("me/permissions")]
+    [SwaggerResponseExample(200, typeof(PermissionsResponseExample))]
     public IActionResult Permissions()
     {
         var role = User.FindFirstValue(ClaimTypes.Role);

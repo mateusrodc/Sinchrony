@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Sinchrony.Api.SwaggerExamples.Health;
 using Sinchrony.Infrastructure.Persistence;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.App;
 
@@ -9,6 +11,7 @@ namespace Sinchrony.Api.Controllers.App;
 public class HealthController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(HealthResponseExample))]
     public async Task<IActionResult> Check(CancellationToken ct)
     {
         try

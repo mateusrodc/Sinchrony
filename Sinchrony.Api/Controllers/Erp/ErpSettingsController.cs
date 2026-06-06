@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -11,6 +13,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpSettingsController(ISettingsRepository settingsRepository) : ControllerBase
 {
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(SettingsResponseExample))]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
         var settings = await settingsRepository.GetAsync(ct) ?? new Settings();

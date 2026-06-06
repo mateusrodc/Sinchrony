@@ -1,12 +1,14 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Application.Packages.Commands.CreatePackage;
 using Sinchrony.Application.Packages.Commands.TogglePackage;
 using Sinchrony.Application.Packages.Commands.UpdatePackage;
 using Sinchrony.Application.Packages.Queries.ListPackages;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -16,6 +18,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpPackagesController(IMediator mediator, IPackageRepository packageRepository) : ControllerBase
 {
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(ErpPackageListResponseExample))]
     public async Task<IActionResult> List([FromQuery] bool? activeOnly, CancellationToken ct)
     {
         var result = await mediator.Send(new ListPackagesQuery(activeOnly), ct);
@@ -23,6 +26,7 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
     }
 
     [HttpGet("{id}")]
+    [SwaggerResponseExample(200, typeof(ErpPackageListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var pkg = await packageRepository.GetByIdAsync(id, ct)

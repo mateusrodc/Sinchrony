@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -15,6 +17,7 @@ public class ErpReportsController(
     IPurchaseRepository purchaseRepository) : ControllerBase
 {
     [HttpGet("summary")]
+    [SwaggerResponseExample(200, typeof(ReportSummaryResponseExample))]
     public async Task<IActionResult> Summary([FromQuery] string? period, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
@@ -45,6 +48,7 @@ public class ErpReportsController(
     }
 
     [HttpGet("occupancy")]
+    [SwaggerResponseExample(200, typeof(OccupancyReportResponseExample))]
     public async Task<IActionResult> Occupancy([FromQuery] int days = 30, CancellationToken ct = default)
     {
         var from = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-days));
@@ -70,6 +74,7 @@ public class ErpReportsController(
     }
 
     [HttpGet("frequency")]
+    [SwaggerResponseExample(200, typeof(FrequencyReportResponseExample))]
     public async Task<IActionResult> Frequency(CancellationToken ct)
     {
         var classes = await classRepository.ListAsync(null, null, null, ct);

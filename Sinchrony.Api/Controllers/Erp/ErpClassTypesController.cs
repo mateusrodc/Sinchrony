@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -12,6 +14,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpClassTypesController(IClassTypeRepository classTypeRepository) : ControllerBase
 {
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(ClassTypeListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var types = await classTypeRepository.ListAsync(ct);
@@ -19,6 +22,7 @@ public class ErpClassTypesController(IClassTypeRepository classTypeRepository) :
     }
 
     [HttpGet("{id}")]
+    [SwaggerResponseExample(200, typeof(ClassTypeListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var type = await classTypeRepository.GetByIdAsync(id, ct)

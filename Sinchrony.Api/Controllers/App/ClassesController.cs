@@ -1,6 +1,12 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Classes;
+using Sinchrony.Application.Attendance.Commands.BulkAttendance;
+using Sinchrony.Application.Attendance.Commands.ConfirmAllAttendance;
+using Sinchrony.Application.Attendance.Commands.UpdateAttendance;
+using Sinchrony.Application.Attendance.Queries.AttendanceSummary;
+using Sinchrony.Application.Attendance.Queries.ListAttendance;
 using Sinchrony.Application.Classes.Queries.GetClass;
 using Sinchrony.Application.Classes.Queries.GetClassBikes;
 using Sinchrony.Application.Classes.Queries.GetClassStudents;
@@ -9,11 +15,7 @@ using Sinchrony.Application.Classes.Queries.ListClassesToday;
 using Sinchrony.Application.Sessions.Commands.EndSession;
 using Sinchrony.Application.Sessions.Commands.StartSession;
 using Sinchrony.Application.Sessions.Queries.GetSession;
-using Sinchrony.Application.Attendance.Commands.BulkAttendance;
-using Sinchrony.Application.Attendance.Commands.ConfirmAllAttendance;
-using Sinchrony.Application.Attendance.Commands.UpdateAttendance;
-using Sinchrony.Application.Attendance.Queries.AttendanceSummary;
-using Sinchrony.Application.Attendance.Queries.ListAttendance;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -27,6 +29,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(ClassListResponseExample))]
     public async Task<IActionResult> List(
         [FromQuery] string? date,
         [FromQuery] string? type,
@@ -39,6 +42,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("today")]
+    [SwaggerResponseExample(200, typeof(ClassListResponseExample))]
     public async Task<IActionResult> Today(CancellationToken ct)
     {
         var result = await mediator.Send(new ListClassesTodayQuery(), ct);
@@ -46,6 +50,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [SwaggerResponseExample(200, typeof(ClassDetailResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new GetClassQuery(id), ct);
@@ -54,6 +59,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
 
     [Authorize(Roles = "teacher,admin")]
     [HttpGet("{id}/students")]
+    [SwaggerResponseExample(200, typeof(ClassStudentsResponseExample))]
     public async Task<IActionResult> Students(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new GetClassStudentsQuery(id), ct);
@@ -61,6 +67,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("{id}/bikes")]
+    [SwaggerResponseExample(200, typeof(ClassBikesResponseExample))]
     public async Task<IActionResult> Bikes(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new GetClassBikesQuery(id), ct);

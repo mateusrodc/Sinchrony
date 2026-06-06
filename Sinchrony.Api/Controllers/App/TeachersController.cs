@@ -1,8 +1,10 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Teachers;
 using Sinchrony.Application.Classes.Queries.ListClasses;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -16,6 +18,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet("classes")]
+    [SwaggerResponseExample(200, typeof(TeacherClassListResponseExample))]
     public async Task<IActionResult> MyClasses([FromQuery] string? date, CancellationToken ct)
     {
         DateOnly? parsedDate = DateOnly.TryParse(date, out var d) ? d : null;
@@ -24,6 +27,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
     }
 
     [HttpGet("classes/today")]
+    [SwaggerResponseExample(200, typeof(TeacherClassListResponseExample))]
     public async Task<IActionResult> MyClassesToday(CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -32,6 +36,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
     }
 
     [HttpGet("classes/{id}")]
+    [SwaggerResponseExample(200, typeof(TeacherClassListResponseExample))]
     public async Task<IActionResult> MyClass(Guid id, CancellationToken ct)
     {
         var @class = await classRepository.GetByIdAsync(id, ct);
@@ -42,6 +47,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
     }
 
     [HttpGet("metrics")]
+    [SwaggerResponseExample(200, typeof(TeacherMetricsResponseExample))]
     public async Task<IActionResult> Metrics([FromQuery] int? month, [FromQuery] int? year, CancellationToken ct)
     {
         var now = DateTime.UtcNow;

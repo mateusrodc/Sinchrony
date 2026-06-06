@@ -1,10 +1,12 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Cards;
 using Sinchrony.Application.Cards.Commands.AddCard;
 using Sinchrony.Application.Cards.Commands.RemoveCard;
 using Sinchrony.Application.Cards.Commands.SetDefaultCard;
 using Sinchrony.Application.Cards.Queries.ListCards;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -18,6 +20,7 @@ public class CardsController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(CardListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var result = await mediator.Send(new ListCardsQuery(UserId), ct);

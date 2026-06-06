@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Packages;
 using Sinchrony.Application.Packages.Queries.ListPackages;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.App;
 
@@ -11,6 +13,7 @@ namespace Sinchrony.Api.Controllers.App;
 public class PackagesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
+    [SwaggerResponseExample(200, typeof(PackageListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var result = await mediator.Send(new ListPackagesQuery(ActiveOnly: true), ct);
