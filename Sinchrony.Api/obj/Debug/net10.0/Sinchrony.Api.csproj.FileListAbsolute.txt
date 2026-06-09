@@ -148,4 +148,14 @@ C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Scrutor.dll
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.Filters.dll
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.Filters.Abstractions.dll
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\obj\Debug\net10.0\Sinchrony.Api.sourcelink.json
-C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.AspNetCore.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Enrichers.Environment.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Enrichers.Thread.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Extensions.Hosting.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Extensions.Logging.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Formatting.Compact.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Settings.Configuration.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Sinks.Console.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Sinks.Debug.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Serilog.Sinks.File.dll

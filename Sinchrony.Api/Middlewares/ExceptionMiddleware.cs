@@ -1,10 +1,11 @@
 ﻿using System.Text.Json;
 using FluentValidation;
+using Serilog;
 using Sinchrony.Domain.Exceptions;
 
 namespace Sinchrony.Api.Middlewares;
 
-public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
+public class ExceptionMiddleware(RequestDelegate next)
 {
     public async Task Invoke(HttpContext context)
     {
@@ -14,6 +15,9 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         }
         catch (DomainException ex)
         {
+            Log.Warning("Domain exception: {Code} — {Message} | Path: {Path}",
+                ex.Code, ex.Message, context.Request.Path);
+
             context.Response.StatusCode = ex.HttpStatus;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
@@ -23,6 +27,10 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         }
         catch (ValidationException ex)
         {
+            Log.Warning("Validation exception | Path: {Path} | Errors: {Errors}",
+                context.Request.Path,
+                string.Join(", ", ex.Errors.Select(e => e.ErrorMessage)));
+
             context.Response.StatusCode = 422;
             context.Response.ContentType = "application/json";
             var errors = ex.Errors.Select(e => new { field = e.PropertyName, message = e.ErrorMessage });
@@ -33,7 +41,8 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception.");
+            Log.Error(ex, "Unhandled exception | Path: {Path}", context.Request.Path);
+
             context.Response.StatusCode = 500;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
