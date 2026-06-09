@@ -2489,11 +2489,11 @@
             "type": "string",
             "nullable": true
           },
-          "holder_name": {
+          "holderName": {
             "type": "string",
             "nullable": true
           },
-          "expiry_date": {
+          "expiryDate": {
             "type": "string",
             "nullable": true
           },
@@ -2511,7 +2511,7 @@
       "BulkAttendanceItemRequest": {
         "type": "object",
         "properties": {
-          "student_id": {
+          "studentId": {
             "type": "string",
             "format": "uuid"
           },
@@ -2542,11 +2542,11 @@
             "type": "number",
             "format": "double"
           },
-          "card_token": {
+          "cardToken": {
             "type": "string",
             "nullable": true
           },
-          "package_ids": {
+          "packageIds": {
             "type": "array",
             "items": {
               "type": "string",
@@ -2554,7 +2554,7 @@
             },
             "nullable": true
           },
-          "coupon_code": {
+          "couponCode": {
             "type": "string",
             "nullable": true
           }
@@ -2564,11 +2564,11 @@
       "ChangePasswordRequest": {
         "type": "object",
         "properties": {
-          "current_password": {
+          "currentPassword": {
             "type": "string",
             "nullable": true
           },
-          "new_password": {
+          "newPassword": {
             "type": "string",
             "nullable": true
           }
@@ -2606,11 +2606,11 @@
       "CreateBookingRequest": {
         "type": "object",
         "properties": {
-          "class_id": {
+          "classId": {
             "type": "string",
             "format": "uuid"
           },
-          "bike_number": {
+          "bikeNumber": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -2625,15 +2625,15 @@
             "type": "string",
             "nullable": true
           },
-          "class_type_id": {
+          "classTypeId": {
             "type": "string",
             "format": "uuid"
           },
-          "teacher_id": {
+          "teacherId": {
             "type": "string",
             "format": "uuid"
           },
-          "studio_id": {
+          "studioId": {
             "type": "string",
             "format": "uuid"
           },
@@ -2641,11 +2641,11 @@
             "type": "string",
             "nullable": true
           },
-          "start_time": {
+          "startTime": {
             "type": "string",
             "nullable": true
           },
-          "end_time": {
+          "endTime": {
             "type": "string",
             "nullable": true
           },
@@ -2653,7 +2653,7 @@
             "type": "integer",
             "format": "int32"
           },
-          "total_spots": {
+          "totalSpots": {
             "type": "integer",
             "format": "int32"
           }
@@ -2679,7 +2679,7 @@
             "type": "number",
             "format": "double"
           },
-          "validity_days": {
+          "validityDays": {
             "type": "integer",
             "format": "int32"
           },
@@ -2689,7 +2689,7 @@
           "active": {
             "type": "boolean"
           },
-          "display_order": {
+          "displayOrder": {
             "type": "integer",
             "format": "int32"
           }
@@ -2746,11 +2746,11 @@
       "ErpChangePasswordRequest": {
         "type": "object",
         "properties": {
-          "current_password": {
+          "currentPassword": {
             "type": "string",
             "nullable": true
           },
-          "new_password": {
+          "newPassword": {
             "type": "string",
             "nullable": true
           }
@@ -2802,7 +2802,7 @@
             "type": "number",
             "format": "double"
           },
-          "package_ids": {
+          "packageIds": {
             "type": "array",
             "items": {
               "type": "string",
@@ -2810,7 +2810,7 @@
             },
             "nullable": true
           },
-          "coupon_code": {
+          "couponCode": {
             "type": "string",
             "nullable": true
           }
@@ -2876,11 +2876,11 @@
             "type": "string",
             "nullable": true
           },
-          "opening_time": {
+          "openingTime": {
             "type": "string",
             "nullable": true
           },
-          "closing_time": {
+          "closingTime": {
             "type": "string",
             "nullable": true
           },
@@ -2894,7 +2894,7 @@
       "UpdateAttendanceRequest": {
         "type": "object",
         "properties": {
-          "student_id": {
+          "studentId": {
             "type": "string",
             "format": "uuid"
           },
@@ -2916,7 +2916,7 @@
             "type": "string",
             "nullable": true
           },
-          "last_maintenance": {
+          "lastMaintenance": {
             "type": "string",
             "nullable": true
           }
@@ -2930,15 +2930,15 @@
             "type": "string",
             "nullable": true
           },
-          "class_type_id": {
+          "classTypeId": {
             "type": "string",
             "format": "uuid"
           },
-          "teacher_id": {
+          "teacherId": {
             "type": "string",
             "format": "uuid"
           },
-          "studio_id": {
+          "studioId": {
             "type": "string",
             "format": "uuid"
           },
@@ -2946,11 +2946,11 @@
             "type": "string",
             "nullable": true
           },
-          "start_time": {
+          "startTime": {
             "type": "string",
             "nullable": true
           },
-          "end_time": {
+          "endTime": {
             "type": "string",
             "nullable": true
           },
@@ -2958,7 +2958,7 @@
             "type": "integer",
             "format": "int32"
           },
-          "total_spots": {
+          "totalSpots": {
             "type": "integer",
             "format": "int32"
           },
@@ -2988,7 +2988,7 @@
             "type": "number",
             "format": "double"
           },
-          "validity_days": {
+          "validityDays": {
             "type": "integer",
             "format": "int32"
           },
@@ -2998,7 +2998,7 @@
           "active": {
             "type": "boolean"
           },
-          "display_order": {
+          "displayOrder": {
             "type": "integer",
             "format": "int32"
           }
@@ -3039,54 +3039,54 @@
       "UpdateSettingsRequest": {
         "type": "object",
         "properties": {
-          "studio_name": {
+          "studioName": {
             "type": "string",
             "nullable": true
           },
-          "studio_email": {
+          "studioEmail": {
             "type": "string",
             "nullable": true
           },
-          "studio_phone": {
+          "studioPhone": {
             "type": "string",
             "nullable": true
           },
-          "studio_address": {
+          "studioAddress": {
             "type": "string",
             "nullable": true
           },
-          "booking_window_days": {
+          "bookingWindowDays": {
             "type": "integer",
             "format": "int32",
             "nullable": true
           },
-          "cancellation_deadline_hours": {
+          "cancellationDeadlineHours": {
             "type": "integer",
             "format": "int32",
             "nullable": true
           },
-          "max_bookings_per_student": {
+          "maxBookingsPerStudent": {
             "type": "integer",
             "format": "int32",
             "nullable": true
           },
-          "allow_waitlist": {
+          "allowWaitlist": {
             "type": "boolean",
             "nullable": true
           },
-          "auto_confirm_bookings": {
+          "autoConfirmBookings": {
             "type": "boolean",
             "nullable": true
           },
-          "send_booking_confirmation_email": {
+          "sendBookingConfirmationEmail": {
             "type": "boolean",
             "nullable": true
           },
-          "send_reminder_email": {
+          "sendReminderEmail": {
             "type": "boolean",
             "nullable": true
           },
-          "reminder_hours_before": {
+          "reminderHoursBefore": {
             "type": "integer",
             "format": "int32",
             "nullable": true

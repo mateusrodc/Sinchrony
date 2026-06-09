@@ -16,7 +16,7 @@ public static class ApiExtensions
         services.AddControllers()
             .AddJsonOptions(opt =>
             {
-                opt.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
+                opt.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
             });
         services.AddEndpointsApiExplorer();
 
