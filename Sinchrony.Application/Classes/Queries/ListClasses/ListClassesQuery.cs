@@ -1,9 +1,13 @@
 ﻿using MediatR;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Interfaces.Repositories;
 
 namespace Sinchrony.Application.Classes.Queries.ListClasses;
 
-public record ListClassesQuery(DateOnly? Date, string? Type, Guid? StudioId) : IRequest<IEnumerable<ClassDto>>;
+public record ListClassesQuery(
+    DateOnly? Date, string? Type, Guid? StudioId,
+    int Page = 1, int PageSize = 20)
+    : IRequest<PagedResult<ClassDto>>;
 
 public record ClassDto(
     Guid Id,
@@ -32,12 +36,18 @@ public record StudioDto(
     string ClosingTime);
 
 public class ListClassesQueryHandler(IClassRepository classRepository)
-    : IRequestHandler<ListClassesQuery, IEnumerable<ClassDto>>
+    : IRequestHandler<ListClassesQuery, PagedResult<ClassDto>>
 {
-    public async Task<IEnumerable<ClassDto>> Handle(ListClassesQuery request, CancellationToken ct)
+    public async Task<PagedResult<ClassDto>> Handle(ListClassesQuery request, CancellationToken ct)
     {
-        var classes = await classRepository.ListAsync(request.Date, request.Type, request.StudioId, ct);
-        return classes.Select(MapToDto);
+        var (items, total) = await classRepository.ListPagedAsync(
+            request.Date, request.Type, request.StudioId,
+            request.Page, request.PageSize, ct);
+
+        var data = items.Select(MapToDto).ToList();
+        var totalPages = (int)Math.Ceiling(total / (double)request.PageSize);
+
+        return new PagedResult<ClassDto>(data, request.Page, request.PageSize, total, totalPages);
     }
 
     public static ClassDto MapToDto(Domain.Entities.Class c)
@@ -52,9 +62,7 @@ public class ListClassesQueryHandler(IClassRepository classRepository)
             c.TeacherId,
             c.Date.ToString("yyyy-MM-dd"),
             c.StartTime, c.EndTime, c.Duration,
-            c.TotalSpots,
-            c.TotalSpots - enrolled,
-            enrolled,
+            c.TotalSpots, c.TotalSpots - enrolled, enrolled,
             c.Status.ToString(),
             new StudioDto(
                 c.Studio!.Id, c.Studio.Name, c.Studio.Address,

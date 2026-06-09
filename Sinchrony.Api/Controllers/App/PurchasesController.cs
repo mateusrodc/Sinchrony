@@ -18,9 +18,12 @@ public class PurchasesController(IMediator mediator) : ControllerBase
 
     [HttpGet]
     [SwaggerResponseExample(200, typeof(PurchaseListResponseExample))]
-    public async Task<IActionResult> List(CancellationToken ct)
+    public async Task<IActionResult> List(
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken ct = default)
     {
-        var result = await mediator.Send(new ListPurchasesQuery(UserId), ct);
-        return Ok(new { data = result });
+        var result = await mediator.Send(new ListPurchasesQuery(UserId, page, pageSize), ct);
+        return Ok(result);
     }
 }

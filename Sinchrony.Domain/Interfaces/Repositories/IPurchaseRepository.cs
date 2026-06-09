@@ -9,4 +9,6 @@ public interface IPurchaseRepository
     Task<decimal> TotalRevenueThisMonthAsync(CancellationToken ct = default);
     Task AddAsync(Purchase purchase, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
+    Task<(IEnumerable<Purchase> Items, int Total)> ListByUserPagedAsync(
+    Guid userId, int page, int pageSize, CancellationToken ct = default);
 }

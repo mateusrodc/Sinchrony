@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Bookings;
 using Sinchrony.Application.Bookings.Commands.CreateBooking;
+using Sinchrony.Application.Bookings.Queries.ListBookings;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
@@ -19,13 +20,15 @@ public class BookingsController(IMediator mediator) : ControllerBase
     [HttpGet]
     [SwaggerResponseExample(200, typeof(BookingListResponseExample))]
     public async Task<IActionResult> List(
-        [FromQuery] string? status,
-        [FromQuery] bool history = false,
-        CancellationToken ct = default)
+    [FromQuery] string? status,
+    [FromQuery] bool history = false,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken ct = default)
     {
         var result = await mediator.Send(
-            new Application.Bookings.Queries.ListBookings.ListBookingsQuery(UserId, status, history), ct);
-        return Ok(new { data = result });
+            new ListBookingsQuery(UserId, status, history, page, pageSize), ct);
+        return Ok(result);
     }
 
     [HttpPost]

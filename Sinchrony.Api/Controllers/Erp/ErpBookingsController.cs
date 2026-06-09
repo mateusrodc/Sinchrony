@@ -15,13 +15,20 @@ public class ErpBookingsController(IBookingRepository bookingRepository) : Contr
     [HttpGet]
     [SwaggerResponseExample(200, typeof(ErpBookingListResponseExample))]
     public async Task<IActionResult> List(
-        [FromQuery] Guid? classId, [FromQuery] Guid? studentId,
-        [FromQuery] string? status, CancellationToken ct)
+    [FromQuery] Guid? classId,
+    [FromQuery] Guid? studentId,
+    [FromQuery] string? status,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken ct = default)
     {
-        var bookings = await bookingRepository.ListErpAsync(classId, studentId, status, ct);
+        var (items, total) = await bookingRepository.ListErpPagedAsync(
+            classId, studentId, status, page, pageSize, ct);
+        var totalPages = (int)Math.Ceiling(total / (double)pageSize);
+
         return Ok(new
         {
-            data = bookings.Select(b => new {
+            data = items.Select(b => new {
                 id = b.Id,
                 classId = b.ClassId,
                 className = b.Class?.Name,
@@ -32,7 +39,11 @@ public class ErpBookingsController(IBookingRepository bookingRepository) : Contr
                 bikeNumber = b.BikeNumber,
                 bookedAt = b.BookedAt,
                 checkedIn = b.CheckedIn
-            })
+            }),
+            page,
+            pageSize,
+            total,
+            totalPages
         });
     }
 

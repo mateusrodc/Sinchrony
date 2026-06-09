@@ -45,4 +45,21 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
 
     public async Task SaveAsync(CancellationToken ct = default)
         => await db.SaveChangesAsync(ct);
+
+    public async Task<(IEnumerable<User> Items, int Total)> ListStudentsPagedAsync(
+    string? status, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = db.Users.Where(u => u.Role == Domain.Enums.Role.student);
+        if (!string.IsNullOrEmpty(status))
+            query = query.Where(u => u.Status.ToString() == status);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderBy(u => u.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
 }

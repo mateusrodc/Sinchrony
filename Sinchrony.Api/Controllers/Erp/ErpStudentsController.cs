@@ -21,10 +21,23 @@ public class ErpStudentsController(
 {
     [HttpGet]
     [SwaggerResponseExample(200, typeof(StudentListResponseExample))]
-    public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
+    public async Task<IActionResult> List(
+    [FromQuery] string? status,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken ct = default)
     {
-        var students = await userRepository.ListStudentsAsync(status, ct);
-        return Ok(new { data = students.Select(MapStudent) });
+        var (items, total) = await userRepository.ListStudentsPagedAsync(status, page, pageSize, ct);
+        var totalPages = (int)Math.Ceiling(total / (double)pageSize);
+
+        return Ok(new
+        {
+            data = items.Select(MapStudent),
+            page,
+            pageSize,
+            total,
+            totalPages
+        });
     }
 
     [HttpGet("{id}")]

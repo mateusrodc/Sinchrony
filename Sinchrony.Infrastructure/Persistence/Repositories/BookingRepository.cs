@@ -76,4 +76,52 @@ public class BookingRepository(ApplicationDbContext db) : IBookingRepository
 
     public async Task SaveAsync(CancellationToken ct = default)
         => await db.SaveChangesAsync(ct);
+
+    public async Task<(IEnumerable<Booking> Items, int Total)> ListByStudentPagedAsync(
+    Guid studentId, string? status, bool history,
+    int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = db.Bookings
+            .Include(b => b.Class).ThenInclude(c => c!.ClassType)
+            .Include(b => b.Class).ThenInclude(c => c!.Studio)
+            .Where(b => b.StudentId == studentId);
+
+        if (!string.IsNullOrEmpty(status))
+            query = query.Where(b => b.Status.ToString() == status);
+
+        if (!history)
+            query = query.Where(b => b.Status == BookingStatus.confirmed);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(b => b.BookedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
+
+    public async Task<(IEnumerable<Booking> Items, int Total)> ListErpPagedAsync(
+        Guid? classId, Guid? studentId, string? status,
+        int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = db.Bookings
+            .Include(b => b.Class)
+            .Include(b => b.Student)
+            .AsQueryable();
+
+        if (classId.HasValue) query = query.Where(b => b.ClassId == classId.Value);
+        if (studentId.HasValue) query = query.Where(b => b.StudentId == studentId.Value);
+        if (!string.IsNullOrEmpty(status)) query = query.Where(b => b.Status.ToString() == status);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(b => b.BookedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
 }

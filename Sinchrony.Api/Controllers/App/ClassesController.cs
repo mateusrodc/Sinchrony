@@ -31,14 +31,17 @@ public class ClassesController(IMediator mediator) : ControllerBase
     [HttpGet]
     [SwaggerResponseExample(200, typeof(ClassListResponseExample))]
     public async Task<IActionResult> List(
-        [FromQuery] string? date,
-        [FromQuery] string? type,
-        [FromQuery] Guid? studioId,
-        CancellationToken ct)
+    [FromQuery] string? date,
+    [FromQuery] string? type,
+    [FromQuery] Guid? studioId,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken ct = default)
     {
         DateOnly? parsedDate = DateOnly.TryParse(date, out var d) ? d : null;
-        var result = await mediator.Send(new ListClassesQuery(parsedDate, type, studioId), ct);
-        return Ok(new { data = result });
+        var result = await mediator.Send(
+            new ListClassesQuery(parsedDate, type, studioId, page, pageSize), ct);
+        return Ok(result);
     }
 
     [HttpGet("today")]

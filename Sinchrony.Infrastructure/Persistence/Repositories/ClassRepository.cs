@@ -77,4 +77,28 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
                 classId)
             .CountAsync(ct);
     }
+    public async Task<(IEnumerable<Class> Items, int Total)> ListPagedAsync(
+    DateOnly? date, string? type, Guid? studioId,
+    int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = db.Classes
+            .Include(c => c.ClassType)
+            .Include(c => c.Teacher)
+            .Include(c => c.Studio)
+            .Include(c => c.Bookings.Where(b => b.Status != BookingStatus.cancelled))
+            .AsQueryable();
+
+        if (date.HasValue) query = query.Where(c => c.Date == date.Value);
+        if (!string.IsNullOrEmpty(type)) query = query.Where(c => c.ClassType!.Name.ToLower() == type.ToLower());
+        if (studioId.HasValue) query = query.Where(c => c.StudioId == studioId.Value);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderBy(c => c.Date).ThenBy(c => c.StartTime)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
 }

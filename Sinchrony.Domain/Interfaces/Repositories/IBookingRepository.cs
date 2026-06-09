@@ -12,4 +12,11 @@ public interface IBookingRepository
     Task<bool> IsBikeOccupiedAsync(Guid classId, int bikeNumber, CancellationToken ct = default);
     Task AddAsync(Booking booking, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
+    Task<(IEnumerable<Booking> Items, int Total)> ListByStudentPagedAsync(
+    Guid studentId, string? status, bool history,
+    int page, int pageSize, CancellationToken ct = default);
+
+    Task<(IEnumerable<Booking> Items, int Total)> ListErpPagedAsync(
+        Guid? classId, Guid? studentId, string? status,
+        int page, int pageSize, CancellationToken ct = default);
 }

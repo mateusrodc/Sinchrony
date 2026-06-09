@@ -12,4 +12,7 @@ public interface IClassRepository
     Task AddAsync(Class @class, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
     Task<int> CountActiveBookingsWithLockAsync(Guid classId, CancellationToken ct = default);
+    Task<(IEnumerable<Class> Items, int Total)> ListPagedAsync(
+    DateOnly? date, string? type, Guid? studioId,
+    int page, int pageSize, CancellationToken ct = default);
 }
