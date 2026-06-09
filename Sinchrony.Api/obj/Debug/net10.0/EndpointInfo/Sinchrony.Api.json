@@ -2501,6 +2501,10 @@
             "type": "string",
             "nullable": true
           },
+          "cpf": {
+            "type": "string",
+            "nullable": true
+          },
           "nickname": {
             "type": "string",
             "nullable": true

@@ -148,11 +148,13 @@ public class AsaasService(
 
     public async Task<CardTokenizationResult> TokenizeCardAsync(
         string number, string holderName, string expiryDate,
-        string cvv, string customerId, CancellationToken ct = default)
+        string cvv, string customerId, string cpf, CancellationToken ct = default)
     {
         var parts = expiryDate.Split('/');
         if (parts.Length != 2)
             throw new ArgumentException("ExpiryDate must be in MM/YY format.");
+
+        var cpfLimpo = cpf.Replace(".", "").Replace("-", "").Replace("/", "").Trim();
 
         var body = new
         {
@@ -170,7 +172,7 @@ public class AsaasService(
                 name = holderName,
                 email = "noreply@sinchrony.com",
                 // Campos mínimos exigidos pelo Asaas
-                cpfCnpj = "00000000000", // placeholder — idealmente pegar do usuário
+                cpfCnpj = cpfLimpo, // placeholder — idealmente pegar do usuário
                 postalCode = "00000000",
                 addressNumber = "0",
                 phone = "00000000000"
