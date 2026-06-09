@@ -13,3 +13,4 @@ C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinch
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\refint\Sinchrony.Application.dll
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.pdb
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\ref\Sinchrony.Application.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Application\obj\Debug\net10.0\Sinchrony.Application.sourcelink.json

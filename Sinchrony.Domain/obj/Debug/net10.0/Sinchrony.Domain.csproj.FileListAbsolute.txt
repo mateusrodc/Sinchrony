@@ -9,3 +9,4 @@ C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Domain\obj\Debug\net10.0\Sinchrony.
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Domain\obj\Debug\net10.0\refint\Sinchrony.Domain.dll
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Domain\obj\Debug\net10.0\Sinchrony.Domain.pdb
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Domain\obj\Debug\net10.0\ref\Sinchrony.Domain.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Domain\obj\Debug\net10.0\Sinchrony.Domain.sourcelink.json

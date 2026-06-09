@@ -17,3 +17,4 @@ C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Infrastructure\obj\Debug\net10.0\re
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Infrastructure\obj\Debug\net10.0\Sinchrony.Infrastructure.pdb
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Infrastructure\obj\Debug\net10.0\Sinchrony.Infrastructure.genruntimeconfig.cache
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Infrastructure\obj\Debug\net10.0\ref\Sinchrony.Infrastructure.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Infrastructure\obj\Debug\net10.0\Sinchrony.Infrastructure.sourcelink.json

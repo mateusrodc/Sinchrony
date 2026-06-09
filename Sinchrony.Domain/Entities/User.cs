@@ -18,6 +18,7 @@ public class User
     public string? ReferralCode { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
+    public string? Cpf { get; private set; }
 
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
     public ICollection<Booking> Bookings { get; private set; } = [];
@@ -26,7 +27,7 @@ public class User
 
     protected User() { }
 
-    public static User Create(string name, string email, string? phone, string passwordHash, Role role)
+    public static User Create(string name, string email, string? phone, string passwordHash, Role role, string? cpf = null)
     {
         return new User
         {
@@ -36,7 +37,8 @@ public class User
             PasswordHash = passwordHash,
             Role = role,
             Credits = 0,
-            ReferralCode = GenerateReferralCode(name)
+            ReferralCode = GenerateReferralCode(name),
+            Cpf = cpf,
         };
     }
 

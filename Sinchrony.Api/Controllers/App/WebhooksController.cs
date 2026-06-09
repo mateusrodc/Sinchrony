@@ -14,18 +14,26 @@ public class WebhooksController(
     IUserRepository userRepository,
     ICreditTransactionRepository creditTransactionRepository,
     IAuditService auditService,
+    ILogger<WebhooksController> logger,
     IConfiguration configuration) : ControllerBase
 {
     [HttpPost("asaas")]
     public async Task<IActionResult> Asaas([FromBody] JsonElement payload, CancellationToken ct)
     {
-        // Valida token de segurança do webhook
+
+        // Sempre valida o token — rejeita se não configurado
         var webhookToken = configuration["Asaas:WebhookToken"];
-        if (!string.IsNullOrEmpty(webhookToken))
+        if (string.IsNullOrEmpty(webhookToken))
         {
-            Request.Headers.TryGetValue("asaas-access-token", out var receivedToken);
-            if (receivedToken != webhookToken)
-                return Unauthorized();
+            logger.LogWarning("Asaas webhook received but WebhookToken is not configured.");
+            return Unauthorized();
+        }
+
+        Request.Headers.TryGetValue("asaas-access-token", out var receivedToken);
+        if (receivedToken.ToString() != webhookToken)
+        {
+            logger.LogWarning("Asaas webhook received with invalid token.");
+            return Unauthorized();
         }
 
         var eventType = payload.GetProperty("event").GetString();

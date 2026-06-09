@@ -2845,6 +2845,10 @@
           "password": {
             "type": "string",
             "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false

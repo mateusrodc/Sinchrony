@@ -20,7 +20,7 @@ public class RegisterCommandHandler(
             throw DomainException.Conflict("EMAIL_IN_USE", "Email already in use.");
 
         var hash = passwordService.HashPassword(request.Password);
-        var user = User.Create(request.Name, request.Email, request.Phone, hash, Role.student);
+        var user = User.Create(request.Name, request.Email, request.Phone, hash, Role.student, request.Cpf);
 
         await userRepository.AddAsync(user, ct);
         await userRepository.SaveAsync(ct);

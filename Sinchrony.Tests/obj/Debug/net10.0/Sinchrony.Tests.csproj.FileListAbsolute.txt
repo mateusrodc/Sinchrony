@@ -134,3 +134,4 @@ C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\refint\Sinc
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\Sinchrony.Tests.pdb
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\Sinchrony.Tests.genruntimeconfig.cache
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\ref\Sinchrony.Tests.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\Sinchrony.Tests.sourcelink.json
