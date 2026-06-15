@@ -11,6 +11,7 @@ namespace Sinchrony.Api.Controllers.App;
 public class HealthController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(HealthResponseExample))]
     public async Task<IActionResult> Check(CancellationToken ct)
     {

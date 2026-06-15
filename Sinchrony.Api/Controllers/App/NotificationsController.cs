@@ -20,6 +20,7 @@ public class NotificationsController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet("preferences")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(NotificationPreferencesResponseExample))]
     public async Task<IActionResult> GetPreferences(CancellationToken ct)
     {

@@ -18,6 +18,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet("classes")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(TeacherClassListResponseExample))]
     public async Task<IActionResult> MyClasses([FromQuery] string? date, CancellationToken ct)
     {
@@ -27,6 +28,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
     }
 
     [HttpGet("classes/today")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(TeacherClassListResponseExample))]
     public async Task<IActionResult> MyClassesToday(CancellationToken ct)
     {
@@ -36,6 +38,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
     }
 
     [HttpGet("classes/{id}")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(TeacherClassListResponseExample))]
     public async Task<IActionResult> MyClass(Guid id, CancellationToken ct)
     {
@@ -47,6 +50,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
     }
 
     [HttpGet("metrics")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(TeacherMetricsResponseExample))]
     public async Task<IActionResult> Metrics([FromQuery] int? month, [FromQuery] int? year, CancellationToken ct)
     {

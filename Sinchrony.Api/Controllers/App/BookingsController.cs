@@ -18,6 +18,7 @@ public class BookingsController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(BookingListResponseExample))]
     public async Task<IActionResult> List(
     [FromQuery] string? status,

@@ -21,6 +21,7 @@ public class CardsController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(CardListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {

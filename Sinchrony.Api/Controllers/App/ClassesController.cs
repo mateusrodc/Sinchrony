@@ -29,6 +29,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ClassListResponseExample))]
     public async Task<IActionResult> List(
     [FromQuery] string? date,
@@ -45,6 +46,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("today")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ClassListResponseExample))]
     public async Task<IActionResult> Today(CancellationToken ct)
     {
@@ -53,6 +55,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ClassDetailResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
@@ -62,6 +65,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
 
     [Authorize(Roles = "teacher,admin")]
     [HttpGet("{id}/students")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ClassStudentsResponseExample))]
     public async Task<IActionResult> Students(Guid id, CancellationToken ct)
     {
@@ -70,6 +74,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("{id}/bikes")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ClassBikesResponseExample))]
     public async Task<IActionResult> Bikes(Guid id, CancellationToken ct)
     {

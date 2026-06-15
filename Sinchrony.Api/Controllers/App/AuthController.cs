@@ -21,6 +21,7 @@ public class AuthController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpPost("login")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(LoginResponseExample))]
     public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
@@ -59,6 +60,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(MeResponseExample))]
     public async Task<IActionResult> Me(CancellationToken ct)
     {
@@ -68,6 +70,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
     [Authorize]
     [HttpGet("me/permissions")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(PermissionsResponseExample))]
     public IActionResult Permissions()
     {

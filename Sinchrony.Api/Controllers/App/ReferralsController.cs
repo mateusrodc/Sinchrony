@@ -17,6 +17,7 @@ public class ReferralsController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ReferralResponseExample))]
     public async Task<IActionResult> Get(CancellationToken ct)
     {

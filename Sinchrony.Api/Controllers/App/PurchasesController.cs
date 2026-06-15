@@ -17,6 +17,7 @@ public class PurchasesController(IMediator mediator) : ControllerBase
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(PurchaseListResponseExample))]
     public async Task<IActionResult> List(
     [FromQuery] int page = 1,

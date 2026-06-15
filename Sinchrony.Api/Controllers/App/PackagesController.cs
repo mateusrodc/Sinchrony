@@ -13,6 +13,7 @@ namespace Sinchrony.Api.Controllers.App;
 public class PackagesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(PackageListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
