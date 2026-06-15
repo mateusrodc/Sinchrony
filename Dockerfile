@@ -1,4 +1,4 @@
-FROM dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 WORKDIR /src
 
 COPY ["NuGet.Config", "."]
@@ -16,7 +16,7 @@ RUN dotnet publish "Sinchrony.Api/Sinchrony.Api.csproj" \
     -o /app/publish \
     --no-restore
 
-FROM dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 WORKDIR /app
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
