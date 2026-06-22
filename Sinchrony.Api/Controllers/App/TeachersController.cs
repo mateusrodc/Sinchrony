@@ -40,7 +40,7 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
 
     [HttpGet("classes/{id}")]
     [ProducesResponseType(typeof(object), 200)]
-    [SwaggerResponseExample(200, typeof(TeacherClassListResponseExample))]
+    [SwaggerResponseExample(200, typeof(TeacherClassDetailResponseExample))]
     public async Task<IActionResult> MyClass(Guid id, CancellationToken ct)
     {
         var @class = await classRepository.GetByIdAsync(id, ct);
