@@ -11,6 +11,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "teacher,admin")]
 [ApiController]
 [Route("api/checkin")]
+[Produces("application/json")]
 public class ErpCheckinController(IAttendanceRepository attendanceRepository) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)

@@ -42,14 +42,9 @@ public class ListBookingsQueryHandler(IBookingRepository bookingRepository)
                 b.Class.Teacher?.Name ?? string.Empty,
                 b.Class.Date.ToString("yyyy-MM-dd"),
                 b.Class.StartTime, b.Class.EndTime, b.Class.Duration,
-                new StudioSummaryDto(
-                    b.Class.Studio!.Id,
-                    b.Class.Studio.Name,
-                    b.Class.Studio.Address)),
-            b.BikeNumber, b.Status.ToString(),
-            b.BookedAt, b.CheckedIn)).ToList();
+                new StudioSummaryDto(b.Class.Studio!.Id, b.Class.Studio.Name, b.Class.Studio.Address)),
+            b.BikeNumber, b.Status.ToString(), b.BookedAt, b.CheckedIn));
 
-        var totalPages = (int)Math.Ceiling(total / (double)request.PageSize);
-        return new PagedResult<BookingListItemDto>(data, request.Page, request.PageSize, total, totalPages);
+        return PagedResult.Create(data, request.Page, request.PageSize, total);
     }
 }

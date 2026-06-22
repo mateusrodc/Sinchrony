@@ -10,6 +10,7 @@ namespace Sinchrony.Api.Controllers.App;
 [Authorize]
 [ApiController]
 [Route("profile")]
+[Produces("application/json")]
 public class ProfileController(IMediator mediator) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)

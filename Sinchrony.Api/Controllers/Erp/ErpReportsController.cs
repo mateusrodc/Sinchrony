@@ -10,6 +10,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/reports")]
+[Produces("application/json")]
 public class ErpReportsController(
     IUserRepository userRepository,
     IClassRepository classRepository,

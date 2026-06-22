@@ -44,10 +44,7 @@ public class ListClassesQueryHandler(IClassRepository classRepository)
             request.Date, request.Type, request.StudioId,
             request.Page, request.PageSize, ct);
 
-        var data = items.Select(MapToDto).ToList();
-        var totalPages = (int)Math.Ceiling(total / (double)request.PageSize);
-
-        return new PagedResult<ClassDto>(data, request.Page, request.PageSize, total, totalPages);
+        return PagedResult.Create(items.Select(MapToDto), request.Page, request.PageSize, total);
     }
 
     public static ClassDto MapToDto(Domain.Entities.Class c)

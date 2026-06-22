@@ -33,9 +33,8 @@ public class ListPurchasesQueryHandler(IPurchaseRepository purchaseRepository)
             new PurchasePackageDto(p.Package!.Id, p.Package.Name, p.Package.Credits, p.Package.Price),
             p.Amount,
             p.Coupon is null ? null : new CouponInfoDto(p.Coupon.Code, p.Coupon.Discount, p.Coupon.DiscountType),
-            p.PaymentMethod, p.Status, p.CreatedAt)).ToList();
+            p.PaymentMethod, p.Status, p.CreatedAt));
 
-        var totalPages = (int)Math.Ceiling(total / (double)request.PageSize);
-        return new PagedResult<PurchaseDto>(data, request.Page, request.PageSize, total, totalPages);
+        return PagedResult.Create(data, request.Page, request.PageSize, total);
     }
 }

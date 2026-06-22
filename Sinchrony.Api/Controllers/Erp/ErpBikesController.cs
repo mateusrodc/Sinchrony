@@ -11,6 +11,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 
 [Authorize(Roles = "admin")]
 [ApiController]
+[Produces("application/json")]
 public class ErpBikesController(IBikeRepository bikeRepository) : ControllerBase
 {
     [HttpGet("api/studios/{studioId}/bikes")]

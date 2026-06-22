@@ -8,6 +8,7 @@ namespace Sinchrony.Api.Controllers.App;
 
 [ApiController]
 [Route("health")]
+[Produces("application/json")]
 public class HealthController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet]

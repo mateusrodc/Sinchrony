@@ -15,6 +15,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/packages")]
+[Produces("application/json")]
 public class ErpPackagesController(IMediator mediator, IPackageRepository packageRepository) : ControllerBase
 {
     [HttpGet]

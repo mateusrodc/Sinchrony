@@ -11,6 +11,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/class-types")]
+[Produces("application/json")]
 public class ErpClassTypesController(IClassTypeRepository classTypeRepository) : ControllerBase
 {
     [HttpGet]

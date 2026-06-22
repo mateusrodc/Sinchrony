@@ -10,6 +10,7 @@ namespace Sinchrony.Api.Controllers.App;
 [Authorize]
 [ApiController]
 [Route("payments")]
+[Produces("application/json")]
 public class PaymentsController(IMediator mediator) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)

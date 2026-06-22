@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
@@ -14,6 +15,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/students")]
+[Produces("application/json")]
 public class ErpStudentsController(
     IUserRepository userRepository,
     IBookingRepository bookingRepository,
@@ -28,16 +30,7 @@ public class ErpStudentsController(
     CancellationToken ct = default)
     {
         var (items, total) = await userRepository.ListStudentsPagedAsync(status, page, pageSize, ct);
-        var totalPages = (int)Math.Ceiling(total / (double)pageSize);
-
-        return Ok(new
-        {
-            data = items.Select(MapStudent),
-            page,
-            pageSize,
-            total,
-            totalPages
-        });
+        return Ok(PagedResult.Create(items.Select(MapStudent), page, pageSize, total));
     }
 
     [HttpGet("{id}")]
@@ -89,6 +82,18 @@ public class ErpStudentsController(
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Student not found.");
 
+        if (!string.IsNullOrEmpty(req.status))
+        {
+            switch (req.status)
+            {
+                case "active": student.Reactivate(); break;
+                case "inactive": student.Deactivate(); break;
+                case "blocked": student.Block(); break;
+            }
+        }
+
+        if (req.plan is not null) student.UpdatePlan(req.plan);
+
         student.UpdateProfile(req.name, req.email, req.phone, student.Avatar);
         await userRepository.SaveAsync(ct);
         return Ok(MapStudent(student));
@@ -129,5 +134,5 @@ public class ErpStudentsController(
     };
 }
 
-public record CreateStudentRequest(string name, string email, string? phone, string? plan);
-public record UpdateStudentRequest(string name, string email, string? phone);
+public record CreateStudentRequest(string name, string email, string? phone, string? plan, string? status);
+public record UpdateStudentRequest(string name, string email, string? phone, string? status, string? plan);

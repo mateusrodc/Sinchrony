@@ -70,6 +70,11 @@ public class User
         Credits -= amount;
         UpdatedAt = DateTime.UtcNow;
     }
+    public void UpdatePlan(string? plan)
+    {
+        PlanName = plan;
+        UpdatedAt = DateTime.UtcNow;
+    }
 
     public void Deactivate() { Status = StudentStatus.inactive; Active = false; UpdatedAt = DateTime.UtcNow; }
     public void Reactivate() { Status = StudentStatus.active; Active = true; UpdatedAt = DateTime.UtcNow; }

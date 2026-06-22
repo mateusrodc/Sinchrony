@@ -14,6 +14,7 @@ namespace Sinchrony.Api.Controllers.App;
 [Authorize]
 [ApiController]
 [Route("notifications")]
+[Produces("application/json")]
 public class NotificationsController(IMediator mediator) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)

@@ -12,6 +12,7 @@ namespace Sinchrony.Api.Controllers.App;
 [Authorize(Roles = "teacher,admin")]
 [ApiController]
 [Route("teachers/me")]
+[Produces("application/json")]
 public class TeachersController(IMediator mediator, IClassRepository classRepository) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)

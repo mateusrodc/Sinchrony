@@ -14,6 +14,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 
 [ApiController]
 [Route("api/auth")]
+[Produces("application/json")]
 public class ErpAuthController(IMediator mediator, IUserRepository userRepository, ITokenService tokenService) : ControllerBase
 {
     [HttpPost("login")]

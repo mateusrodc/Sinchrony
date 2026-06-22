@@ -10,6 +10,7 @@ namespace Sinchrony.Api.Controllers.App;
 [Authorize]
 [ApiController]
 [Route("packages")]
+[Produces("application/json")]
 public class PackagesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]

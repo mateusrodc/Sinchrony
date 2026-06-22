@@ -13,6 +13,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "teacher,admin")]
 [ApiController]
 [Route("api/classes")]
+[Produces("application/json")]
 public class ErpClassesController(IClassRepository classRepository) : ControllerBase
 {
     [HttpGet]
@@ -94,7 +95,9 @@ public class ErpClassesController(IClassRepository classRepository) : Controller
 
 public record CreateClassRequest(
     string name, Guid classTypeId, Guid teacherId, Guid studioId,
-    string date, string startTime, string endTime, int duration, int totalSpots);
+    string date, string startTime, string endTime,
+    int duration, int totalSpots,
+    string status = "scheduled"); // campo aceito conforme API_REFERENCE
 
 public record UpdateClassRequest(
     string name, Guid classTypeId, Guid teacherId, Guid studioId,

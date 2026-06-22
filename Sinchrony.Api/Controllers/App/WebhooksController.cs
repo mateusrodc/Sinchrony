@@ -9,6 +9,7 @@ namespace Sinchrony.Api.Controllers.App;
 
 [ApiController]
 [Route("webhooks")]
+[Produces("application/json")]
 public class WebhooksController(
     IPurchaseRepository purchaseRepository,
     IUserRepository userRepository,

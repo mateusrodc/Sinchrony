@@ -11,6 +11,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/studios")]
+[Produces("application/json")]
 public class ErpStudiosController(IStudioRepository studioRepository) : ControllerBase
 {
     [HttpGet]
@@ -51,6 +52,34 @@ public class ErpStudiosController(IStudioRepository studioRepository) : Controll
             req.openingTime ?? "06:00", req.closingTime ?? "22:00", req.active ?? true);
         await studioRepository.SaveAsync(ct);
         return Ok(MapStudio(studio));
+    }
+
+    [HttpPatch("{id}/deactivate")]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
+    {
+        var studio = await studioRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Studio not found.");
+
+        studio.Update(studio.Name, studio.Address, studio.Capacity,
+            studio.Phone, studio.Email,
+            studio.OpeningTime, studio.ClosingTime, active: false);
+
+        await studioRepository.SaveAsync(ct);
+        return Ok(new { success = true });
+    }
+
+    [HttpPatch("{id}/activate")]
+    public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
+    {
+        var studio = await studioRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Studio not found.");
+
+        studio.Update(studio.Name, studio.Address, studio.Capacity,
+            studio.Phone, studio.Email,
+            studio.OpeningTime, studio.ClosingTime, active: true);
+
+        await studioRepository.SaveAsync(ct);
+        return Ok(new { success = true });
     }
 
     private static object MapStudio(Studio s) => new

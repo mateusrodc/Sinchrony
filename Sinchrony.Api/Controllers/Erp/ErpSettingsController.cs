@@ -10,6 +10,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/settings")]
+[Produces("application/json")]
 public class ErpSettingsController(ISettingsRepository settingsRepository) : ControllerBase
 {
     [HttpGet]

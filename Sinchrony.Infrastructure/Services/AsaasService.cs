@@ -154,7 +154,7 @@ public class AsaasService(
         if (parts.Length != 2)
             throw new ArgumentException("ExpiryDate must be in MM/YY format.");
 
-        var cpfLimpo = cpf.Replace(".", "").Replace("-", "").Replace("/", "").Trim();
+        var cpfLimpo = string.IsNullOrEmpty(cpf) ? "00000000000" : cpf.Replace(".", "").Replace("-", "").Replace("/", "").Trim();
 
         var body = new
         {

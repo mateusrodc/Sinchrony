@@ -14,6 +14,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/teachers")]
+[Produces("application/json")]
 public class ErpTeachersController(
     IUserRepository userRepository,
     IPasswordService passwordService) : ControllerBase
@@ -55,9 +56,13 @@ public class ErpTeachersController(
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTeacherRequest req, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Teacher not found.");
+        ?? throw DomainException.NotFound("Teacher not found.");
 
         teacher.UpdateProfile(req.name, req.email, req.phone, teacher.Avatar);
+
+        if (req.active == false) teacher.Deactivate();
+        else if (req.active == true) teacher.Reactivate();
+
         await userRepository.SaveAsync(ct);
         return Ok(MapTeacher(teacher));
     }
@@ -111,5 +116,12 @@ public class ErpTeachersController(
     };
 }
 
-public record CreateTeacherRequest(string name, string email, string? phone, string password, bool active);
-public record UpdateTeacherRequest(string name, string email, string? phone);
+public record CreateTeacherRequest(
+    string name, string email, string? phone,
+    string password, bool active,
+    List<string>? specialties = null); // aceita mas ignora por ora
+
+public record UpdateTeacherRequest(
+    string name, string email, string? phone,
+    bool? active = null,
+    List<string>? specialties = null); // aceita mas ignora por ora

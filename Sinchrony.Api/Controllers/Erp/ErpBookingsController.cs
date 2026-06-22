@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Swashbuckle.AspNetCore.Filters;
@@ -10,6 +11,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/bookings")]
+[Produces("application/json")]
 public class ErpBookingsController(IBookingRepository bookingRepository) : ControllerBase
 {
     [HttpGet]
@@ -23,28 +25,23 @@ public class ErpBookingsController(IBookingRepository bookingRepository) : Contr
     CancellationToken ct = default)
     {
         var (items, total) = await bookingRepository.ListErpPagedAsync(
-            classId, studentId, status, page, pageSize, ct);
-        var totalPages = (int)Math.Ceiling(total / (double)pageSize);
+    classId, studentId, status, page, pageSize, ct);
 
-        return Ok(new
+        var data = items.Select(b => new
         {
-            data = items.Select(b => new {
-                id = b.Id,
-                classId = b.ClassId,
-                className = b.Class?.Name,
-                studentId = b.StudentId,
-                studentName = b.Student?.Name,
-                studentEmail = b.Student?.Email,
-                status = b.Status.ToString(),
-                bikeNumber = b.BikeNumber,
-                bookedAt = b.BookedAt,
-                checkedIn = b.CheckedIn
-            }),
-            page,
-            pageSize,
-            total,
-            totalPages
+            id = b.Id,
+            classId = b.ClassId,
+            className = b.Class?.Name,
+            studentId = b.StudentId,
+            studentName = b.Student?.Name,
+            studentEmail = b.Student?.Email,
+            status = b.Status.ToString(),
+            bikeNumber = b.BikeNumber,
+            bookedAt = b.BookedAt,
+            checkedIn = b.CheckedIn
         });
+
+        return Ok(PagedResult.Create(data, page, pageSize, total));
     }
 
     [HttpGet("{id}")]
