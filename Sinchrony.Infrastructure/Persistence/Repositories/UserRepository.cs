@@ -62,4 +62,8 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
 
         return (items, total);
     }
+    public async Task<User?> GetByGoogleIdAsync(string googleId, CancellationToken ct = default)
+    => await db.Users
+        .Include(u => u.RefreshTokens)
+        .FirstOrDefaultAsync(u => u.GoogleId == googleId, ct);
 }

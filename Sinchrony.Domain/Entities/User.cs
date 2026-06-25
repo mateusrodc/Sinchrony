@@ -19,6 +19,7 @@ public class User
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
     public string? Cpf { get; private set; }
+    public string? GoogleId { get; private set; }
 
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
     public ICollection<Booking> Bookings { get; private set; } = [];
@@ -73,6 +74,27 @@ public class User
     public void UpdatePlan(string? plan)
     {
         PlanName = plan;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public static User CreateWithGoogle(string name, string email, string googleId, string? avatar = null)
+    {
+        return new User
+        {
+            Name = name,
+            Email = email.ToLower(),
+            GoogleId = googleId,
+            Avatar = avatar,
+            PasswordHash = Guid.NewGuid().ToString(), // senha aleatória
+            Role = Role.student,
+            Credits = 0,
+            ReferralCode = GenerateReferralCode(name)
+        };
+    }
+
+    public void LinkGoogle(string googleId)
+    {
+        GoogleId = googleId;
         UpdatedAt = DateTime.UtcNow;
     }
 

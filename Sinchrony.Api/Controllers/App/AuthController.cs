@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Auth;
 using Sinchrony.Application.Auth.Commands.ChangePassword;
+using Sinchrony.Application.Auth.Commands.GoogleLogin;
 using Sinchrony.Application.Auth.Commands.Login;
 using Sinchrony.Application.Auth.Commands.Logout;
 using Sinchrony.Application.Auth.Commands.RefreshToken;
@@ -86,6 +87,14 @@ public class AuthController(IMediator mediator) : ControllerBase
         await mediator.Send(new ChangePasswordCommand(UserId, req.currentPassword, req.newPassword), ct);
         return Ok(new { success = true });
     }
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GoogleLoginCommand(req.idToken), ct);
+        return Ok(result);
+    }
+
+    public record GoogleLoginRequest(string idToken);
 
     private static string[] GetPermissionsByRole(string? role) => role switch
     {

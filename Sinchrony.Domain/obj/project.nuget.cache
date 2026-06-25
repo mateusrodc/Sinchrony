@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "3ppaYkQOwgw=",
+  "dgSpecHash": "Lt8/n3q1ukg=",
   "success": true,
   "projectFilePath": "C:\\Users\\Mateus\\Desktop\\4Sinchrony\\Sinchrony.Domain\\Sinchrony.Domain.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\Mateus\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512"
+  ],
   "logs": []
 }

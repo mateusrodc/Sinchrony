@@ -21,6 +21,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Cpf).HasMaxLength(14);
 
+        builder.Property(u => u.GoogleId).HasMaxLength(100);
+        builder.HasIndex(u => u.GoogleId).IsUnique().HasFilter("\"GoogleId\" IS NOT NULL");
+
         // Aspas duplas para respeitar o case-sensitive do PostgreSQL
         builder.ToTable(t => t.HasCheckConstraint("ck_users_credits", "\"Credits\" >= 0"));
 

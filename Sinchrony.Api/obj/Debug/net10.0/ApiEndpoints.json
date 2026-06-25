@@ -1163,6 +1163,22 @@
   },
   {
     "ContainingType": "Sinchrony.Api.Controllers.App.AuthController",
+    "Method": "GoogleLogin",
+    "RelativePath": "auth/google",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.App.AuthController\u002BGoogleLoginRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.App.AuthController",
     "Method": "Login",
     "RelativePath": "auth/login",
     "HttpMethod": "POST",

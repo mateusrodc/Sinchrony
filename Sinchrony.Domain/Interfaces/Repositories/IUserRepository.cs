@@ -11,6 +11,7 @@ public interface IUserRepository
     Task<IEnumerable<User>> ListTeachersAsync(bool? active, CancellationToken ct = default);
     Task AddAsync(User user, CancellationToken ct = default);
     Task AddRefreshTokenAsync(RefreshToken refreshToken, CancellationToken ct = default);
+    Task<User?> GetByGoogleIdAsync(string googleId, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
     Task<(IEnumerable<User> Items, int Total)> ListStudentsPagedAsync(
     string? status, int page, int pageSize, CancellationToken ct = default);

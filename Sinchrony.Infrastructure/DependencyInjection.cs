@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<ICreditTransactionRepository, CreditTransactionRepository>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 
         // Domain services
         services.AddScoped<ITokenService, TokenService>();
