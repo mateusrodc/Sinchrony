@@ -6,7 +6,9 @@ using Sinchrony.Domain.Interfaces.Services;
 
 namespace Sinchrony.Application.Payments.Commands.PayWithCard;
 
-public record PayWithCardCommand(Guid UserId, decimal Amount, string CardToken, List<Guid> PackageIds, string? CouponCode)
+public record PayWithCardCommand(
+    Guid UserId, decimal Amount, string CardToken,
+    List<Guid> PackageIds, string? CouponCode)
     : IRequest<CardPaymentResponseDto>;
 
 public record CardPaymentResponseDto(bool Success, string TransactionId, string Message);
@@ -16,7 +18,9 @@ public class PayWithCardCommandHandler(
     IPackageRepository packageRepository,
     IPurchaseRepository purchaseRepository,
     ICouponRepository couponRepository,
-    IAsaasService asaasService) : IRequestHandler<PayWithCardCommand, CardPaymentResponseDto>
+    ICreditTransactionRepository creditTransactionRepository,
+    IAsaasService asaasService,
+    IAuditService auditService) : IRequestHandler<PayWithCardCommand, CardPaymentResponseDto>
 {
     public async Task<CardPaymentResponseDto> Handle(PayWithCardCommand request, CancellationToken ct)
     {
@@ -39,20 +43,40 @@ public class PayWithCardCommandHandler(
             packages.Add(pkg);
         }
 
-        var customerId = await asaasService.GetOrCreateCustomerAsync(user.Name, user.Email, ct: ct);
-        var result = await asaasService.ChargeCardAsync(customerId, request.CardToken, request.Amount, "4Sinchrony - Pacote de aulas", ct);
+        var customerId = await asaasService.GetOrCreateCustomerAsync(
+            user.Name, user.Email, user.Cpf, ct);
 
+        var result = await asaasService.ChargeCardAsync(
+            customerId, request.CardToken, request.Amount,
+            "4Sinchrony - Pacote de aulas", ct);
+
+        // Cartão: aprovação síncrona — credita imediatamente
         var totalCredits = packages.Sum(p => p.Credits);
         user.AddCredits(totalCredits);
 
+        var creditTx = CreditTransaction.Create(
+            user.Id, totalCredits, user.Credits,
+            $"Card purchase confirmed: {result.TransactionId}",
+            "purchase", null);
+        await creditTransactionRepository.AddAsync(creditTx, ct);
+
         foreach (var pkg in packages)
         {
-            var purchase = Purchase.Create(user.Id, pkg.Id, request.Amount, "card", result.TransactionId, coupon?.Id);
+            var purchase = Purchase.Create(
+                user.Id, pkg.Id, request.Amount, "card",
+                result.TransactionId, coupon?.Id);
             await purchaseRepository.AddAsync(purchase, ct);
         }
 
         await userRepository.SaveAsync(ct);
+        await creditTransactionRepository.SaveAsync(ct);
         await purchaseRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(
+            "payment.card_confirmed", "Purchase",
+            null, user.Id,
+            $"TransactionId: {result.TransactionId}, Amount: {request.Amount}",
+            ct: ct);
 
         return new CardPaymentResponseDto(true, result.TransactionId, result.Message);
     }

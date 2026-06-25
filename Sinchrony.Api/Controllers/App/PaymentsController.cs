@@ -21,7 +21,9 @@ public class PaymentsController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(
             new Application.Payments.Queries.ValidateCoupon.ValidateCouponQuery(req.code), ct);
-        return Ok(new { coupon = result });
+        if (result is null)
+            return Ok(new { valid = false, coupon = (object?)null });
+        return Ok(new { valid = true, coupon = result });
     }
 
     [HttpPost("pix")]
