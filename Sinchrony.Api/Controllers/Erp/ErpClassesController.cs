@@ -17,6 +17,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpClassesController(IClassRepository classRepository) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpClassListResponseExample))]
     public async Task<IActionResult> List(
     [FromQuery] string? date, [FromQuery] string? type, [FromQuery] Guid? studioId,
@@ -28,6 +29,7 @@ public class ErpClassesController(IClassRepository classRepository) : Controller
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpClassListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {

@@ -22,6 +22,7 @@ public class ErpStudentsController(
     IPasswordService passwordService) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(StudentListResponseExample))]
     public async Task<IActionResult> List(
     [FromQuery] string? status,
@@ -34,6 +35,7 @@ public class ErpStudentsController(
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(StudentDetailResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
@@ -44,6 +46,7 @@ public class ErpStudentsController(
     }
 
     [HttpGet("{id}/history")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(StudentHistoryResponseExample))]
     public async Task<IActionResult> History(Guid id, CancellationToken ct)
     {

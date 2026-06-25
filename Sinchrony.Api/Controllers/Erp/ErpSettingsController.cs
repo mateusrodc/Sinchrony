@@ -14,6 +14,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpSettingsController(ISettingsRepository settingsRepository) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(SettingsResponseExample))]
     public async Task<IActionResult> Get(CancellationToken ct)
     {

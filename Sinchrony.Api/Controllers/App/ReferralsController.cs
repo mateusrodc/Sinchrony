@@ -27,6 +27,8 @@ public class ReferralsController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("achievements")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(ReferralResponseExample))]
     public IActionResult Achievements()
     {
         // Estrutura base — expanda conforme regras de negócio futuras

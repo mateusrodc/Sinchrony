@@ -19,6 +19,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpPackagesController(IMediator mediator, IPackageRepository packageRepository) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpPackageListResponseExample))]
     public async Task<IActionResult> List([FromQuery] bool? activeOnly, CancellationToken ct)
     {
@@ -27,6 +28,7 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpPackageListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {

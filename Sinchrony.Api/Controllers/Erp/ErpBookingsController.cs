@@ -15,6 +15,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpBookingsController(IBookingRepository bookingRepository) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpBookingListResponseExample))]
     public async Task<IActionResult> List(
     [FromQuery] Guid? classId,
@@ -45,6 +46,7 @@ public class ErpBookingsController(IBookingRepository bookingRepository) : Contr
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpBookingDetailResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {

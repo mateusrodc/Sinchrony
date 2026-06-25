@@ -15,6 +15,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpBikesController(IBikeRepository bikeRepository) : ControllerBase
 {
     [HttpGet("api/studios/{studioId}/bikes")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(BikeListResponseExample))]
     public async Task<IActionResult> List(Guid studioId, CancellationToken ct)
     {

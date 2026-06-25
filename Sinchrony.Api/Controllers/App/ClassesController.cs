@@ -100,6 +100,8 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [Authorize(Roles = "teacher,admin")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(SessionResponseExample))]
     [HttpGet("{id}/session")]
     public async Task<IActionResult> GetSession(Guid id, CancellationToken ct)
     {
@@ -108,6 +110,8 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [Authorize(Roles = "teacher,admin")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(ClassStudentsResponseExample))]
     [HttpGet("{id}/attendance")]
     public async Task<IActionResult> Attendance(Guid id, CancellationToken ct)
     {
@@ -141,6 +145,8 @@ public class ClassesController(IMediator mediator) : ControllerBase
     }
 
     [Authorize(Roles = "teacher,admin")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(AttendanceSummaryResponseExample))]
     [HttpGet("{id}/attendance/summary")]
     public async Task<IActionResult> AttendanceSummary(Guid id, CancellationToken ct)
     {

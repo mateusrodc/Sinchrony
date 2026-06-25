@@ -18,6 +18,7 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
         ?? User.FindFirstValue("sub")!);
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(CheckinListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
@@ -26,6 +27,7 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
     }
 
     [HttpGet("class/{classId}")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(CheckinListResponseExample))]
     public async Task<IActionResult> ByClass(Guid classId, CancellationToken ct)
     {
@@ -45,6 +47,7 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
     }
 
     [HttpGet("summary")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(CheckinSummaryResponseExample))]
     public async Task<IActionResult> Summary([FromQuery] Guid classId, CancellationToken ct)
     {

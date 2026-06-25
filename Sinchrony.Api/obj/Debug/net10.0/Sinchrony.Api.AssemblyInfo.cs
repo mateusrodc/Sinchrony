@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Sinchrony.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5d68c35b531a97b0f8352e4a896fac89550a8aa9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3b1ba224b99e1af84c55fedea2b764b9f16ed576")]
 [assembly: System.Reflection.AssemblyProductAttribute("Sinchrony.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Sinchrony.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

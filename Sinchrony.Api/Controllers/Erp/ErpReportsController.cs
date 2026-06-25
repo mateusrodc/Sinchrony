@@ -18,6 +18,7 @@ public class ErpReportsController(
     IPurchaseRepository purchaseRepository) : ControllerBase
 {
     [HttpGet("summary")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ReportSummaryResponseExample))]
     public async Task<IActionResult> Summary([FromQuery] string? period, CancellationToken ct)
     {
@@ -49,6 +50,7 @@ public class ErpReportsController(
     }
 
     [HttpGet("occupancy")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(OccupancyReportResponseExample))]
     public async Task<IActionResult> Occupancy([FromQuery] int days = 30, CancellationToken ct = default)
     {
@@ -75,6 +77,7 @@ public class ErpReportsController(
     }
 
     [HttpGet("frequency")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(FrequencyReportResponseExample))]
     public async Task<IActionResult> Frequency(CancellationToken ct)
     {

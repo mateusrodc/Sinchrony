@@ -17,6 +17,7 @@ public class ErpDashboardController(
 {
     [HttpGet("admin/dashboard")]
     [HttpGet("api/dashboard")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(DashboardResponseExample))]
     public async Task<IActionResult> Dashboard(CancellationToken ct)
     {

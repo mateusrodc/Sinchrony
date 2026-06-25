@@ -42,6 +42,7 @@ public class ErpAuthController(IMediator mediator, IUserRepository userRepositor
 
     [Authorize]
     [HttpGet("validate")]
+    [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpAuthValidateResponseExample))]
     public async Task<IActionResult> Validate(CancellationToken ct)
     {

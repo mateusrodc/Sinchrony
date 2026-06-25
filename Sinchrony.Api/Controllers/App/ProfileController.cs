@@ -1,8 +1,10 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Profile;
 using Sinchrony.Application.Profile.Commands.UpdateProfile;
 using Sinchrony.Application.Profile.Queries.ProfileProgress;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -25,6 +27,8 @@ public class ProfileController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("progress")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(ProfileProgressResponseExample))]
     public async Task<IActionResult> Progress(CancellationToken ct)
     {
         var result = await mediator.Send(new ProfileProgressQuery(UserId), ct);
