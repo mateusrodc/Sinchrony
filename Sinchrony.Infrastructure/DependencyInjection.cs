@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddHttpClient<IAsaasService, AsaasService>(client =>
         {
             client.DefaultRequestHeaders.Add("access_token", configuration["Asaas:ApiKey"]);
+            client.DefaultRequestHeaders.Add("User-Agent", "4Sinchrony/1.0");
         });
 
         return services;
