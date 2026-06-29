@@ -15,6 +15,6 @@ public class GetMeQueryHandler(IUserRepository userRepository) : IRequestHandler
             ?? throw DomainException.NotFound("User not found.");
 
         return new UserDto(user.Id, user.Name, user.Email,
-            user.Role.ToString(), user.Credits, user.Phone, user.Avatar);
+            user.Role.ToString(), user.Credits, user.Phone, user.Avatar, user?.Cpf);
     }
 }

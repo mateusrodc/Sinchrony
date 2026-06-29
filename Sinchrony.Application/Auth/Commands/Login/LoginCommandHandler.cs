@@ -41,7 +41,7 @@ public class LoginCommandHandler(
     }
 
     public static AuthResponseDto BuildResponse(string accessToken, string refreshToken, User user) =>
-        new(accessToken, accessToken, refreshToken, "Bearer", 900,
-            new UserDto(user.Id, user.Name, user.Email,
-                user.Role.ToString(), user.Credits, user.Phone, user.Avatar));
+    new(accessToken, accessToken, refreshToken, "Bearer", 900,
+        new UserDto(user.Id, user.Name, user.Email,
+            user.Role.ToString(), user.Credits, user.Phone, user.Avatar, user.Cpf));
 }

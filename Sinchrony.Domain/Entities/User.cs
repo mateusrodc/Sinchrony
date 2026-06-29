@@ -107,4 +107,9 @@ public class User
         var prefix = name.Length >= 5 ? name[..5].ToUpper() : name.ToUpper();
         return prefix + Random.Shared.Next(100, 999);
     }
+    public void UpdateCpf(string? cpf)
+    {
+        Cpf = string.IsNullOrEmpty(cpf) ? null : cpf.Replace(".", "").Replace("-", "").Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

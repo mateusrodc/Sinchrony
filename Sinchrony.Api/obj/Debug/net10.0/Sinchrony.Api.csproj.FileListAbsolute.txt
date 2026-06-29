@@ -164,4 +164,7 @@ C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Google.Apis.A
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\Google.Apis.Core.dll
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\System.Management.dll
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\runtimes\win\lib\net7.0\System.Management.dll
-C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\MailKit.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\MimeKit.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Api\bin\Debug\net10.0\SixLabors.ImageSharp.dll

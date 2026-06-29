@@ -22,7 +22,7 @@ public class ProfileController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Update([FromBody] UpdateProfileRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(
-            new UpdateProfileCommand(UserId, req.name, req.email, req.phone, req.avatar), ct);
+            new UpdateProfileCommand(UserId, req.name, req.email, req.phone, req.avatar, req.cpf), ct);
         return Ok(result);
     }
 
@@ -36,4 +36,4 @@ public class ProfileController(IMediator mediator) : ControllerBase
     }
 }
 
-public record UpdateProfileRequest(string name, string email, string? phone, string? avatar);
+public record UpdateProfileRequest(string name, string email, string? phone, string? avatar, string? cpf);

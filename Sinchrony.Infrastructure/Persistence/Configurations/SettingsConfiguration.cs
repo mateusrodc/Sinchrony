@@ -14,5 +14,9 @@ public class SettingsConfiguration : IEntityTypeConfiguration<Settings>
         builder.Property(s => s.StudioEmail).IsRequired().HasMaxLength(200);
         builder.Property(s => s.StudioPhone).HasMaxLength(20);
         builder.Property(s => s.StudioAddress).HasMaxLength(300);
+        builder.Property(s => s.SmtpHost).HasMaxLength(200);
+        builder.Property(s => s.SmtpUser).HasMaxLength(200);
+        builder.Property(s => s.SmtpPassword).HasMaxLength(500);
+        builder.Property(s => s.SmtpFrom).HasMaxLength(200);
     }
 }

@@ -7,6 +7,7 @@ using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -46,8 +47,12 @@ public class ErpTeachersController(
         if (existing is not null)
             throw DomainException.Conflict("EMAIL_IN_USE", "Email already in use.");
 
+        if (!string.IsNullOrEmpty(req.cpf) && !CpfValidator.IsValid(req.cpf))
+            throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
+
         var hash = passwordService.HashPassword(req.password);
-        var teacher = Sinchrony.Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.teacher);
+        var teacher = Sinchrony.Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.teacher,
+            string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
 
         await userRepository.AddAsync(teacher, ct);
         await userRepository.SaveAsync(ct);
@@ -112,8 +117,10 @@ public class ErpTeachersController(
         id = u.Id,
         name = u.Name,
         email = u.Email,
+        cpf = u.Cpf,
         phone = u.Phone,
         active = u.Active,
+        avatar = u.Avatar,
         specialties = new List<string>()
     };
 }
@@ -121,9 +128,11 @@ public class ErpTeachersController(
 public record CreateTeacherRequest(
     string name, string email, string? phone,
     string password, bool active,
-    List<string>? specialties = null); // aceita mas ignora por ora
+    string? cpf = null,
+    List<string>? specialties = null);
 
 public record UpdateTeacherRequest(
     string name, string email, string? phone,
     bool? active = null,
-    List<string>? specialties = null); // aceita mas ignora por ora
+    string? cpf = null,
+    List<string>? specialties = null);

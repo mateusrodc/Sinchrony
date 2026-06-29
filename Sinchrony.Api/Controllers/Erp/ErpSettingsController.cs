@@ -45,6 +45,13 @@ public class ErpSettingsController(ISettingsRepository settingsRepository) : Con
         if (req.sendReminderEmail.HasValue) settings.SendReminderEmail = req.sendReminderEmail.Value;
         if (req.reminderHoursBefore.HasValue) settings.ReminderHoursBefore = req.reminderHoursBefore.Value;
 
+        if (req.smtpHost is not null) settings.SmtpHost = req.smtpHost;
+        if (req.smtpPort.HasValue) settings.SmtpPort = req.smtpPort.Value;
+        if (req.smtpUser is not null) settings.SmtpUser = req.smtpUser;
+        if (req.smtpPassword is not null) settings.SmtpPassword = req.smtpPassword;
+        if (req.smtpFrom is not null) settings.SmtpFrom = req.smtpFrom;
+        if (req.smtpSecure.HasValue) settings.SmtpSecure = req.smtpSecure.Value;
+
         await settingsRepository.SaveAsync(ct);
         return Ok(MapSettings(settings));
     }
@@ -62,12 +69,23 @@ public class ErpSettingsController(ISettingsRepository settingsRepository) : Con
         autoConfirmBookings = s.AutoConfirmBookings,
         sendBookingConfirmationEmail = s.SendBookingConfirmationEmail,
         sendReminderEmail = s.SendReminderEmail,
-        reminderHoursBefore = s.ReminderHoursBefore
+        reminderHoursBefore = s.ReminderHoursBefore,
+        smtpHost = s.SmtpHost,
+        smtpPort = s.SmtpPort,
+        smtpUser = s.SmtpUser,
+        smtpPassword = string.IsNullOrEmpty(s.SmtpPassword) ? null : "••••••••",
+        smtpFrom = s.SmtpFrom,
+        smtpSecure = s.SmtpSecure
     };
 }
 
 public record UpdateSettingsRequest(
-    string? studioName, string? studioEmail, string? studioPhone, string? studioAddress,
-    int? bookingWindowDays, int? cancellationDeadlineHours, int? maxBookingsPerStudent,
-    bool? allowWaitlist, bool? autoConfirmBookings,
-    bool? sendBookingConfirmationEmail, bool? sendReminderEmail, int? reminderHoursBefore);
+    string? studioName, string? studioEmail,
+    string? studioPhone, string? studioAddress,
+    int? bookingWindowDays, int? cancellationDeadlineHours,
+    int? maxBookingsPerStudent, bool? allowWaitlist,
+    bool? autoConfirmBookings, bool? sendBookingConfirmationEmail,
+    bool? sendReminderEmail, int? reminderHoursBefore,
+    // SMTP
+    string? smtpHost, int? smtpPort, string? smtpUser,
+    string? smtpPassword, string? smtpFrom, bool? smtpSecure);

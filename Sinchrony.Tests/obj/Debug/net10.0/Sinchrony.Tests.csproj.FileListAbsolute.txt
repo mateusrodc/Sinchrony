@@ -135,3 +135,13 @@ C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\Sinchrony.T
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\Sinchrony.Tests.genruntimeconfig.cache
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\ref\Sinchrony.Tests.dll
 C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\obj\Debug\net10.0\Sinchrony.Tests.sourcelink.json
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\Google.Apis.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\Google.Apis.Auth.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\Google.Apis.Core.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\MailKit.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\MimeKit.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\SixLabors.ImageSharp.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\System.CodeDom.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\System.Management.dll
+C:\Users\Mateus\Desktop\4Sinchrony\Sinchrony.Tests\bin\Debug\net10.0\runtimes\win\lib\net7.0\System.Management.dll

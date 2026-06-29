@@ -94,6 +94,24 @@ public class AuthController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+    [FromBody] ForgotPasswordRequest req, CancellationToken ct)
+    {
+        await mediator.Send(
+            new Application.Auth.Commands.ForgotPassword.ForgotPasswordCommand(req.email), ct);
+        return Ok(new { success = true, message = "Se o email existir, você receberá o link de recuperação." });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordRequest req, CancellationToken ct)
+    {
+        await mediator.Send(
+            new Application.Auth.Commands.ResetPassword.ResetPasswordCommand(req.token, req.newPassword), ct);
+        return Ok(new { message = "Senha redefinida com sucesso." });
+    }
+
     public record GoogleLoginRequest(string idToken);
 
     private static string[] GetPermissionsByRole(string? role) => role switch
@@ -112,4 +130,5 @@ public record LoginRequest(string email, string password);
 public record RegisterRequest(string name, string email, string? phone, string password, string? cpf);
 public record RefreshRequest(string refresh_token);
 public record ForgotPasswordRequest(string email);
+public record ResetPasswordRequest(string token, string newPassword);
 public record ChangePasswordRequest(string currentPassword, string newPassword);

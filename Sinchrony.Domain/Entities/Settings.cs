@@ -15,4 +15,10 @@ public class Settings
     public bool SendBookingConfirmationEmail { get; set; } = true;
     public bool SendReminderEmail { get; set; } = true;
     public int ReminderHoursBefore { get; set; } = 24;
+    public string? SmtpHost { get; set; }
+    public int SmtpPort { get; set; } = 587;
+    public string? SmtpUser { get; set; }
+    public string? SmtpPassword { get; set; }
+    public string? SmtpFrom { get; set; }
+    public bool SmtpSecure { get; set; }
 }

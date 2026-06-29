@@ -509,6 +509,39 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.ToTable("packages", (string)null);
                 });
 
+            modelBuilder.Entity("Sinchrony.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("Used")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("password_reset_tokens", (string)null);
+                });
+
             modelBuilder.Entity("Sinchrony.Domain.Entities.Purchase", b =>
                 {
                     b.Property<Guid>("Id")
@@ -645,6 +678,28 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.Property<bool>("SendReminderEmail")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("SmtpFrom")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SmtpHost")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SmtpPassword")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("SmtpPort")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("SmtpSecure")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SmtpUser")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("StudioAddress")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -727,8 +782,8 @@ namespace Sinchrony.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Cpf")
-                        .HasMaxLength(14)
-                        .HasColumnType("character varying(14)");
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -779,6 +834,10 @@ namespace Sinchrony.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Cpf")
+                        .IsUnique()
+                        .HasFilter("\"Cpf\" IS NOT NULL");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -918,6 +977,17 @@ namespace Sinchrony.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("Sinchrony.Domain.Entities.NotificationPreference", b =>
+                {
+                    b.HasOne("Sinchrony.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.PasswordResetToken", b =>
                 {
                     b.HasOne("Sinchrony.Domain.Entities.User", "User")
                         .WithMany()

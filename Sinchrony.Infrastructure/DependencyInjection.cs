@@ -39,6 +39,17 @@ public static class DependencyInjection
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+        services.AddSingleton<IAppSettings, AppSettings>();
+
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+
+        services.AddHttpClient<IStorageService, SupabaseStorageService>(client =>
+        {
+            client.DefaultRequestHeaders.Add("Authorization",
+                $"Bearer {configuration["Storage:Key"]}");
+            client.DefaultRequestHeaders.Add("apikey", configuration["Storage:Key"]!);
+        });
 
         // Domain services
         services.AddScoped<ITokenService, TokenService>();

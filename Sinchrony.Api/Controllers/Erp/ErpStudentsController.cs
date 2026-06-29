@@ -8,6 +8,7 @@ using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -71,8 +72,12 @@ public class ErpStudentsController(
         if (existing is not null)
             throw DomainException.Conflict("EMAIL_IN_USE", "Email already in use.");
 
+        if (!string.IsNullOrEmpty(req.cpf) && !CpfValidator.IsValid(req.cpf))
+            throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
+
         var hash = passwordService.HashPassword(Guid.NewGuid().ToString());
-        var student = Sinchrony.Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.student);
+        var student = Sinchrony.Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.student,
+            string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
 
         await userRepository.AddAsync(student, ct);
         await userRepository.SaveAsync(ct);
@@ -84,6 +89,15 @@ public class ErpStudentsController(
     {
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Student not found.");
+
+        student.UpdateProfile(req.name, req.email, req.phone, student.Avatar);
+
+        if (!string.IsNullOrEmpty(req.cpf))
+        {
+            if (!CpfValidator.IsValid(req.cpf))
+                throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
+            student.UpdateCpf(req.cpf);
+        }
 
         if (!string.IsNullOrEmpty(req.status))
         {
@@ -97,7 +111,6 @@ public class ErpStudentsController(
 
         if (req.plan is not null) student.UpdatePlan(req.plan);
 
-        student.UpdateProfile(req.name, req.email, req.phone, student.Avatar);
         await userRepository.SaveAsync(ct);
         return Ok(MapStudent(student));
     }
@@ -127,15 +140,22 @@ public class ErpStudentsController(
         id = u.Id,
         name = u.Name,
         email = u.Email,
+        cpf = u.Cpf,
         phone = u.Phone,
         status = u.Status.ToString(),
         plan = u.PlanName,
         credits = u.Credits,
-        registeredAt = u.CreatedAt.ToString("yyyy-MM-dd"),
+        avatar = u.Avatar,
+        registeredAt = u.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
         lastVisit = (string?)null,
         totalClasses = 0
     };
 }
 
-public record CreateStudentRequest(string name, string email, string? phone, string? plan, string? status);
-public record UpdateStudentRequest(string name, string email, string? phone, string? status, string? plan);
+public record CreateStudentRequest(
+    string name, string email, string? phone,
+    string? plan, string? status, string? cpf);
+
+public record UpdateStudentRequest(
+    string name, string email, string? phone,
+    string? status, string? plan, string? cpf);
