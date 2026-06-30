@@ -53,13 +53,6 @@ public class AuthController(IMediator mediator) : ControllerBase
         return Ok(new { success = true });
     }
 
-    [HttpPost("forgot-password")]
-    public IActionResult ForgotPassword([FromBody] ForgotPasswordRequest req)
-    {
-        // Resposta idêntica independente do email existir (evita enumeração)
-        return Ok(new { success = true, message = "Se o email existir, você receberá o link de recuperação." });
-    }
-
     [Authorize]
     [HttpGet("me")]
     [ProducesResponseType(typeof(object), 200)]

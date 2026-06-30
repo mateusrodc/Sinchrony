@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Sinchrony.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+97f6dd587a59b99fc37fe08009cf297e08bd4054")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4733e4f574d4b69274b0d37cf7a9e247b017b018")]
 [assembly: System.Reflection.AssemblyProductAttribute("Sinchrony.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Sinchrony.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

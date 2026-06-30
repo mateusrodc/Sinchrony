@@ -27,16 +27,17 @@ public class PaymentsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("pix")]
-    public async Task<IActionResult> PayWithPix([FromBody] PixPaymentRequest req, CancellationToken ct)
+    public async Task<IActionResult> PayWithPix(
+    [FromBody] PixPaymentRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(
-            new PayWithPixCommand(UserId, req.amount, req.packageIds, req.couponCode), ct);
+            new PayWithPixCommand(UserId, req.amount, req.packageIds, req.couponCode, req.cpf), ct);
         return Ok(new
         {
             success = result.Success,
             transactionId = result.TransactionId,
             pixCode = result.PixCode,
-            pixQRCode = result.QrCodeBase64
+            pixQrCode = result.QrCodeBase64
         });
     }
 
@@ -55,5 +56,9 @@ public class PaymentsController(IMediator mediator) : ControllerBase
 }
 
 public record ValidateCouponRequest(string code);
-public record PixPaymentRequest(decimal amount, List<Guid> packageIds, string? couponCode);
+public record PixPaymentRequest(
+    decimal amount,
+    List<Guid> packageIds,
+    string? couponCode,
+    string? cpf = null);
 public record CardPaymentRequest(decimal amount, string cardToken, List<Guid> packageIds, string? couponCode);

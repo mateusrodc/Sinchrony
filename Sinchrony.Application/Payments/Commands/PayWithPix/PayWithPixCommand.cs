@@ -6,7 +6,10 @@ using Sinchrony.Domain.Interfaces.Services;
 
 namespace Sinchrony.Application.Payments.Commands.PayWithPix;
 
-public record PayWithPixCommand(Guid UserId, decimal Amount, List<Guid> PackageIds, string? CouponCode)
+public record PayWithPixCommand(
+    Guid UserId, decimal Amount,
+    List<Guid> PackageIds, string? CouponCode,
+    string? Cpf = null)
     : IRequest<PixPaymentResponseDto>;
 
 public record PixPaymentResponseDto(bool Success, string TransactionId, string PixCode, string QrCodeBase64);
@@ -40,14 +43,21 @@ public class PayWithPixCommandHandler(
             packages.Add(pkg);
         }
 
-        var customerId = await asaasService.GetOrCreateCustomerAsync(user.Name, user.Email, ct: ct);
+        // Usa CPF do request se informado, senão usa o do cadastro
+        var cpf = request.Cpf ?? user.Cpf;
+
+        var customerId = await asaasService.GetOrCreateCustomerAsync(
+            user.Name, user.Email, cpf, ct);
+
         var result = await asaasService.CreatePixChargeAsync(
             customerId, request.Amount, "4Sinchrony - Pacote de aulas", ct);
 
+        // PIX: compra fica PENDING até confirmação via webhook
         foreach (var pkg in packages)
         {
             var purchase = Purchase.CreatePending(
-                user.Id, pkg.Id, request.Amount, "pix", result.TransactionId, coupon?.Id);
+                user.Id, pkg.Id, request.Amount, "pix",
+                result.TransactionId, coupon?.Id);
             await purchaseRepository.AddAsync(purchase, ct);
         }
 

@@ -34,7 +34,7 @@ public class CardsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Add([FromBody] AddCardRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(
-            new AddCardCommand(UserId, req.number, req.holderName, req.expiryDate, req.cvv, req.cpf, req.nickname), ct);
+            new AddCardCommand(UserId, req.number, req.holderName, req.expiryDate, req.cvv, req.cpf ?? "", req.nickname), ct);
         return StatusCode(201, result);
     }
 
@@ -53,4 +53,4 @@ public class CardsController(IMediator mediator) : ControllerBase
     }
 }
 
-public record AddCardRequest(string number, string holderName, string expiryDate, string cvv, string cpf, string? nickname);
+public record AddCardRequest(string number, string holderName, string expiryDate, string cvv, string? cpf, string? nickname);

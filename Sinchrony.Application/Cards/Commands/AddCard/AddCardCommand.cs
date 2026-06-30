@@ -22,10 +22,10 @@ public class AddCardCommandHandler(
         var user = await userRepository.GetByIdAsync(request.UserId, ct)
             ?? throw DomainException.NotFound("User not found.");
 
-        var customerId = await asaasService.GetOrCreateCustomerAsync(user.Name, user.Email, ct: ct);
+        var customerId = await asaasService.GetOrCreateCustomerAsync(user.Name, user.Email, user.Cpf, ct: ct);
         var tokenResult = await asaasService.TokenizeCardAsync(
             request.Number, request.HolderName,
-            request.ExpiryDate, request.Cvv, customerId, request.Cpf, ct);
+            request.ExpiryDate, request.Cvv, customerId, user.Cpf ?? "00000000000", ct);
 
         var duplicate = await cardRepository.ExistsByTokenAsync(request.UserId, tokenResult.Token, ct);
         if (duplicate)

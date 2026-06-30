@@ -21,6 +21,8 @@ public class AvatarController(
         ?? User.FindFirstValue("sub")!);
 
     [HttpPost("avatar")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(object), 200)]
     public async Task<IActionResult> UploadAvatar(
         IFormFile file, CancellationToken ct)
     {

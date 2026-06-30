@@ -117,37 +117,6 @@
         }
       }
     },
-    "/auth/forgot-password": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/auth/me": {
       "get": {
         "tags": [
@@ -242,6 +211,106 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/upload/avatar": {
+      "post": {
+        "tags": [
+          "Avatar"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "file": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"permissions":["class:read","class:book","class:cancel","purchase:create","purchase:read","card:manage","profile:manage","booking:read","booking:create"]}
+              }
+            }
           }
         }
       }
@@ -2597,6 +2666,35 @@
         }
       }
     },
+    "/packages/{id}": {
+      "get": {
+        "tags": [
+          "Packages"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"1 Aula","description":"Experimente uma aula avulsa","credits":1,"price":45,"pricePerCredit":45,"validityDays":30,"popular":false,"active":true,"displayOrder":1,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"},{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas","description":"O mais popular do estúdio","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"}]}
+              }
+            }
+          }
+        }
+      }
+    },
     "/payments/validate-coupon": {
       "post": {
         "tags": [
@@ -3195,6 +3293,10 @@
           "status": {
             "type": "string",
             "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3220,6 +3322,10 @@
           },
           "active": {
             "type": "boolean"
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
           },
           "specialties": {
             "type": "array",
@@ -3311,6 +3417,10 @@
           "couponCode": {
             "type": "string",
             "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3345,6 +3455,20 @@
             "nullable": true
           },
           "cpf": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "nullable": true
+          },
+          "newPassword": {
             "type": "string",
             "nullable": true
           }
@@ -3530,6 +3654,10 @@
           "avatar": {
             "type": "string",
             "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3588,6 +3716,31 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          },
+          "smtpHost": {
+            "type": "string",
+            "nullable": true
+          },
+          "smtpPort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "smtpUser": {
+            "type": "string",
+            "nullable": true
+          },
+          "smtpPassword": {
+            "type": "string",
+            "nullable": true
+          },
+          "smtpFrom": {
+            "type": "string",
+            "nullable": true
+          },
+          "smtpSecure": {
+            "type": "boolean",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3614,6 +3767,10 @@
           "plan": {
             "type": "string",
             "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3635,6 +3792,10 @@
           },
           "active": {
             "type": "boolean",
+            "nullable": true
+          },
+          "cpf": {
+            "type": "string",
             "nullable": true
           },
           "specialties": {
