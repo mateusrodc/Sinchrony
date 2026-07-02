@@ -19,4 +19,10 @@ public interface IBookingRepository
     Task<(IEnumerable<Booking> Items, int Total)> ListErpPagedAsync(
         Guid? classId, Guid? studentId, string? status,
         int page, int pageSize, CancellationToken ct = default);
+
+    Task<Booking?> GetByClassAndStudentAsync(
+    Guid classId, Guid studentId, CancellationToken ct = default);
+
+    Task<IEnumerable<Booking>> ListByClassAsync(
+        Guid classId, CancellationToken ct = default);
 }

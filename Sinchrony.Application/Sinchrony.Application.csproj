@@ -15,7 +15,6 @@
   <ItemGroup>
     <Folder Include="Auth\Queries\GetPermissions\" />
     <Folder Include="Bikes\" />
-    <Folder Include="Classes\Commands\" />
     <Folder Include="ClassTypes\" />
     <Folder Include="Settings\" />
     <Folder Include="Reports\" />

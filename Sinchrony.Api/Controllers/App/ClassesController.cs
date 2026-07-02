@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Classes;
 using Sinchrony.Application.Attendance.Commands.BulkAttendance;
-using Sinchrony.Application.Attendance.Commands.ConfirmAllAttendance;
-using Sinchrony.Application.Attendance.Commands.UpdateAttendance;
 using Sinchrony.Application.Attendance.Queries.AttendanceSummary;
 using Sinchrony.Application.Attendance.Queries.ListAttendance;
+using Sinchrony.Application.Classes.Commands.BulkUpdateAttendance;
+using Sinchrony.Application.Classes.Commands.ConfirmAllAttendance;
+using Sinchrony.Application.Classes.Commands.UpdateAttendance;
 using Sinchrony.Application.Classes.Queries.GetClass;
 using Sinchrony.Application.Classes.Queries.GetClassBikes;
 using Sinchrony.Application.Classes.Queries.GetClassStudents;
@@ -121,27 +122,43 @@ public class ClassesController(IMediator mediator) : ControllerBase
 
     [Authorize(Roles = "teacher,admin")]
     [HttpPut("{id}/attendance")]
-    public async Task<IActionResult> UpdateAttendance(Guid id, [FromBody] UpdateAttendanceRequest req, CancellationToken ct)
+    public async Task<IActionResult> UpdateAttendance(
+    Guid id, [FromBody] UpdateAttendanceRequest req, CancellationToken ct)
     {
-        await mediator.Send(new UpdateAttendanceCommand(id, req.studentId, req.status), ct);
+        await mediator.Send(
+            new UpdateAttendanceCommand(id, req.studentId, req.status, UserId), ct);
         return Ok(new { success = true });
     }
 
     [Authorize(Roles = "teacher,admin")]
     [HttpPost("{id}/attendance/bulk")]
-    public async Task<IActionResult> BulkAttendance(Guid id, [FromBody] BulkAttendanceRequest req, CancellationToken ct)
+    public async Task<IActionResult> BulkAttendance(
+    Guid id, [FromBody] BulkAttendanceRequest req, CancellationToken ct)
     {
-        var updates = req.updates.Select(u => new BulkAttendanceUpdate(u.studentId, u.status)).ToList();
-        await mediator.Send(new BulkAttendanceCommand(id, updates), ct);
-        return Ok(new { success = true });
+        var updates = req.updates
+            .Select(u => new AttendanceUpdate(u.studentId, u.status))
+            .ToList();
+
+        var result = await mediator.Send(
+            new BulkUpdateAttendanceCommand(id, updates, UserId), ct);
+
+        return Ok(new { success = result.Success, updated = result.Updated, created = result.Created });
     }
 
     [Authorize(Roles = "teacher,admin")]
     [HttpPost("{id}/attendance/confirm-all")]
     public async Task<IActionResult> ConfirmAll(Guid id, CancellationToken ct)
     {
-        await mediator.Send(new ConfirmAllAttendanceCommand(id, UserId), ct);
-        return Ok(new { success = true });
+        var result = await mediator.Send(
+            new ConfirmAllAttendanceCommand(id, UserId), ct);
+
+        return Ok(new
+        {
+            success = result.Success,
+            total = result.Total,
+            updated = result.Updated,
+            created = result.Created
+        });
     }
 
     [Authorize(Roles = "teacher,admin")]

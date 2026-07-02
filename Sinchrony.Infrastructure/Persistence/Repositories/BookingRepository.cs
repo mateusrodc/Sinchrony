@@ -124,4 +124,18 @@ public class BookingRepository(ApplicationDbContext db) : IBookingRepository
 
         return (items, total);
     }
+
+    public async Task<Booking?> GetByClassAndStudentAsync(
+    Guid classId, Guid studentId, CancellationToken ct = default)
+    => await db.Bookings
+        .FirstOrDefaultAsync(b =>
+            b.ClassId == classId &&
+            b.StudentId == studentId &&
+            b.Status == BookingStatus.confirmed, ct);
+
+    public async Task<IEnumerable<Booking>> ListByClassAsync(
+        Guid classId, CancellationToken ct = default)
+        => await db.Bookings
+            .Where(b => b.ClassId == classId)
+            .ToListAsync(ct);
 }

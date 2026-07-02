@@ -11,6 +11,7 @@ public class CreateBookingCommandHandler(
     IUserRepository userRepository,
     IClassRepository classRepository,
     IBookingRepository bookingRepository,
+    IAttendanceRepository attendanceRepository,
     ICreditTransactionRepository creditTransactionRepository,
     IAuditService auditService,
     IUnitOfWork unitOfWork) : IRequestHandler<CreateBookingCommand, BookingDto>
@@ -35,7 +36,8 @@ public class CreateBookingCommandHandler(
             if (@class.Status != ClassStatus.scheduled)
                 throw DomainException.Conflict("CLASS_UNAVAILABLE", "Class is not available for booking.");
 
-            var alreadyBooked = await bookingRepository.HasActiveBookingAsync(request.StudentId, request.ClassId, ct);
+            var alreadyBooked = await bookingRepository.HasActiveBookingAsync(
+                request.StudentId, request.ClassId, ct);
             if (alreadyBooked)
                 throw DomainException.Conflict("BOOKING_CONFLICT", "Student is already enrolled in this class.");
 
@@ -44,37 +46,35 @@ public class CreateBookingCommandHandler(
             if (hasConflict)
                 throw DomainException.Conflict("TIME_CONFLICT", "Time conflict with another booking.");
 
-            // Lock pessimista — previne overbooking em concorrência
             var activeCount = await classRepository.CountActiveBookingsWithLockAsync(request.ClassId, ct);
             if (activeCount >= @class.TotalSpots)
                 throw DomainException.Conflict("CLASS_FULL", "Class is full.");
 
             if (request.BikeNumber.HasValue)
             {
-                var bikeOccupied = await bookingRepository.IsBikeOccupiedAsync(request.ClassId, request.BikeNumber.Value, ct);
+                var bikeOccupied = await bookingRepository.IsBikeOccupiedAsync(
+                    request.ClassId, request.BikeNumber.Value, ct);
                 if (bikeOccupied)
                     throw DomainException.Conflict("BIKE_OCCUPIED", "Bike is already taken.");
             }
 
-            // Débito de crédito
             user.DeductCredits(1);
 
-            // Ledger
             var creditTx = CreditTransaction.Create(
                 user.Id, -1, user.Credits,
                 $"Booking for class {@class.Name} on {@class.Date}",
                 "booking", null);
             await creditTransactionRepository.AddAsync(creditTx, ct);
 
-            // Reserva + presença
             var booking = Booking.Create(request.ClassId, request.StudentId, request.BikeNumber);
             var attendance = AttendanceRecord.Create(booking.Id, request.ClassId, request.StudentId);
 
             await bookingRepository.AddAsync(booking, ct);
+            await attendanceRepository.AddAsync(attendance, ct); // <-- linha que faltava
+
             await userRepository.SaveAsync(ct);
             await creditTransactionRepository.SaveAsync(ct);
 
-            // Auditoria
             await auditService.LogAsync(
                 "booking.created", "Booking",
                 booking.Id, request.StudentId,

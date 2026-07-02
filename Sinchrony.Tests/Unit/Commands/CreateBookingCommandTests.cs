@@ -15,13 +15,13 @@ public class CreateBookingCommandTests
     private readonly Mock<IUserRepository> _userRepo = new();
     private readonly Mock<IClassRepository> _classRepo = new();
     private readonly Mock<IBookingRepository> _bookingRepo = new();
+    private readonly Mock<IAttendanceRepository> _attendanceRepo = new();
     private readonly Mock<ICreditTransactionRepository> _creditTxRepo = new();
     private readonly Mock<IAuditService> _auditService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     public CreateBookingCommandTests()
     {
-        // Setup padrão dos mocks de infraestrutura para não quebrar os testes
         _unitOfWork.Setup(u => u.BeginTransactionAsync(default)).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.CommitAsync(default)).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.RollbackAsync(default)).Returns(Task.CompletedTask);
@@ -33,11 +33,14 @@ public class CreateBookingCommandTests
             .Returns(Task.CompletedTask);
         _creditTxRepo.Setup(r => r.AddAsync(It.IsAny<CreditTransaction>(), default)).Returns(Task.CompletedTask);
         _creditTxRepo.Setup(r => r.SaveAsync(default)).Returns(Task.CompletedTask);
+        _attendanceRepo.Setup(r => r.AddAsync(It.IsAny<AttendanceRecord>(), default)).Returns(Task.CompletedTask);
+        _attendanceRepo.Setup(r => r.SaveAsync(default)).Returns(Task.CompletedTask);
     }
 
     private CreateBookingCommandHandler CreateHandler() =>
         new(_userRepo.Object, _classRepo.Object, _bookingRepo.Object,
-            _creditTxRepo.Object, _auditService.Object, _unitOfWork.Object);
+            _attendanceRepo.Object, _creditTxRepo.Object,
+            _auditService.Object, _unitOfWork.Object);
 
     private static User CreateStudent(int credits = 5)
     {

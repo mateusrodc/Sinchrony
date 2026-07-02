@@ -39,4 +39,9 @@ public class AttendanceRepository(ApplicationDbContext db) : IAttendanceReposito
         .Include(r => r.Booking)
         .OrderByDescending(r => r.CreatedAt)
         .ToListAsync(ct);
+
+    public async Task<AttendanceRecord?> GetByBookingAsync(
+    Guid bookingId, CancellationToken ct = default)
+    => await db.AttendanceRecords
+        .FirstOrDefaultAsync(a => a.BookingId == bookingId, ct);
 }

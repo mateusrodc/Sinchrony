@@ -10,4 +10,6 @@ public interface IAttendanceRepository
     Task AddAsync(AttendanceRecord record, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
     Task<IEnumerable<AttendanceRecord>> ListAllAsync(CancellationToken ct = default);
+    Task<AttendanceRecord?> GetByBookingAsync(
+    Guid bookingId, CancellationToken ct = default);
 }

@@ -30,6 +30,22 @@ public class AttendanceRecord
         ConfirmedAt = DateTime.UtcNow;
     }
 
+    public void UpdateStatus(string status, Guid? confirmedById = null)
+    {
+        Status = status switch
+        {
+            "attended" => BookingStatus.attended,
+            "no_show" => BookingStatus.no_show,
+            _ => BookingStatus.confirmed
+        };
+
+        if (Status == BookingStatus.attended)
+        {
+            ConfirmedById = confirmedById;
+            ConfirmedAt = DateTime.UtcNow;
+        }
+    }
+
     public void MarkNoShow() => Status = BookingStatus.no_show;
     public void MarkConfirmed() => Status = BookingStatus.confirmed;
 }

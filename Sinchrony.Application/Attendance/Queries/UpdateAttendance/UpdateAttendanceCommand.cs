@@ -1,40 +1,37 @@
 ﻿using MediatR;
-using Sinchrony.Domain.Enums;
+using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 
-namespace Sinchrony.Application.Attendance.Commands.UpdateAttendance;
+namespace Sinchrony.Application.Classes.Commands.UpdateAttendance;
 
-public record UpdateAttendanceCommand(Guid ClassId, Guid StudentId, string Status) : IRequest;
+public record UpdateAttendanceCommand(
+    Guid ClassId, Guid StudentId, string Status, Guid? ConfirmedById = null)
+    : IRequest;
 
 public class UpdateAttendanceCommandHandler(
     IAttendanceRepository attendanceRepository,
-    IBookingRepository bookingRepository)
-    : IRequestHandler<UpdateAttendanceCommand>
+    IBookingRepository bookingRepository,
+    IClassRepository classRepository) : IRequestHandler<UpdateAttendanceCommand>
 {
     public async Task Handle(UpdateAttendanceCommand request, CancellationToken ct)
     {
-        var record = await attendanceRepository.GetByClassAndStudentAsync(request.ClassId, request.StudentId, ct)
-            ?? throw DomainException.NotFound("Attendance record not found.");
+        _ = await classRepository.GetByIdAsync(request.ClassId, ct)
+            ?? throw DomainException.NotFound("Class not found.");
 
-        switch (request.Status)
+        var booking = await bookingRepository.GetByClassAndStudentAsync(
+            request.ClassId, request.StudentId, ct)
+            ?? throw DomainException.NotFound("No confirmed booking for this student in this class.");
+
+        var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
+
+        if (attendance is null)
         {
-            case "attended":
-                record.Confirm(record.StudentId);
-                var booking = await bookingRepository.GetByIdAsync(record.BookingId, ct);
-                booking?.MarkAttended();
-                await bookingRepository.SaveAsync(ct);
-                break;
-            case "no_show":
-                record.MarkNoShow();
-                break;
-            case "confirmed":
-                record.MarkConfirmed();
-                break;
-            default:
-                throw DomainException.Validation("INVALID_STATUS", "Invalid attendance status.");
+            attendance = AttendanceRecord.Create(booking.Id, request.ClassId, request.StudentId);
+            await attendanceRepository.AddAsync(attendance, ct);
         }
 
+        attendance.UpdateStatus(request.Status, request.ConfirmedById);
         await attendanceRepository.SaveAsync(ct);
     }
 }
