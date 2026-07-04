@@ -20,5 +20,8 @@ public class AttendanceRecordConfiguration : IEntityTypeConfiguration<Attendance
 
         builder.HasOne(a => a.ConfirmedBy).WithMany()
             .HasForeignKey(a => a.ConfirmedById).OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(a => a.Booking).WithMany()
+            .HasForeignKey(a => a.BookingId).OnDelete(DeleteBehavior.Restrict);
     }
 }

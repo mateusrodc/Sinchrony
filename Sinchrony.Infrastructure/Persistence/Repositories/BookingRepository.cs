@@ -131,7 +131,7 @@ public class BookingRepository(ApplicationDbContext db) : IBookingRepository
         .FirstOrDefaultAsync(b =>
             b.ClassId == classId &&
             b.StudentId == studentId &&
-            b.Status == BookingStatus.confirmed, ct);
+            b.Status != BookingStatus.cancelled, ct);
 
     public async Task<IEnumerable<Booking>> ListByClassAsync(
         Guid classId, CancellationToken ct = default)
