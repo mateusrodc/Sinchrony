@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Logging;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -11,16 +12,25 @@ public class ForgotPasswordCommandHandler(
     IUserRepository userRepository,
     IPasswordResetTokenRepository tokenRepository,
     IEmailService emailService,
-    IAppSettings appSettings) : IRequestHandler<ForgotPasswordCommand>
+    IAppSettings appSettings,
+    ILogger<ForgotPasswordCommandHandler> logger) : IRequestHandler<ForgotPasswordCommand>
 {
     public async Task Handle(ForgotPasswordCommand request, CancellationToken ct)
     {
         var user = await userRepository.GetByEmailAsync(request.Email, ct);
-        if (user is null) return;
+
+        // Anti-enumeração — retorna imediatamente se não existir
+        if (user is null)
+        {
+            logger.LogInformation("ForgotPassword: email not found {Email}", request.Email);
+            return;
+        }
 
         var resetToken = PasswordResetToken.Create(user.Id, expiryMinutes: 60);
         await tokenRepository.AddAsync(resetToken, ct);
         await tokenRepository.SaveAsync(ct);
+
+        logger.LogInformation("ForgotPassword: token created for {Email}", request.Email);
 
         var resetLink = $"{appSettings.ErpUrl}/reset-password?token={resetToken.Token}";
 
@@ -35,6 +45,22 @@ public class ForgotPasswordCommandHandler(
             <small>4Sinchrony Experience</small>
             """;
 
-        await emailService.SendAsync(user.Email, "Redefinição de Senha — 4Sinchrony", body, ct);
+        // Dispara em background — não bloqueia a response HTTP
+        var emailTo = user.Email;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await emailService.SendAsync(
+                    emailTo,
+                    "Redefinição de Senha — 4Sinchrony",
+                    body,
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Background email sending failed for {Email}", emailTo);
+            }
+        });
     }
 }

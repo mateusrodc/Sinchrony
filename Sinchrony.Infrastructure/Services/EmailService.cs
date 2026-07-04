@@ -2,6 +2,7 @@
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using MimeKit;
+using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 
@@ -13,13 +14,29 @@ public class EmailService(
 {
     public async Task SendAsync(string to, string subject, string body, CancellationToken ct = default)
     {
-        var settings = await settingsRepository.GetAsync(ct);
+        Settings? settings = null;
+
+        try
+        {
+            settings = await settingsRepository.GetAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Email not sent: failed to load settings.");
+            return;
+        }
 
         if (settings is null || string.IsNullOrEmpty(settings.SmtpHost))
         {
-            logger.LogWarning("Email not sent: SMTP not configured.");
+            logger.LogWarning("Email not sent: SMTP not configured (SmtpHost is empty).");
             return;
         }
+
+        logger.LogInformation("Sending email to {To} via {Host}:{Port}", to, settings.SmtpHost, settings.SmtpPort);
+
+        // Timeout de 10 segundos — não deixa travar a request
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
 
         try
         {
@@ -31,21 +48,28 @@ public class EmailService(
             message.Body = new TextPart("html") { Text = body };
 
             using var client = new SmtpClient();
+            client.Timeout = 8000; // 8s no nível do MailKit também
 
             var secureOption = settings.SmtpSecure
                 ? SecureSocketOptions.SslOnConnect
-                : SecureSocketOptions.StartTls;
+                : SecureSocketOptions.StartTlsWhenAvailable;
 
-            await client.ConnectAsync(settings.SmtpHost, settings.SmtpPort, secureOption, ct);
-            await client.AuthenticateAsync(settings.SmtpUser, settings.SmtpPassword, ct);
-            await client.SendAsync(message, ct);
-            await client.DisconnectAsync(true, ct);
+            await client.ConnectAsync(settings.SmtpHost, settings.SmtpPort, secureOption, cts.Token);
+            await client.AuthenticateAsync(settings.SmtpUser, settings.SmtpPassword, cts.Token);
+            await client.SendAsync(message, cts.Token);
+            await client.DisconnectAsync(true, cts.Token);
 
-            logger.LogInformation("Email sent to {To}: {Subject}", to, subject);
+            logger.LogInformation("Email sent successfully to {To}: {Subject}", to, subject);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogError("Email to {To} timed out after 10s. Check SMTP config: {Host}:{Port}",
+                to, settings.SmtpHost, settings.SmtpPort);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to send email to {To}", to);
+            logger.LogError(ex, "Failed to send email to {To} via {Host}:{Port}",
+                to, settings.SmtpHost, settings.SmtpPort);
         }
     }
 }
