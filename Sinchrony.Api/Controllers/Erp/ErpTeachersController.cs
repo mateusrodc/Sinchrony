@@ -51,8 +51,10 @@ public class ErpTeachersController(
             throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
 
         var hash = passwordService.HashPassword(req.password);
-        var teacher = Sinchrony.Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.teacher,
+        var teacher = Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.teacher,
             string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
+
+        teacher.UpdateSpecialties(req.specialties);
 
         await userRepository.AddAsync(teacher, ct);
         await userRepository.SaveAsync(ct);
@@ -63,12 +65,21 @@ public class ErpTeachersController(
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTeacherRequest req, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct)
-        ?? throw DomainException.NotFound("Teacher not found.");
+            ?? throw DomainException.NotFound("Teacher not found.");
 
         teacher.UpdateProfile(req.name, req.email, req.phone, teacher.Avatar);
 
+        if (!string.IsNullOrEmpty(req.cpf))
+        {
+            if (!CpfValidator.IsValid(req.cpf))
+                throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
+            teacher.UpdateCpf(req.cpf);
+        }
+
         if (req.active == false) teacher.Deactivate();
         else if (req.active == true) teacher.Reactivate();
+
+        teacher.UpdateSpecialties(req.specialties);
 
         await userRepository.SaveAsync(ct);
         return Ok(MapTeacher(teacher));
@@ -121,7 +132,9 @@ public class ErpTeachersController(
         phone = u.Phone,
         active = u.Active,
         avatar = u.Avatar,
-        specialties = new List<string>()
+        specialties = string.IsNullOrEmpty(u.Specialties)
+        ? new List<string>()
+        : System.Text.Json.JsonSerializer.Deserialize<List<string>>(u.Specialties)
     };
 }
 

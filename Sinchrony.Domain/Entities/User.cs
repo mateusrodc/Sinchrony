@@ -20,6 +20,7 @@ public class User
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
     public string? Cpf { get; private set; }
     public string? GoogleId { get; private set; }
+    public string? Specialties { get; private set; }
 
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
     public ICollection<Booking> Bookings { get; private set; } = [];
@@ -110,6 +111,13 @@ public class User
     public void UpdateCpf(string? cpf)
     {
         Cpf = string.IsNullOrEmpty(cpf) ? null : cpf.Replace(".", "").Replace("-", "").Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+    public void UpdateSpecialties(List<string>? specialties)
+    {
+        Specialties = specialties is null || !specialties.Any()
+            ? null
+            : System.Text.Json.JsonSerializer.Serialize(specialties);
         UpdatedAt = DateTime.UtcNow;
     }
 }
