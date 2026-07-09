@@ -11,5 +11,6 @@ public class ClassTypeConfiguration : IEntityTypeConfiguration<ClassType>
         builder.ToTable("class_types");
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Name).IsRequired().HasMaxLength(100);
+        builder.Property(c => c.UsesBikes).IsRequired().HasMaxLength(100);
     }
 }

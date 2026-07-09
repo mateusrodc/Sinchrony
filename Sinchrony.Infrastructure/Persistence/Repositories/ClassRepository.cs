@@ -44,17 +44,17 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
             .ToListAsync(ct);
     }
 
-    public async Task<IEnumerable<Class>> ListByTeacherAsync(Guid teacherId, DateOnly? date, CancellationToken ct = default)
-    {
-        var query = db.Classes
-            .Include(c => c.ClassType)
-            .Include(c => c.Studio)
-            .Include(c => c.Bookings.Where(b => b.Status != BookingStatus.cancelled))
-            .Where(c => c.TeacherId == teacherId);
-
-        if (date.HasValue) query = query.Where(c => c.Date == date.Value);
-        return await query.OrderBy(c => c.Date).ThenBy(c => c.StartTime).ToListAsync(ct);
-    }
+    public async Task<IEnumerable<Class>> ListByTeacherAsync(
+    Guid teacherId, DateOnly? date, CancellationToken ct = default)
+    => await db.Classes
+        .Include(c => c.ClassType)
+        .Include(c => c.Teacher)
+        .Include(c => c.Studio)
+        .Include(c => c.Bookings.Where(b => b.Status != BookingStatus.cancelled))
+        .Where(c => c.TeacherId == teacherId &&
+            (!date.HasValue || c.Date == date.Value))
+        .OrderBy(c => c.Date).ThenBy(c => c.StartTime)
+        .ToListAsync(ct);
 
     public async Task<int> CountActiveBookingsAsync(Guid classId, CancellationToken ct = default)
         => await db.Bookings.CountAsync(b => b.ClassId == classId && b.Status != BookingStatus.cancelled, ct);

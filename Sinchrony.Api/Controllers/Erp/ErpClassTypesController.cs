@@ -34,23 +34,35 @@ public class ErpClassTypesController(IClassTypeRepository classTypeRepository) :
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] ClassTypeRequest req, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CreateClassTypeRequest req, CancellationToken ct)
     {
-        var type = ClassType.Create(req.name);
-        await classTypeRepository.AddAsync(type, ct);
+        var classType = ClassType.Create(req.name);
+        classType.Update(req.name, req.active, req.usesBikes);
+        await classTypeRepository.AddAsync(classType, ct);
         await classTypeRepository.SaveAsync(ct);
-        return StatusCode(201, new { id = type.Id, name = type.Name, active = type.Active });
+        return StatusCode(201, MapClassType(classType));
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] ClassTypeRequest req, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateClassTypeRequest req, CancellationToken ct)
     {
-        var type = await classTypeRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Class type not found.");
-        type.Update(req.name, req.active ?? type.Active);
+        var classType = await classTypeRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("ClassType not found.");
+
+        classType.Update(req.name, req.active, req.usesBikes);
         await classTypeRepository.SaveAsync(ct);
-        return Ok(new { id = type.Id, name = type.Name, active = type.Active });
+        return Ok(MapClassType(classType));
     }
+    private static object MapClassType(ClassType ct) => new
+    {
+        id = ct.Id,
+        name = ct.Name,
+        active = ct.Active,
+        usesBikes = ct.UsesBikes  // <-- novo campo
+    };
+
+    public record CreateClassTypeRequest(string name, bool active = true, bool usesBikes = false);
+    public record UpdateClassTypeRequest(string name, bool active, bool usesBikes = false);
 }
 
 public record ClassTypeRequest(string name, bool? active);

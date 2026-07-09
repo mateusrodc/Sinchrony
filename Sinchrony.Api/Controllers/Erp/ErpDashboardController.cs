@@ -13,7 +13,8 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpDashboardController(
     IUserRepository userRepository,
     IClassRepository classRepository,
-    IStudioRepository studioRepository) : ControllerBase
+    IStudioRepository studioRepository,
+    IBookingRepository bookingRepository) : ControllerBase
 {
     [HttpGet("admin/dashboard")]
     [HttpGet("api/dashboard")]
@@ -26,7 +27,27 @@ public class ErpDashboardController(
         var teachers = await userRepository.ListTeachersAsync(null, ct);
         var studios = await studioRepository.ListAsync(ct);
         var classes = await classRepository.ListAsync(null, null, null, ct);
-        var monthClasses = classes.Where(c => c.Date.Month == now.Month && c.Date.Year == now.Year).ToList();
+        var monthClasses = classes
+            .Where(c => c.Date.Month == now.Month && c.Date.Year == now.Year)
+            .ToList();
+
+        // Calcula occupancyRate real
+        var occupancyRate = 0.0;
+        if (monthClasses.Count > 0)
+        {
+            var totalSpots = monthClasses.Sum(c => c.TotalSpots);
+            if (totalSpots > 0)
+            {
+                var bookings = await bookingRepository.ListErpAsync(null, null, null, ct);
+                var monthBookings = bookings.Count(b =>
+                    b.Class != null &&
+                    b.Class.Date.Month == now.Month &&
+                    b.Class.Date.Year == now.Year &&
+                    b.Status == BookingStatus.confirmed);
+
+                occupancyRate = Math.Round((double)monthBookings / totalSpots * 100, 1);
+            }
+        }
 
         return Ok(new
         {
@@ -36,7 +57,7 @@ public class ErpDashboardController(
             totalClassesThisMonth = monthClasses.Count,
             revenueThisMonth = 0,
             activeSubscriptions = students.Count(s => s.Status == StudentStatus.active),
-            occupancyRate = 74,
+            occupancyRate,
             recentActivities = new List<object>(),
             monthlyRevenue = new List<object>()
         });

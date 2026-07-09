@@ -13,6 +13,7 @@ public record ClassDto(
     Guid Id,
     string Name,
     string Type,
+    bool UsesBikes,
     Guid ClassTypeId,
     string Instructor,
     string? InstructorAvatar,
@@ -53,6 +54,7 @@ public class ListClassesQueryHandler(IClassRepository classRepository)
         return new ClassDto(
             c.Id, c.Name,
             c.ClassType?.Name ?? string.Empty,
+            c.ClassType?.UsesBikes ?? false,
             c.ClassTypeId,
             c.Teacher?.Name ?? string.Empty,
             c.Teacher?.Avatar,
