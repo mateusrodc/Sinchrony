@@ -1539,17 +1539,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClassTypeRequest"
+                "$ref": "#/components/schemas/CreateClassTypeRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClassTypeRequest"
+                "$ref": "#/components/schemas/CreateClassTypeRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/ClassTypeRequest"
+                "$ref": "#/components/schemas/CreateClassTypeRequest"
               }
             }
           }
@@ -1608,17 +1608,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClassTypeRequest"
+                "$ref": "#/components/schemas/UpdateClassTypeRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClassTypeRequest"
+                "$ref": "#/components/schemas/UpdateClassTypeRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/ClassTypeRequest"
+                "$ref": "#/components/schemas/UpdateClassTypeRequest"
               }
             }
           }
@@ -3146,20 +3146,6 @@
         },
         "additionalProperties": false
       },
-      "ClassTypeRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "active": {
-            "type": "boolean",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "CreateBikeRequest": {
         "type": "object",
         "properties": {
@@ -3231,6 +3217,22 @@
           "status": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateClassTypeRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "usesBikes": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -3587,6 +3589,22 @@
           "status": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateClassTypeRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "usesBikes": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false

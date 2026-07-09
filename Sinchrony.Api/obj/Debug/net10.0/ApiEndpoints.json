@@ -324,7 +324,7 @@
     "Parameters": [
       {
         "Name": "req",
-        "Type": "Sinchrony.Api.Controllers.Erp.ClassTypeRequest",
+        "Type": "Sinchrony.Api.Controllers.Erp.ErpClassTypesController\u002BCreateClassTypeRequest",
         "IsRequired": true
       }
     ],
@@ -369,7 +369,7 @@
       },
       {
         "Name": "req",
-        "Type": "Sinchrony.Api.Controllers.Erp.ClassTypeRequest",
+        "Type": "Sinchrony.Api.Controllers.Erp.ErpClassTypesController\u002BUpdateClassTypeRequest",
         "IsRequired": true
       }
     ],

@@ -15,7 +15,6 @@ public class EmailService(
     public async Task SendAsync(string to, string subject, string body, CancellationToken ct = default)
     {
         Settings? settings = null;
-
         try
         {
             settings = await settingsRepository.GetAsync(ct);
@@ -26,15 +25,22 @@ public class EmailService(
             return;
         }
 
+        await SendWithSettingsAsync(to, subject, body, settings, ct);
+    }
+
+    public async Task SendWithSettingsAsync(
+        string to, string subject, string body,
+        Settings? settings, CancellationToken ct = default)
+    {
         if (settings is null || string.IsNullOrEmpty(settings.SmtpHost))
         {
             logger.LogWarning("Email not sent: SMTP not configured (SmtpHost is empty).");
             return;
         }
 
-        logger.LogInformation("Sending email to {To} via {Host}:{Port}", to, settings.SmtpHost, settings.SmtpPort);
+        logger.LogInformation("Sending email to {To} via {Host}:{Port}",
+            to, settings.SmtpHost, settings.SmtpPort);
 
-        // Timeout de 10 segundos — não deixa travar a request
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(10));
 
@@ -42,13 +48,15 @@ public class EmailService(
         {
             var message = new MimeMessage();
             message.From.Add(MailboxAddress.Parse(
-                string.IsNullOrEmpty(settings.SmtpFrom) ? settings.SmtpUser : settings.SmtpFrom));
+                string.IsNullOrEmpty(settings.SmtpFrom)
+                    ? settings.SmtpUser
+                    : settings.SmtpFrom));
             message.To.Add(MailboxAddress.Parse(to));
             message.Subject = subject;
             message.Body = new TextPart("html") { Text = body };
 
             using var client = new SmtpClient();
-            client.Timeout = 8000; // 8s no nível do MailKit também
+            client.Timeout = 8000;
 
             var secureOption = settings.SmtpSecure
                 ? SecureSocketOptions.SslOnConnect
@@ -63,7 +71,7 @@ public class EmailService(
         }
         catch (OperationCanceledException)
         {
-            logger.LogError("Email to {To} timed out after 10s. Check SMTP config: {Host}:{Port}",
+            logger.LogError("Email to {To} timed out after 10s. Check SMTP: {Host}:{Port}",
                 to, settings.SmtpHost, settings.SmtpPort);
         }
         catch (Exception ex)
