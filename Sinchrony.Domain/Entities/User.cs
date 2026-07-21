@@ -22,6 +22,14 @@ public class User
     public string? GoogleId { get; private set; }
     public string? Specialties { get; private set; }
 
+    public string? Cep { get; private set; }
+    public string? Logradouro { get; private set; }
+    public string? Numero { get; private set; }
+    public string? Complemento { get; private set; }
+    public string? Bairro { get; private set; }
+    public string? Cidade { get; private set; }
+    public string? Estado { get; private set; }
+
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
     public ICollection<Booking> Bookings { get; private set; } = [];
     public ICollection<Purchase> Purchases { get; private set; } = [];
@@ -50,6 +58,20 @@ public class User
         Email = email.ToLower();
         Phone = phone;
         Avatar = avatar;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateAddress(
+    string? cep, string? logradouro, string? numero,
+    string? complemento, string? bairro, string? cidade, string? estado)
+    {
+        Cep = string.IsNullOrEmpty(cep) ? null : cep.Replace("-", "").Trim();
+        Logradouro = logradouro;
+        Numero = numero;
+        Complemento = complemento;
+        Bairro = bairro;
+        Cidade = cidade;
+        Estado = estado;
         UpdatedAt = DateTime.UtcNow;
     }
 

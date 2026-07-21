@@ -34,8 +34,11 @@ public class CardsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Add([FromBody] AddCardRequest req, CancellationToken ct)
     {
         var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
         var result = await mediator.Send(
-            new AddCardCommand(UserId, req.number, req.holderName, req.expiryDate, req.cvv, req.cpf ?? "", req.nickname, remoteIp), ct);
+            new AddCardCommand(UserId, req.number, req.holderName,
+                req.expiryDate, req.cvv, req.cpf ?? "",
+                req.nickname, remoteIp), ct);
         return StatusCode(201, result);
     }
 
@@ -54,4 +57,7 @@ public class CardsController(IMediator mediator) : ControllerBase
     }
 }
 
-public record AddCardRequest(string number, string holderName, string expiryDate, string cvv, string? cpf, string? nickname);
+public record AddCardRequest(
+    string number, string holderName,
+    string expiryDate, string cvv,
+    string? cpf, string? nickname);

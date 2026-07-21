@@ -8,7 +8,8 @@ namespace Sinchrony.Application.Profile.Commands.UpdateProfile;
 
 public record UpdateProfileCommand(
     Guid UserId, string Name, string Email,
-    string? Phone, string? Avatar, string? Cpf)
+    string? Phone, string? Avatar, string? Cpf, string? Cep, string? Logradouro, string? Numero,
+    string? Complemento, string? Bairro, string? Cidade, string? Estado)
     : IRequest<UserDto>;
 
 public class UpdateProfileCommandHandler(IUserRepository userRepository)
@@ -18,6 +19,9 @@ public class UpdateProfileCommandHandler(IUserRepository userRepository)
     {
         var user = await userRepository.GetByIdAsync(request.UserId, ct)
             ?? throw DomainException.NotFound("User not found.");
+
+        user.UpdateAddress(request.Cep, request.Logradouro, request.Numero,
+    request.Complemento, request.Bairro, request.Cidade, request.Estado);
 
         var emailInUse = await userRepository.GetByEmailAsync(request.Email, ct);
         if (emailInUse is not null && emailInUse.Id != request.UserId)
@@ -32,6 +36,8 @@ public class UpdateProfileCommandHandler(IUserRepository userRepository)
         await userRepository.SaveAsync(ct);
 
         return new UserDto(user.Id, user.Name, user.Email,
-            user.Role.ToString(), user.Credits, user.Phone, user.Avatar, user.Cpf);
+    user.Role.ToString(), user.Credits, user.Phone, user.Avatar, user.Cpf,
+    user.Cep, user.Logradouro, user.Numero,
+    user.Complemento, user.Bairro, user.Cidade, user.Estado);
     }
 }

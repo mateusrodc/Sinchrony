@@ -22,6 +22,9 @@ public class RegisterCommandHandler(
         var hash = passwordService.HashPassword(request.Password);
         var user = User.Create(request.Name, request.Email, request.Phone, hash, Role.student, request.Cpf);
 
+        user.UpdateAddress(request.cep, request.logradouro, request.numero,
+    request.complemento, request.bairro, request.cidade, request.estado);
+
         await userRepository.AddAsync(user, ct);
         await userRepository.SaveAsync(ct);
 

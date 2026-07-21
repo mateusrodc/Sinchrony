@@ -1,8 +1,9 @@
-﻿using System.Net.Http.Json;
-using System.Text.Json;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Services;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Sinchrony.Infrastructure.Services;
 
@@ -149,7 +150,9 @@ public class AsaasService(
     public async Task<CardTokenizationResult> TokenizeCardAsync(
     string number, string holderName, string expiryDate,
     string cvv, string customerId, string cpf,
-    string remoteIp = "127.0.0.1", CancellationToken ct = default)
+    string remoteIp, string postalCode, string addressNumber,
+    string? addressComplement, string? email, string? phone,
+    CancellationToken ct = default)
     {
         var parts = expiryDate.Split('/');
         if (parts.Length != 2)
@@ -158,6 +161,8 @@ public class AsaasService(
         var cpfLimpo = string.IsNullOrEmpty(cpf)
             ? "00000000000"
             : cpf.Replace(".", "").Replace("-", "").Replace("/", "").Trim();
+
+        var cepLimpo = postalCode.Replace("-", "").Trim();
 
         var body = new
         {
@@ -173,16 +178,16 @@ public class AsaasService(
             creditCardHolderInfo = new
             {
                 name = holderName,
-                email = "noreply@sinchrony.com",
+                email = email ?? "noreply@sinchrony.com",
                 cpfCnpj = cpfLimpo,
-                postalCode = "00000000",
-                addressNumber = "0",
-                phone = "00000000000"
+                postalCode = cepLimpo,
+                addressNumber,
+                addressComplement,
+                phone = phone ?? "11999999999"
             },
             remoteIp
         };
 
-        // CORRETO: creditCard (singular)
         var resp = await httpClient.PostAsJsonAsync(
             $"{BaseUrl}/creditCard/tokenizeCreditCard", body, ct);
         var content = await resp.Content.ReadAsStringAsync(ct);
@@ -191,7 +196,14 @@ public class AsaasService(
         {
             logger.LogError("Asaas: failed to tokenize card. Status: {Status}, Body: {Body}",
                 resp.StatusCode, content);
-            throw new InvalidOperationException($"Asaas card tokenization failed: {content}");
+
+            // Trata erro do Asaas como 422, não 500
+            var errorBody = JsonSerializer.Deserialize<JsonElement>(content);
+            var description = errorBody.TryGetProperty("errors", out var errors) && errors.GetArrayLength() > 0
+                ? errors[0].GetProperty("description").GetString()
+                : "Erro ao tokenizar cartão.";
+
+            throw DomainException.Validation("CARD_TOKENIZATION_ERROR", description!);
         }
 
         var result = JsonSerializer.Deserialize<JsonElement>(content);

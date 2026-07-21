@@ -79,6 +79,9 @@ public class ErpStudentsController(
         var student = Sinchrony.Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.student,
             string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
 
+        student.UpdateAddress(req.cep, req.logradouro, req.numero,
+    req.complemento, req.bairro, req.cidade, req.estado);
+
         await userRepository.AddAsync(student, ct);
         await userRepository.SaveAsync(ct);
         return StatusCode(201, MapStudent(student));
@@ -91,6 +94,8 @@ public class ErpStudentsController(
             ?? throw DomainException.NotFound("Student not found.");
 
         student.UpdateProfile(req.name, req.email, req.phone, student.Avatar);
+        student.UpdateAddress(req.cep, req.logradouro, req.numero,
+    req.complemento, req.bairro, req.cidade, req.estado);
 
         if (!string.IsNullOrEmpty(req.cpf))
         {
@@ -148,14 +153,26 @@ public class ErpStudentsController(
         avatar = u.Avatar,
         registeredAt = u.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
         lastVisit = (string?)null,
-        totalClasses = 0
+        totalClasses = 0,
+        cep = u.Cep,
+        logradouro = u.Logradouro,
+        numero = u.Numero,
+        complemento = u.Complemento,
+        bairro = u.Bairro,
+        cidade = u.Cidade,
+        estado = u.Estado
     };
 }
 
 public record CreateStudentRequest(
     string name, string email, string? phone,
-    string? plan, string? status, string? cpf);
+    string? plan, string? status, string? cpf,
+    string? cep, string? logradouro, string? numero,
+    string? complemento, string? bairro, string? cidade, string? estado);
 
 public record UpdateStudentRequest(
     string name, string email, string? phone,
-    string? status, string? plan, string? cpf);
+    string? status, string? plan, string? cpf,
+    string? cep, string? logradouro, string? numero,
+    string? complemento, string? bairro, string? cidade, string? estado);
+

@@ -21,6 +21,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Specialties).HasMaxLength(500);
 
+        builder.Property(u => u.Cep).HasMaxLength(8);
+        builder.Property(u => u.Logradouro).HasMaxLength(200);
+        builder.Property(u => u.Numero).HasMaxLength(20);
+        builder.Property(u => u.Complemento).HasMaxLength(100);
+        builder.Property(u => u.Bairro).HasMaxLength(100);
+        builder.Property(u => u.Cidade).HasMaxLength(100);
+        builder.Property(u => u.Estado).HasMaxLength(2);
+
         builder.Property(u => u.Cpf).HasMaxLength(11);
         builder.HasIndex(u => u.Cpf)
             .IsUnique()

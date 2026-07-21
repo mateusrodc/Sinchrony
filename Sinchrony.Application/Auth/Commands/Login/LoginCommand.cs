@@ -14,4 +14,6 @@ public record AuthResponseDto(
 
 public record UserDto(
     Guid Id, string Name, string Email, string Role,
-    int Credits, string? Phone, string? Avatar, string? Cpf);
+    int Credits, string? Phone, string? Avatar, string? Cpf,
+    string? Cep, string? Logradouro, string? Numero,
+    string? Complemento, string? Bairro, string? Cidade, string? Estado);
