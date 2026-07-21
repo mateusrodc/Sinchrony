@@ -134,8 +134,9 @@ public class BookingRepository(ApplicationDbContext db) : IBookingRepository
             b.Status != BookingStatus.cancelled, ct);
 
     public async Task<IEnumerable<Booking>> ListByClassAsync(
-        Guid classId, CancellationToken ct = default)
-        => await db.Bookings
-            .Where(b => b.ClassId == classId)
-            .ToListAsync(ct);
+    Guid classId, CancellationToken ct = default)
+    => await db.Bookings
+        .Include(b => b.Student)
+        .Where(b => b.ClassId == classId)
+        .ToListAsync(ct);
 }

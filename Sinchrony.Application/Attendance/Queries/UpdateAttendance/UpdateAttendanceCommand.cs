@@ -21,7 +21,7 @@ public class UpdateAttendanceCommandHandler(
 
         var booking = await bookingRepository.GetByClassAndStudentAsync(
             request.ClassId, request.StudentId, ct)
-            ?? throw DomainException.NotFound("No confirmed booking for this student in this class.");
+            ?? throw DomainException.NotFound("No booking found for this student in this class.");
 
         var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
 
@@ -32,6 +32,14 @@ public class UpdateAttendanceCommandHandler(
         }
 
         attendance.UpdateStatus(request.Status, request.ConfirmedById);
+
+        // Sincroniza Booking.CheckedIn com o status do attendance
+        if (request.Status == "attended")
+            booking.SetCheckedIn(true);
+        else if (request.Status == "no_show" || request.Status == "pending")
+            booking.SetCheckedIn(false);
+
         await attendanceRepository.SaveAsync(ct);
+        await bookingRepository.SaveAsync(ct);
     }
 }

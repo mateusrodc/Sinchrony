@@ -17,7 +17,8 @@ public record SessionDto(
 public class StartSessionCommandHandler(
     IClassRepository classRepository,
     ISessionRepository sessionRepository,
-    IBookingRepository bookingRepository)
+    IBookingRepository bookingRepository,
+    IAttendanceRepository attendanceRepository) // <-- adicionado
     : IRequestHandler<StartSessionCommand, SessionDto>
 {
     public async Task<SessionDto> Handle(StartSessionCommand request, CancellationToken ct)
@@ -36,9 +37,24 @@ public class StartSessionCommandHandler(
         await sessionRepository.AddAsync(session, ct);
         await classRepository.SaveAsync(ct);
 
-        var enrolled = await bookingRepository.ListErpAsync(request.ClassId, null, null, ct);
-        var activeCount = enrolled.Count(b => b.Status != BookingStatus.cancelled);
-        var attendedCount = enrolled.Count(b => b.Status == BookingStatus.attended);
+        // Cria attendance para todos os alunos com reserva confirmada
+        var enrolled = await bookingRepository.ListByClassAsync(request.ClassId, ct);
+        var confirmed = enrolled.Where(b => b.Status == BookingStatus.confirmed).ToList();
+
+        foreach (var booking in confirmed)
+        {
+            var existing = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
+            if (existing is null)
+            {
+                var attendance = AttendanceRecord.Create(booking.Id, request.ClassId, booking.StudentId);
+                await attendanceRepository.AddAsync(attendance, ct);
+            }
+        }
+
+        await attendanceRepository.SaveAsync(ct);
+
+        var activeCount = confirmed.Count;
+        var attendedCount = 0; // Sessão acabou de iniciar, ninguém confirmado ainda
 
         return new SessionDto(session.Id, session.ClassId, session.Status.ToString(),
             session.StartedAt, session.Duration, activeCount, attendedCount);
