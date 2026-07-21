@@ -9,5 +9,5 @@ public interface IAsaasService
     Task<string> GetOrCreateCustomerAsync(string name, string email, string? cpf = null, CancellationToken ct = default);
     Task<PixPaymentResult> CreatePixChargeAsync(string customerId, decimal amount, string description, CancellationToken ct = default);
     Task<CardPaymentResult> ChargeCardAsync(string customerId, string cardToken, decimal amount, string description, CancellationToken ct = default);
-    Task<CardTokenizationResult> TokenizeCardAsync(string number, string holderName, string expiryDate, string cvv, string customerId, string cpf,CancellationToken ct = default);
+    Task<CardTokenizationResult> TokenizeCardAsync(string number, string holderName, string expiryDate, string cvv, string customerId, string cpf, string remoteIp,CancellationToken ct = default);
 }

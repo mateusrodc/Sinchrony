@@ -147,14 +147,17 @@ public class AsaasService(
     }
 
     public async Task<CardTokenizationResult> TokenizeCardAsync(
-        string number, string holderName, string expiryDate,
-        string cvv, string customerId, string cpf, CancellationToken ct = default)
+    string number, string holderName, string expiryDate,
+    string cvv, string customerId, string cpf,
+    string remoteIp = "127.0.0.1", CancellationToken ct = default)
     {
         var parts = expiryDate.Split('/');
         if (parts.Length != 2)
             throw new ArgumentException("ExpiryDate must be in MM/YY format.");
 
-        var cpfLimpo = string.IsNullOrEmpty(cpf) ? "00000000000" : cpf.Replace(".", "").Replace("-", "").Replace("/", "").Trim();
+        var cpfLimpo = string.IsNullOrEmpty(cpf)
+            ? "00000000000"
+            : cpf.Replace(".", "").Replace("-", "").Replace("/", "").Trim();
 
         var body = new
         {
@@ -171,15 +174,17 @@ public class AsaasService(
             {
                 name = holderName,
                 email = "noreply@sinchrony.com",
-                // Campos mínimos exigidos pelo Asaas
-                cpfCnpj = cpfLimpo, // placeholder — idealmente pegar do usuário
+                cpfCnpj = cpfLimpo,
                 postalCode = "00000000",
                 addressNumber = "0",
                 phone = "00000000000"
-            }
+            },
+            remoteIp
         };
 
-        var resp = await httpClient.PostAsJsonAsync($"{BaseUrl}/creditCards/tokenizeCreditCard", body, ct);
+        // CORRETO: creditCard (singular)
+        var resp = await httpClient.PostAsJsonAsync(
+            $"{BaseUrl}/creditCard/tokenizeCreditCard", body, ct);
         var content = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)

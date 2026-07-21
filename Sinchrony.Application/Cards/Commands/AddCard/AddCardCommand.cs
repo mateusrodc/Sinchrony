@@ -9,7 +9,7 @@ namespace Sinchrony.Application.Cards.Commands.AddCard;
 
 public record AddCardCommand(
     Guid UserId, string Number, string HolderName,
-    string ExpiryDate, string Cvv, string Cpf, string? Nickname) : IRequest<CardDto>;
+    string ExpiryDate, string Cvv, string Cpf, string? Nickname, string RemoteIp = "127.0.0.1") : IRequest<CardDto>;
 
 public class AddCardCommandHandler(
     ICardRepository cardRepository,
@@ -25,7 +25,7 @@ public class AddCardCommandHandler(
         var customerId = await asaasService.GetOrCreateCustomerAsync(user.Name, user.Email, user.Cpf, ct: ct);
         var tokenResult = await asaasService.TokenizeCardAsync(
             request.Number, request.HolderName,
-            request.ExpiryDate, request.Cvv, customerId, user.Cpf ?? "00000000000", ct);
+            request.ExpiryDate, request.Cvv, customerId, user.Cpf ?? "00000000000", request.RemoteIp, ct);
 
         var duplicate = await cardRepository.ExistsByTokenAsync(request.UserId, tokenResult.Token, ct);
         if (duplicate)
