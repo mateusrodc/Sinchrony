@@ -45,7 +45,9 @@ public class ErpReportsController(
             a.Class != null &&
             a.Class.Date.Month == now.Month &&
             a.Class.Date.Year == now.Year &&
-            a.Status == BookingStatus.attended);
+            a.Status == BookingStatus.attended &&
+            a.Booking != null &&
+            a.Booking.Status == BookingStatus.confirmed);
 
         var totalSpots = monthClasses.Sum(c => c.TotalSpots);
         var occupancy = totalSpots > 0
@@ -53,7 +55,7 @@ public class ErpReportsController(
             : 0;
 
         var checkinRate = monthBookings.Count > 0
-            ? Math.Round((double)monthAttended * 100 / monthBookings.Count, 1)
+            ? Math.Min(100, Math.Round((double)monthAttended * 100 / monthBookings.Count, 1))
             : 0;
 
         return Ok(new
