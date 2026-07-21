@@ -34,9 +34,10 @@ public class AttendanceRepository(ApplicationDbContext db) : IAttendanceReposito
     public async Task<IEnumerable<AttendanceRecord>> ListAllAsync(CancellationToken ct = default)
     => await db.AttendanceRecords
         .Include(r => r.Student)
-        .Include(r => r.Class)
         .Include(r => r.ConfirmedBy)
         .Include(r => r.Booking)
+        .Include(r => r.Class)
+            .ThenInclude(c => c!.ClassType)
         .OrderByDescending(r => r.CreatedAt)
         .ToListAsync(ct);
 

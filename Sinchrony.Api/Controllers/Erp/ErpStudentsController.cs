@@ -76,11 +76,15 @@ public class ErpStudentsController(
             throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
 
         var hash = passwordService.HashPassword(Guid.NewGuid().ToString());
-        var student = Sinchrony.Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.student,
+        var student = Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.student,
             string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
 
+        // Fix: plan não estava sendo salvo
+        if (!string.IsNullOrEmpty(req.plan))
+            student.UpdatePlan(req.plan);
+
         student.UpdateAddress(req.cep, req.logradouro, req.numero,
-    req.complemento, req.bairro, req.cidade, req.estado);
+            req.complemento, req.bairro, req.cidade, req.estado);
 
         await userRepository.AddAsync(student, ct);
         await userRepository.SaveAsync(ct);
