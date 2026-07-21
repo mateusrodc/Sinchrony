@@ -179,7 +179,7 @@ public class AsaasService(
             }
         };
 
-        var resp = await httpClient.PostAsJsonAsync($"{BaseUrl}/creditCards/tokenize", body, ct);
+        var resp = await httpClient.PostAsJsonAsync($"{BaseUrl}/creditCards/tokenizeCreditCard", body, ct);
         var content = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)
