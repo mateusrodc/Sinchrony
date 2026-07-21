@@ -18,7 +18,11 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
         builder.Property(p => p.NoShowCreditPenalty).HasDefaultValue(true);
         builder.Property(p => p.NoShowBlockWindowDays).HasDefaultValue(30);
 
+        builder.Property(p => p.PackageTypeId).IsRequired(false);
+
         builder.HasOne(p => p.PackageType).WithMany(pt => pt.Packages)
-            .HasForeignKey(p => p.PackageTypeId).OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(p => p.PackageTypeId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
     }
 }

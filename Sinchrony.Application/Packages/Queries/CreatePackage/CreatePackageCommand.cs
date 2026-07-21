@@ -9,7 +9,7 @@ public record CreatePackageCommand(
     string Name, string? Description, int Credits,
     decimal Price, int ValidityDays, bool Popular,
     bool Active, int DisplayOrder,
-    Guid PackageTypeId,
+    Guid? PackageTypeId = null,
     string PurchaseStrategy = "block",
     int MaxDependents = 0) : IRequest<PackageDto>;
 

@@ -12,7 +12,7 @@ using Sinchrony.Infrastructure.Persistence;
 namespace Sinchrony.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260721233906_AddDynamicPlansAndDependents")]
+    [Migration("20260721235546_AddDynamicPlansAndDependents")]
     partial class AddDynamicPlansAndDependents
     {
         /// <inheritdoc />
@@ -642,7 +642,7 @@ namespace Sinchrony.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<Guid>("PackageTypeId")
+                    b.Property<Guid?>("PackageTypeId")
                         .HasColumnType("uuid");
 
                     b.Property<bool>("Popular")
@@ -1351,8 +1351,7 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.HasOne("Sinchrony.Domain.Entities.PackageType", "PackageType")
                         .WithMany("Packages")
                         .HasForeignKey("PackageTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("PackageType");
                 });

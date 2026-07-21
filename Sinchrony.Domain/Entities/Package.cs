@@ -15,7 +15,6 @@ public class Package
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
     // Campos novos — adicione à entidade existente
-    public Guid PackageTypeId { get; private set; }
     public int MaxDependents { get; private set; }
     public int? CreditsPerMember { get; private set; }
     public string PurchaseStrategy { get; private set; } = "block";
@@ -36,6 +35,7 @@ public class Package
     public int? MaxNoShowsBeforeBlock { get; private set; }
     public int NoShowBlockWindowDays { get; private set; } = 30;
 
+    public Guid? PackageTypeId { get; private set; }
     public PackageType? PackageType { get; private set; }
     public ICollection<PackageBenefit> PackageBenefits { get; private set; } = [];
 
@@ -46,7 +46,7 @@ public class Package
     public static Package Create(
     string name, string? description, int credits, decimal price,
     int validityDays, bool popular, bool active, int displayOrder,
-    Guid packageTypeId, string purchaseStrategy = "block",
+    Guid? packageTypeId = null, string purchaseStrategy = "block",
     int maxDependents = 0)
     {
         return new Package

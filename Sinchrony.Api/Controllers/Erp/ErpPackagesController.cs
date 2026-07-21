@@ -78,9 +78,9 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
 public record CreatePackageRequest(
     string name, string? description, int credits, decimal price,
     int validityDays, bool popular, bool active, int displayOrder,
-    Guid packageTypeId,
-    string? purchaseStrategy,
-    int? maxDependents);
+    Guid? packageTypeId = null,
+    string? purchaseStrategy = null,
+    int? maxDependents = null);
 
 public record UpdatePackageRequest(
     string name, string? description, int credits, decimal price,

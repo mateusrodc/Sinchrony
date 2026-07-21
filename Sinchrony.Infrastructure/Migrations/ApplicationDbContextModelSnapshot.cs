@@ -639,7 +639,7 @@ namespace Sinchrony.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<Guid>("PackageTypeId")
+                    b.Property<Guid?>("PackageTypeId")
                         .HasColumnType("uuid");
 
                     b.Property<bool>("Popular")
@@ -1348,8 +1348,7 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.HasOne("Sinchrony.Domain.Entities.PackageType", "PackageType")
                         .WithMany("Packages")
                         .HasForeignKey("PackageTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("PackageType");
                 });

@@ -3,13 +3,14 @@ using Sinchrony.Domain.Interfaces.Repositories;
 
 namespace Sinchrony.Application.Packages.Queries.ListPackages;
 
+public record BenefitDto(Guid Id, string Name, string? Description, string? Icon);
+
 public record PackageDto(
     Guid Id, string Name, string? Description,
     int Credits, decimal Price, decimal PricePerCredit,
     int ValidityDays, bool Popular, bool Active,
     int DisplayOrder, DateTime CreatedAt, DateTime UpdatedAt,
-    // Campos novos
-    Guid PackageTypeId, string? PackageTypeName, bool IsFamily,
+    Guid? PackageTypeId, string? PackageTypeName, bool IsFamily,
     string PurchaseStrategy, int MaxDependents, int? CreditsPerMember,
     int? MaxFutureBookings, int? MaxBookingsPerDay,
     int? MaxBookingsPerWeek, int? MaxBookingsPerMonth,
@@ -18,8 +19,6 @@ public record PackageDto(
     bool? ReschedulingAllowed, int? ReschedulingDeadlineHours,
     bool NoShowCreditPenalty, int? MaxNoShowsBeforeBlock, int NoShowBlockWindowDays,
     List<BenefitDto> Benefits);
-
-public record BenefitDto(Guid Id, string Name, string? Description, string? Icon);
 
 public record ListPackagesQuery(bool? ActiveOnly) : IRequest<IEnumerable<PackageDto>>;
 
