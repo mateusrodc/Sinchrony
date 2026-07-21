@@ -78,6 +78,69 @@
     ]
   },
   {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpBenefitsController",
+    "Method": "List",
+    "RelativePath": "api/benefits",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpBenefitsController",
+    "Method": "Create",
+    "RelativePath": "api/benefits",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.Erp.BenefitRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpBenefitsController",
+    "Method": "Get",
+    "RelativePath": "api/benefits/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpBenefitsController",
+    "Method": "Update",
+    "RelativePath": "api/benefits/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.Erp.BenefitRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpBikesController",
     "Method": "Update",
     "RelativePath": "api/bikes/{id}",
@@ -489,6 +552,69 @@
     ]
   },
   {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpPackageTypesController",
+    "Method": "List",
+    "RelativePath": "api/package-types",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpPackageTypesController",
+    "Method": "Create",
+    "RelativePath": "api/package-types",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.Erp.PackageTypeRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpPackageTypesController",
+    "Method": "Get",
+    "RelativePath": "api/package-types/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpPackageTypesController",
+    "Method": "Update",
+    "RelativePath": "api/package-types/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.Erp.PackageTypeRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpPackagesController",
     "Method": "List",
     "RelativePath": "api/packages",
@@ -823,6 +949,22 @@
         "StatusCode": 200
       }
     ]
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.App.StudentPackageController",
+    "Method": "ListByStudent",
+    "RelativePath": "api/students/{id}/packages",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
   },
   {
     "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpStudentsController",
@@ -2029,6 +2171,79 @@
         "StatusCode": 200
       }
     ]
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.App.DependentsController",
+    "Method": "List",
+    "RelativePath": "students/me/dependents",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.App.DependentsController",
+    "Method": "Create",
+    "RelativePath": "students/me/dependents",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.App.CreateDependentRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.App.DependentsController",
+    "Method": "Update",
+    "RelativePath": "students/me/dependents/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.App.UpdateDependentRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.App.DependentsController",
+    "Method": "Delete",
+    "RelativePath": "students/me/dependents/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.App.StudentPackageController",
+    "Method": "GetActive",
+    "RelativePath": "students/me/package",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
   },
   {
     "ContainingType": "Sinchrony.Api.Controllers.App.TeachersController",

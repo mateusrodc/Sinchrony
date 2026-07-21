@@ -24,6 +24,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<CreditTransaction> CreditTransactions => Set<CreditTransaction>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<PackageType> PackageTypes => Set<PackageType>();
+    public DbSet<Benefit> Benefits => Set<Benefit>();
+    public DbSet<PackageBenefit> PackageBenefits => Set<PackageBenefit>();
+    public DbSet<StudentPackage> StudentPackages => Set<StudentPackage>();
+    public DbSet<Dependent> Dependents => Set<Dependent>();
+    public DbSet<DependentPackageAllocation> DependentPackageAllocations => Set<DependentPackageAllocation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

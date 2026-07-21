@@ -916,6 +916,110 @@
         }
       }
     },
+    "/students/me/dependents": {
+      "get": {
+        "tags": [
+          "Dependents"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dependents"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDependentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDependentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDependentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/students/me/dependents/{id}": {
+      "put": {
+        "tags": [
+          "Dependents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDependentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDependentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDependentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Dependents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/auth/login": {
       "post": {
         "tags": [
@@ -997,6 +1101,110 @@
             "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/ErpChangePasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/benefits": {
+      "get": {
+        "tags": [
+          "ErpBenefits"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ErpBenefits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/benefits/{id}": {
+      "get": {
+        "tags": [
+          "ErpBenefits"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "ErpBenefits"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitRequest"
               }
             }
           }
@@ -1807,6 +2015,110 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/package-types": {
+      "get": {
+        "tags": [
+          "ErpPackageTypes"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ErpPackageTypes"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageTypeRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageTypeRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageTypeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/package-types/{id}": {
+      "get": {
+        "tags": [
+          "ErpPackageTypes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "ErpPackageTypes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageTypeRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageTypeRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageTypeRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -2911,6 +3223,41 @@
         }
       }
     },
+    "/students/me/package": {
+      "get": {
+        "tags": [
+          "StudentPackage"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/students/{id}/packages": {
+      "get": {
+        "tags": [
+          "StudentPackage"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/teachers/me/classes": {
       "get": {
         "tags": [
@@ -3079,6 +3426,28 @@
         },
         "additionalProperties": false
       },
+      "BenefitRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "BulkAttendanceItemRequest": {
         "type": "object",
         "properties": {
@@ -3237,6 +3606,24 @@
         },
         "additionalProperties": false
       },
+      "CreateDependentRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreatePackageRequest": {
         "type": "object",
         "properties": {
@@ -3269,6 +3656,19 @@
           "displayOrder": {
             "type": "integer",
             "format": "int32"
+          },
+          "packageTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purchaseStrategy": {
+            "type": "string",
+            "nullable": true
+          },
+          "maxDependents": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3424,6 +3824,86 @@
           },
           "password": {
             "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PackageTypeRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "isFamily": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "rank": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultMaxFutureBookings": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultMaxBookingsPerDay": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultMaxBookingsPerWeek": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultMaxBookingsPerMonth": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultCancellationDeadlineHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultBookingWindowDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultEarlyAccessHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultAllowWaitlist": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "defaultReschedulingAllowed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "defaultReschedulingDeadlineHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "defaultNoShowCreditPenalty": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "defaultMaxNoShowsBeforeBlock": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           }
         },
@@ -3665,6 +4145,40 @@
         },
         "additionalProperties": false
       },
+      "UpdateDependentRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "cpf": {
+            "type": "string",
+            "nullable": true
+          },
+          "canBook": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "canCancel": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "canViewHistory": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "UpdatePackageRequest": {
         "type": "object",
         "properties": {
@@ -3697,6 +4211,99 @@
           "displayOrder": {
             "type": "integer",
             "format": "int32"
+          },
+          "packageTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purchaseStrategy": {
+            "type": "string",
+            "nullable": true
+          },
+          "maxDependents": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "creditsPerMember": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxFutureBookings": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxBookingsPerDay": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxBookingsPerWeek": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxBookingsPerMonth": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cancellationDeadlineHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "bookingWindowDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "earlyAccessHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "allowWaitlist": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "waitlistPriority": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "reschedulingAllowed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "reschedulingDeadlineHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "noShowCreditPenalty": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "maxNoShowsBeforeBlock": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "noShowBlockWindowDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "benefitIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false

@@ -108,6 +108,36 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("Sinchrony.Domain.Entities.Benefit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("benefits", (string)null);
+                });
+
             modelBuilder.Entity("Sinchrony.Domain.Entities.Bike", b =>
                 {
                     b.Property<Guid>("Id")
@@ -158,6 +188,9 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.Property<Guid>("ClassId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("DependentId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -172,6 +205,8 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClassId");
+
+                    b.HasIndex("DependentId");
 
                     b.HasIndex("StudentId", "ClassId")
                         .IsUnique()
@@ -424,6 +459,76 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.ToTable("credit_transactions", (string)null);
                 });
 
+            modelBuilder.Entity("Sinchrony.Domain.Entities.Dependent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("CanBook")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanCancel")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanViewHistory")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Cpf")
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("ResponsibleStudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResponsibleStudentId");
+
+                    b.ToTable("dependents", (string)null);
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.DependentPackageAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CreditsRemaining")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("DependentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentPackageId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependentId");
+
+                    b.HasIndex("StudentPackageId");
+
+                    b.ToTable("dependent_package_allocations", (string)null);
+                });
+
             modelBuilder.Entity("Sinchrony.Domain.Entities.NotificationPreference", b =>
                 {
                     b.Property<Guid>("Id")
@@ -474,10 +579,22 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("boolean");
 
+                    b.Property<bool?>("AllowWaitlist")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("BookingWindowDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CancellationDeadlineHours")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Credits")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CreditsPerMember")
                         .HasColumnType("integer");
 
                     b.Property<string>("Description")
@@ -486,10 +603,44 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("EarlyAccessHours")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxBookingsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxBookingsPerMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxBookingsPerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxDependents")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxFutureBookings")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxNoShowsBeforeBlock")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<int>("NoShowBlockWindowDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(30);
+
+                    b.Property<bool>("NoShowCreditPenalty")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<Guid>("PackageTypeId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("Popular")
                         .HasColumnType("boolean");
@@ -502,15 +653,115 @@ namespace Sinchrony.Infrastructure.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
+                    b.Property<string>("PurchaseStrategy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("block");
+
+                    b.Property<bool?>("ReschedulingAllowed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("ReschedulingDeadlineHours")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("ValidityDays")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("WaitlistPriority")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("PackageTypeId");
+
                     b.ToTable("packages", (string)null);
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.PackageBenefit", b =>
+                {
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BenefitId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("PackageId", "BenefitId");
+
+                    b.HasIndex("BenefitId");
+
+                    b.ToTable("package_benefits", (string)null);
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.PackageType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool?>("DefaultAllowWaitlist")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("DefaultBookingWindowDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DefaultCancellationDeadlineHours")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DefaultEarlyAccessHours")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DefaultMaxBookingsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DefaultMaxBookingsPerMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DefaultMaxBookingsPerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DefaultMaxFutureBookings")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DefaultMaxNoShowsBeforeBlock")
+                        .HasColumnType("integer");
+
+                    b.Property<bool?>("DefaultNoShowCreditPenalty")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("DefaultReschedulingAllowed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("DefaultReschedulingDeadlineHours")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsFamily")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("Rank")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("package_types", (string)null);
                 });
 
             modelBuilder.Entity("Sinchrony.Domain.Entities.PasswordResetToken", b =>
@@ -727,6 +978,41 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.ToTable("settings", (string)null);
                 });
 
+            modelBuilder.Entity("Sinchrony.Domain.Entities.StudentPackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("PurchasedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("StudentId", "Status");
+
+                    b.ToTable("student_packages", (string)null);
+                });
+
             modelBuilder.Entity("Sinchrony.Domain.Entities.Studio", b =>
                 {
                     b.Property<Guid>("Id")
@@ -941,6 +1227,11 @@ namespace Sinchrony.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Sinchrony.Domain.Entities.Dependent", null)
+                        .WithMany()
+                        .HasForeignKey("DependentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Sinchrony.Domain.Entities.User", "Student")
                         .WithMany("Bookings")
                         .HasForeignKey("StudentId")
@@ -1012,6 +1303,35 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Sinchrony.Domain.Entities.Dependent", b =>
+                {
+                    b.HasOne("Sinchrony.Domain.Entities.User", "ResponsibleStudent")
+                        .WithMany()
+                        .HasForeignKey("ResponsibleStudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ResponsibleStudent");
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.DependentPackageAllocation", b =>
+                {
+                    b.HasOne("Sinchrony.Domain.Entities.Dependent", "Dependent")
+                        .WithMany()
+                        .HasForeignKey("DependentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Sinchrony.Domain.Entities.StudentPackage", "StudentPackage")
+                        .WithMany("Allocations")
+                        .HasForeignKey("StudentPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Dependent");
+
+                    b.Navigation("StudentPackage");
+                });
+
             modelBuilder.Entity("Sinchrony.Domain.Entities.NotificationPreference", b =>
                 {
                     b.HasOne("Sinchrony.Domain.Entities.User", "User")
@@ -1021,6 +1341,36 @@ namespace Sinchrony.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.Package", b =>
+                {
+                    b.HasOne("Sinchrony.Domain.Entities.PackageType", "PackageType")
+                        .WithMany("Packages")
+                        .HasForeignKey("PackageTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PackageType");
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.PackageBenefit", b =>
+                {
+                    b.HasOne("Sinchrony.Domain.Entities.Benefit", "Benefit")
+                        .WithMany("PackageBenefits")
+                        .HasForeignKey("BenefitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Sinchrony.Domain.Entities.Package", "Package")
+                        .WithMany("PackageBenefits")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Benefit");
+
+                    b.Navigation("Package");
                 });
 
             modelBuilder.Entity("Sinchrony.Domain.Entities.PasswordResetToken", b =>
@@ -1090,6 +1440,30 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Sinchrony.Domain.Entities.StudentPackage", b =>
+                {
+                    b.HasOne("Sinchrony.Domain.Entities.Package", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Sinchrony.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.Benefit", b =>
+                {
+                    b.Navigation("PackageBenefits");
+                });
+
             modelBuilder.Entity("Sinchrony.Domain.Entities.Booking", b =>
                 {
                     b.Navigation("AttendanceRecord");
@@ -1109,7 +1483,19 @@ namespace Sinchrony.Infrastructure.Migrations
 
             modelBuilder.Entity("Sinchrony.Domain.Entities.Package", b =>
                 {
+                    b.Navigation("PackageBenefits");
+
                     b.Navigation("Purchases");
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.PackageType", b =>
+                {
+                    b.Navigation("Packages");
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.StudentPackage", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 
             modelBuilder.Entity("Sinchrony.Domain.Entities.Studio", b =>

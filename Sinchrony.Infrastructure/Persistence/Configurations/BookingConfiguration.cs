@@ -26,5 +26,10 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.HasIndex(b => new { b.StudentId, b.ClassId })
             .IsUnique()
             .HasFilter("\"Status\" NOT IN ('cancelled')");
+
+        builder.Property(b => b.DependentId).IsRequired(false);
+        builder.HasOne<Dependent>().WithMany()
+            .HasForeignKey(b => b.DependentId).OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
     }
 }

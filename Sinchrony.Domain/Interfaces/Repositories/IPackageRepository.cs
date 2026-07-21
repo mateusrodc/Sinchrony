@@ -8,4 +8,5 @@ public interface IPackageRepository
     Task<IEnumerable<Package>> ListAsync(bool? activeOnly, CancellationToken ct = default);
     Task AddAsync(Package package, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
+    Task UpdateBenefitsAsync(Guid packageId, List<Guid> benefitIds, CancellationToken ct = default);
 }

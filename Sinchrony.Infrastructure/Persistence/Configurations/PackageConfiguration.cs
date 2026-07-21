@@ -13,5 +13,12 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
         builder.Property(p => p.Name).IsRequired().HasMaxLength(100);
         builder.Property(p => p.Price).HasPrecision(10, 2);
         builder.Property(p => p.PricePerCredit).HasPrecision(10, 2);
+
+        builder.Property(p => p.PurchaseStrategy).HasMaxLength(30).HasDefaultValue("block");
+        builder.Property(p => p.NoShowCreditPenalty).HasDefaultValue(true);
+        builder.Property(p => p.NoShowBlockWindowDays).HasDefaultValue(30);
+
+        builder.HasOne(p => p.PackageType).WithMany(pt => pt.Packages)
+            .HasForeignKey(p => p.PackageTypeId).OnDelete(DeleteBehavior.Restrict);
     }
 }

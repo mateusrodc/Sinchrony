@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Infrastructure.Persistence;
@@ -40,7 +41,12 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IAppSettings, AppSettings>();
-
+        services.AddScoped<IPackageTypeRepository, PackageTypeRepository>();
+        services.AddScoped<IBenefitRepository, BenefitRepository>();
+        services.AddScoped<IStudentPackageRepository, StudentPackageRepository>();
+        services.AddScoped<IDependentRepository, DependentRepository>();
+        services.AddScoped<IDependentPackageAllocationRepository, DependentPackageAllocationRepository>();
+        services.AddScoped<PurchasePackageService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 

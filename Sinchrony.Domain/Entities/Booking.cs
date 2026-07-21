@@ -12,6 +12,7 @@ public class Booking
     public bool CheckedIn { get; private set; }
     public DateTime BookedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
+    public Guid? DependentId { get; private set; }
 
     public Class? Class { get; private set; }
     public User? Student { get; private set; }
@@ -19,8 +20,18 @@ public class Booking
 
     protected Booking() { }
 
-    public static Booking Create(Guid classId, Guid studentId, int? bikeNumber = null)
-        => new() { ClassId = classId, StudentId = studentId, BikeNumber = bikeNumber };
+    public static Booking Create(Guid classId, Guid studentId, int? bikeNumber, Guid? dependentId = null)
+    {
+        return new Booking
+        {
+            ClassId = classId,
+            StudentId = studentId,
+            BikeNumber = bikeNumber,
+            DependentId = dependentId,
+            Status = BookingStatus.confirmed,
+            BookedAt = DateTime.UtcNow
+        };
+    }
 
     public void Cancel() { Status = BookingStatus.cancelled; UpdatedAt = DateTime.UtcNow; }
     public void MarkAttended() { Status = BookingStatus.attended; CheckedIn = true; UpdatedAt = DateTime.UtcNow; }
