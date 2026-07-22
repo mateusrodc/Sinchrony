@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Bookings;
 using Sinchrony.Application.Bookings.Commands.CreateBooking;
+using Sinchrony.Application.Bookings.Commands.RescheduleBooking;
 using Sinchrony.Application.Bookings.Queries.ListBookings;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
@@ -47,6 +48,14 @@ public class BookingsController(IMediator mediator) : ControllerBase
             new Application.Bookings.Commands.CancelBooking.CancelBookingCommand(UserId, id), ct);
         return Ok(new { success = true });
     }
+    [HttpPost("{id}/reschedule")]
+    public async Task<IActionResult> Reschedule(Guid id, [FromBody] RescheduleRequest req, CancellationToken ct)
+    {
+        await mediator.Send(new RescheduleBookingCommand(UserId, id, req.newClassId), ct);
+        return Ok(new { success = true });
+    }
+
+    public record RescheduleRequest(Guid newClassId);
 }
 
 public record CreateBookingRequest(Guid classId, int? bikeNumber);

@@ -139,4 +139,41 @@ public class BookingRepository(ApplicationDbContext db) : IBookingRepository
         .Include(b => b.Student)
         .Where(b => b.ClassId == classId)
         .ToListAsync(ct);
+
+    public async Task<int> CountFutureBookingsAsync(Guid studentId, CancellationToken ct = default)
+    => await db.Bookings.CountAsync(b =>
+        b.StudentId == studentId &&
+        b.Status == BookingStatus.confirmed &&
+        b.Class != null && b.Class.Date >= DateOnly.FromDateTime(DateTime.UtcNow), ct);
+
+    public async Task<int> CountBookingsOnDateAsync(Guid studentId, DateOnly date, CancellationToken ct = default)
+        => await db.Bookings
+            .Include(b => b.Class)
+            .CountAsync(b =>
+                b.StudentId == studentId &&
+                b.Status == BookingStatus.confirmed &&
+                b.Class != null && b.Class.Date == date, ct);
+
+    public async Task<int> CountBookingsInWeekAsync(Guid studentId, DateOnly date, CancellationToken ct = default)
+    {
+        var startOfWeek = date.AddDays(-(int)date.DayOfWeek);
+        var endOfWeek = startOfWeek.AddDays(7);
+        return await db.Bookings
+            .Include(b => b.Class)
+            .CountAsync(b =>
+                b.StudentId == studentId &&
+                b.Status == BookingStatus.confirmed &&
+                b.Class != null &&
+                b.Class.Date >= startOfWeek && b.Class.Date < endOfWeek, ct);
+    }
+
+    public async Task<int> CountBookingsInMonthAsync(
+        Guid studentId, int month, int year, CancellationToken ct = default)
+        => await db.Bookings
+            .Include(b => b.Class)
+            .CountAsync(b =>
+                b.StudentId == studentId &&
+                b.Status == BookingStatus.confirmed &&
+                b.Class != null &&
+                b.Class.Date.Month == month && b.Class.Date.Year == year, ct);
 }

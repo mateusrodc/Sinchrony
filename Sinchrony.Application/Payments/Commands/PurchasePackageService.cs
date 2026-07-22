@@ -55,6 +55,13 @@ public class PurchasePackageService(
 
         await studentPackageRepository.SaveAsync(ct);
     }
+    public async Task<StudentPackage> ProcessAndReturnAsync(
+    Guid studentId, Package package, CancellationToken ct)
+    {
+        await ProcessAsync(studentId, package, ct);
+        return await studentPackageRepository.GetActiveByStudentAsync(studentId, ct)
+            ?? throw new InvalidOperationException("StudentPackage not created.");
+    }
 
     private async Task CreateAllocationsAsync(
         StudentPackage sp, Package package, Guid studentId, CancellationToken ct)

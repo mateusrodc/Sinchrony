@@ -25,4 +25,9 @@ public interface IBookingRepository
 
     Task<IEnumerable<Booking>> ListByClassAsync(
         Guid classId, CancellationToken ct = default);
+
+    Task<int> CountFutureBookingsAsync(Guid studentId, CancellationToken ct = default);
+    Task<int> CountBookingsOnDateAsync(Guid studentId, DateOnly date, CancellationToken ct = default);
+    Task<int> CountBookingsInWeekAsync(Guid studentId, DateOnly date, CancellationToken ct = default);
+    Task<int> CountBookingsInMonthAsync(Guid studentId, int month, int year, CancellationToken ct = default);
 }

@@ -4,6 +4,7 @@ using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 
 namespace Sinchrony.Application.Bookings.Commands.CreateBooking;
 
@@ -13,6 +14,8 @@ public class CreateBookingCommandHandler(
     IBookingRepository bookingRepository,
     IAttendanceRepository attendanceRepository,
     ICreditTransactionRepository creditTransactionRepository,
+    IStudentPackageRepository studentPackageRepository,
+    ISettingsRepository settingsRepository,
     IAuditService auditService,
     IUnitOfWork unitOfWork) : IRequestHandler<CreateBookingCommand, BookingDto>
 {
@@ -46,6 +49,63 @@ public class CreateBookingCommandHandler(
             if (hasConflict)
                 throw DomainException.Conflict("TIME_CONFLICT", "Time conflict with another booking.");
 
+            // Cascata de regras
+            var studentPackage = await studentPackageRepository.GetActiveByStudentAsync(request.StudentId, ct);
+            var settings = await settingsRepository.GetAsync(ct);
+
+            if (settings is not null)
+            {
+                // bookingWindowDays
+                var bookingWindowDays = PackageRuleResolver.GetBookingWindowDays(studentPackage, settings);
+                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                if (@class.Date > today.AddDays(bookingWindowDays))
+                    throw DomainException.Validation("BOOKING_WINDOW_EXCEEDED",
+                        $"Reservas só podem ser feitas com até {bookingWindowDays} dias de antecedência.");
+
+                // maxFutureBookings
+                var maxFuture = PackageRuleResolver.GetMaxFutureBookings(studentPackage);
+                if (maxFuture.HasValue)
+                {
+                    var futureCount = await bookingRepository.CountFutureBookingsAsync(request.StudentId, ct);
+                    if (futureCount >= maxFuture.Value)
+                        throw DomainException.Validation("BOOKING_LIMIT_EXCEEDED",
+                            $"Limite de {maxFuture.Value} reservas futuras atingido.");
+                }
+
+                // maxBookingsPerDay
+                var maxPerDay = PackageRuleResolver.GetMaxBookingsPerDay(studentPackage);
+                if (maxPerDay.HasValue)
+                {
+                    var dayCount = await bookingRepository.CountBookingsOnDateAsync(
+                        request.StudentId, @class.Date, ct);
+                    if (dayCount >= maxPerDay.Value)
+                        throw DomainException.Validation("BOOKING_LIMIT_EXCEEDED",
+                            $"Limite de {maxPerDay.Value} reservas por dia atingido.");
+                }
+
+                // maxBookingsPerWeek
+                var maxPerWeek = PackageRuleResolver.GetMaxBookingsPerWeek(studentPackage);
+                if (maxPerWeek.HasValue)
+                {
+                    var weekCount = await bookingRepository.CountBookingsInWeekAsync(
+                        request.StudentId, @class.Date, ct);
+                    if (weekCount >= maxPerWeek.Value)
+                        throw DomainException.Validation("BOOKING_LIMIT_EXCEEDED",
+                            $"Limite de {maxPerWeek.Value} reservas por semana atingido.");
+                }
+
+                // maxBookingsPerMonth
+                var maxPerMonth = PackageRuleResolver.GetMaxBookingsPerMonth(studentPackage);
+                if (maxPerMonth.HasValue)
+                {
+                    var monthCount = await bookingRepository.CountBookingsInMonthAsync(
+                        request.StudentId, @class.Date.Month, @class.Date.Year, ct);
+                    if (monthCount >= maxPerMonth.Value)
+                        throw DomainException.Validation("BOOKING_LIMIT_EXCEEDED",
+                            $"Limite de {maxPerMonth.Value} reservas por mês atingido.");
+                }
+            }
+
             var activeCount = await classRepository.CountActiveBookingsWithLockAsync(request.ClassId, ct);
             if (activeCount >= @class.TotalSpots)
                 throw DomainException.Conflict("CLASS_FULL", "Class is full.");
@@ -70,7 +130,7 @@ public class CreateBookingCommandHandler(
             var attendance = AttendanceRecord.Create(booking.Id, request.ClassId, request.StudentId);
 
             await bookingRepository.AddAsync(booking, ct);
-            await attendanceRepository.AddAsync(attendance, ct); // <-- linha que faltava
+            await attendanceRepository.AddAsync(attendance, ct);
 
             await userRepository.SaveAsync(ct);
             await creditTransactionRepository.SaveAsync(ct);

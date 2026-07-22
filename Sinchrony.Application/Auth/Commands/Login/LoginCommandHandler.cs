@@ -45,5 +45,6 @@ public class LoginCommandHandler(
         new UserDto(user.Id, user.Name, user.Email,
             user.Role.ToString(), user.Credits, user.Phone, user.Avatar, user.Cpf,
             user.Cep, user.Logradouro, user.Numero,
-            user.Complemento, user.Bairro, user.Cidade, user.Estado));
+            user.Complemento, user.Bairro, user.Cidade, user.Estado,
+            user.PlanName));
 }

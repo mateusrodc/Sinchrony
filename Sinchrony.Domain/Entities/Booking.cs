@@ -40,4 +40,8 @@ public class Booking
     {
         CheckedIn = value;
     }
+    public void Reschedule(Guid newClassId)
+    {
+        ClassId = newClassId;
+    }
 }
