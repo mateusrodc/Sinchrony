@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Infrastructure.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -16,7 +19,8 @@ public class ErpDashboardController(
     IStudioRepository studioRepository,
     IBookingRepository bookingRepository,
     IPurchaseRepository purchaseRepository,
-    IAttendanceRepository attendanceRepository) : ControllerBase
+    IAttendanceRepository attendanceRepository,
+    IUnitContext unitContext) : ControllerBase
 {
     [HttpGet("admin/dashboard")]
     [HttpGet("api/dashboard")]
@@ -27,9 +31,19 @@ public class ErpDashboardController(
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(now);
 
-        // Dados base
-        var students = await userRepository.ListStudentsAsync(null, ct);
-        var teachers = await userRepository.ListTeachersAsync(null, ct);
+        IEnumerable<User> students;
+        IEnumerable<User> teachers;
+
+        if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
+        {
+            students = await userRepository.ListStudentsAsync(null, ct);
+            teachers = await userRepository.ListTeachersAsync(null, ct);
+        }
+        else
+        {
+            students = await userRepository.ListStudentsByUnitAsync(unitContext.UnitId.Value, ct);
+            teachers = await userRepository.ListTeachersByUnitAsync(unitContext.UnitId.Value, ct);
+        }
         var studios = await studioRepository.ListAsync(ct);
         var classes = await classRepository.ListAsync(null, null, null, ct);
         var allPurchases = await purchaseRepository.ListAllAsync(ct);

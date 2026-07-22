@@ -35,6 +35,23 @@ public class User
     public ICollection<Purchase> Purchases { get; private set; } = [];
     public ICollection<Card> Cards { get; private set; } = [];
 
+    public Guid? UnitId { get; private set; }
+    public bool IsGlobalAdmin { get; private set; }
+
+    public Unit? Unit { get; private set; }
+
+    public void SetUnit(Guid? unitId)
+    {
+        UnitId = unitId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetGlobalAdmin(bool value)
+    {
+        IsGlobalAdmin = value;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     protected User() { }
 
     public static User Create(string name, string email, string? phone, string passwordHash, Role role, string? cpf = null)

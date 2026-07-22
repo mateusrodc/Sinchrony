@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Sinchrony.Domain.Entities;
+using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
 
 namespace Sinchrony.Infrastructure.Persistence.Repositories;
@@ -66,4 +67,16 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
     => await db.Users
         .Include(u => u.RefreshTokens)
         .FirstOrDefaultAsync(u => u.GoogleId == googleId, ct);
+
+    public async Task<IEnumerable<User>> ListStudentsByUnitAsync(Guid unitId, CancellationToken ct = default)
+    => await db.Users
+        .Where(u => u.Role == Role.student && u.UnitId == unitId)
+        .OrderBy(u => u.Name)
+        .ToListAsync(ct);
+
+    public async Task<IEnumerable<User>> ListTeachersByUnitAsync(Guid unitId, CancellationToken ct = default)
+        => await db.Users
+            .Where(u => u.Role == Role.teacher && u.UnitId == unitId)
+            .OrderBy(u => u.Name)
+            .ToListAsync(ct);
 }

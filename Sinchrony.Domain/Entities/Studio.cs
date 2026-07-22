@@ -16,6 +16,15 @@ public class Studio
     public ICollection<Bike> Bikes { get; private set; } = [];
     public ICollection<Class> Classes { get; private set; } = [];
 
+    public Guid? UnitId { get; private set; }
+
+    public Unit? Unit { get; private set; }
+
+    public void SetUnit(Guid? unitId)
+    {
+        UnitId = unitId;
+    }
+
     protected Studio() { }
 
     public static Studio Create(string name, string address, int capacity,

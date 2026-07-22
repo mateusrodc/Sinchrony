@@ -49,6 +49,8 @@ public static class DependencyInjection
         services.AddScoped<PurchasePackageService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+        services.AddScoped<IUnitRepository, UnitRepository>();
+        services.AddScoped<IUnitContext, UnitContext>();
 
         services.AddHttpClient<IStorageService, SupabaseStorageService>(client =>
         {

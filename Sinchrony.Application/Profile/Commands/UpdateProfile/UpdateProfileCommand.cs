@@ -8,9 +8,10 @@ namespace Sinchrony.Application.Profile.Commands.UpdateProfile;
 
 public record UpdateProfileCommand(
     Guid UserId, string Name, string Email,
-    string? Phone, string? Avatar, string? Cpf, string? Cep, string? Logradouro, string? Numero,
-    string? Complemento, string? Bairro, string? Cidade, string? Estado)
-    : IRequest<UserDto>;
+    string? Phone, string? Avatar, string? Cpf,
+    string? Cep, string? Logradouro, string? Numero,
+    string? Complemento, string? Bairro, string? Cidade, string? Estado,
+    Guid? UnitId) : IRequest<UserDto>;
 
 public class UpdateProfileCommandHandler(IUserRepository userRepository)
     : IRequestHandler<UpdateProfileCommand, UserDto>
@@ -22,6 +23,9 @@ public class UpdateProfileCommandHandler(IUserRepository userRepository)
 
         user.UpdateAddress(request.Cep, request.Logradouro, request.Numero,
     request.Complemento, request.Bairro, request.Cidade, request.Estado);
+
+        if (request.UnitId.HasValue)
+            user.SetUnit(request.UnitId.Value);
 
         var emailInUse = await userRepository.GetByEmailAsync(request.Email, ct);
         if (emailInUse is not null && emailInUse.Id != request.UserId)

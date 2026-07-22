@@ -35,9 +35,10 @@ public class AuthController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new RegisterCommand(
-            req.name, req.email, req.phone, req.password, req.cpf,
-            req.cep, req.logradouro, req.numero,
-            req.complemento, req.bairro, req.cidade, req.estado), ct);
+        req.name, req.email, req.phone, req.password, req.cpf,
+        req.cep, req.logradouro, req.numero,
+        req.complemento, req.bairro, req.cidade, req.estado,
+        req.unitId), ct);
         return StatusCode(201, result);
     }
 
@@ -124,10 +125,10 @@ public class AuthController(IMediator mediator) : ControllerBase
 
 public record LoginRequest(string email, string password);
 public record RegisterRequest(
-    string name, string email, string? phone,
-    string password, string? cpf,
+    string name, string email, string? phone, string password, string? cpf,
     string? cep, string? logradouro, string? numero,
-    string? complemento, string? bairro, string? cidade, string? estado);
+    string? complemento, string? bairro, string? cidade, string? estado,
+    Guid? unitId);
 public record RefreshRequest(string refresh_token);
 public record ForgotPasswordRequest(string email);
 public record ResetPasswordRequest(string token, string newPassword);

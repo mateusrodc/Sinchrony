@@ -15,4 +15,7 @@ public interface IUserRepository
     Task SaveAsync(CancellationToken ct = default);
     Task<(IEnumerable<User> Items, int Total)> ListStudentsPagedAsync(
     string? status, int page, int pageSize, CancellationToken ct = default);
+
+    Task<IEnumerable<User>> ListStudentsByUnitAsync(Guid unitId, CancellationToken ct = default);
+    Task<IEnumerable<User>> ListTeachersByUnitAsync(Guid unitId, CancellationToken ct = default);
 }

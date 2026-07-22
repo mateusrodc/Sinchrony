@@ -1533,6 +1533,27 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Sinchrony.Api.Controllers.App.BookingsController",
+    "Method": "Reschedule",
+    "RelativePath": "bookings/{id}/reschedule",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.App.BookingsController\u002BRescheduleRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Sinchrony.Api.Controllers.App.CardsController",
     "Method": "List",
     "RelativePath": "cards",
@@ -2024,6 +2045,27 @@
         "StatusCode": 200
       }
     ]
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.App.PackagesController",
+    "Method": "Purchase",
+    "RelativePath": "packages/{packageId}/purchase",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "packageId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.App.PackagesController\u002BPurchasePackageRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
   },
   {
     "ContainingType": "Sinchrony.Api.Controllers.App.PaymentsController",
