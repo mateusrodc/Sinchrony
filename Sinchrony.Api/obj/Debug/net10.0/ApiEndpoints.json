@@ -839,15 +839,7 @@
         "IsRequired": false
       }
     ],
-    "ReturnTypes": [
-      {
-        "Type": "System.Object",
-        "MediaTypes": [
-          "application/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
+    "ReturnTypes": []
   },
   {
     "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpStudentsController",
@@ -879,15 +871,7 @@
         "IsRequired": true
       }
     ],
-    "ReturnTypes": [
-      {
-        "Type": "System.Object",
-        "MediaTypes": [
-          "application/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
+    "ReturnTypes": []
   },
   {
     "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpStudentsController",
@@ -912,22 +896,6 @@
   },
   {
     "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpStudentsController",
-    "Method": "Deactivate",
-    "RelativePath": "api/students/{id}/deactivate",
-    "HttpMethod": "PATCH",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Guid",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpStudentsController",
     "Method": "History",
     "RelativePath": "api/students/{id}/history",
     "HttpMethod": "GET",
@@ -940,37 +908,13 @@
         "IsRequired": true
       }
     ],
-    "ReturnTypes": [
-      {
-        "Type": "System.Object",
-        "MediaTypes": [
-          "application/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
+    "ReturnTypes": []
   },
   {
     "ContainingType": "Sinchrony.Api.Controllers.App.StudentPackageController",
     "Method": "ListByStudent",
     "RelativePath": "api/students/{id}/packages",
     "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Guid",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpStudentsController",
-    "Method": "Reactivate",
-    "RelativePath": "api/students/{id}/reactivate",
-    "HttpMethod": "PATCH",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -1260,6 +1204,85 @@
     "Method": "SendPassword",
     "RelativePath": "api/teachers/{id}/send-password",
     "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpUnitsController",
+    "Method": "List",
+    "RelativePath": "api/units",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpUnitsController",
+    "Method": "Create",
+    "RelativePath": "api/units",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.Erp.UnitRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpUnitsController",
+    "Method": "Get",
+    "RelativePath": "api/units/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpUnitsController",
+    "Method": "Update",
+    "RelativePath": "api/units/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.Erp.UnitRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpUnitsController",
+    "Method": "Dashboard",
+    "RelativePath": "api/units/{id}/dashboard",
+    "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [

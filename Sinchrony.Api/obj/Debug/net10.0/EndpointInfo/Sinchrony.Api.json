@@ -2323,13 +2323,7 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { },
-                "example": {"data":[{"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Carlos Silva","email":"carlos@email.com","phone":"63984745681","status":"active","plan":null,"credits":5,"registeredAt":"2026-01-15","lastVisit":null,"totalClasses":0}]}
-              }
-            }
+            "description": "OK"
           }
         }
       },
@@ -2381,13 +2375,7 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { },
-                "example": {"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Carlos Silva","email":"carlos@email.com","phone":"63984745681","status":"active","plan":null,"credits":5,"registeredAt":"2026-01-15","lastVisit":null,"totalClasses":0}
-              }
-            }
+            "description": "OK"
           }
         }
       },
@@ -2434,58 +2422,6 @@
     },
     "/api/students/{id}/history": {
       "get": {
-        "tags": [
-          "ErpStudents"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { },
-                "example": {"data":[{"date":"2026-06-06","className":"Velo Power","status":"attended"},{"date":"2026-06-04","className":"Yoga Matinal","status":"attended"},{"date":"2026-06-02","className":"Pilates","status":"cancelled"}]}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/students/{id}/deactivate": {
-      "patch": {
-        "tags": [
-          "ErpStudents"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/students/{id}/reactivate": {
-      "patch": {
         "tags": [
           "ErpStudents"
         ],
@@ -2844,6 +2780,133 @@
       "post": {
         "tags": [
           "ErpTeachers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/units": {
+      "get": {
+        "tags": [
+          "ErpUnits"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ErpUnits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/units/{id}": {
+      "get": {
+        "tags": [
+          "ErpUnits"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "ErpUnits"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/units/{id}/dashboard": {
+      "get": {
+        "tags": [
+          "ErpUnits"
         ],
         "parameters": [
           {
@@ -3754,6 +3817,86 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          },
+          "creditsPerMember": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxFutureBookings": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxBookingsPerDay": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxBookingsPerWeek": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxBookingsPerMonth": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cancellationDeadlineHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "bookingWindowDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "earlyAccessHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "allowWaitlist": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "waitlistPriority": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "reschedulingAllowed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "reschedulingDeadlineHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "noShowCreditPenalty": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "maxNoShowsBeforeBlock": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "noShowBlockWindowDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "benefitIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3811,6 +3954,11 @@
           },
           "estado": {
             "type": "string",
+            "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
             "nullable": true
           }
         },
@@ -4106,6 +4254,11 @@
           "estado": {
             "type": "string",
             "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -4162,6 +4315,32 @@
             "nullable": true
           },
           "closingTime": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UnitRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
             "type": "string",
             "nullable": true
           },
@@ -4488,6 +4667,11 @@
           "estado": {
             "type": "string",
             "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -4628,6 +4812,11 @@
           },
           "estado": {
             "type": "string",
+            "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
             "nullable": true
           }
         },

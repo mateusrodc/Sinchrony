@@ -24,9 +24,9 @@ public record CreatePackageCommand(
     int? WaitlistPriority = null,
     bool? ReschedulingAllowed = null,
     int? ReschedulingDeadlineHours = null,
-    bool NoShowCreditPenalty = true,
+    bool? NoShowCreditPenalty = null,
     int? MaxNoShowsBeforeBlock = null,
-    int NoShowBlockWindowDays = 30,
+    int? NoShowBlockWindowDays = null,
     List<Guid>? BenefitIds = null) : IRequest<PackageDto>;
 
 public class CreatePackageCommandHandler(
@@ -54,8 +54,8 @@ public class CreatePackageCommandHandler(
             request.CancellationDeadlineHours, request.BookingWindowDays,
             request.EarlyAccessHours, request.AllowWaitlist, request.WaitlistPriority,
             request.ReschedulingAllowed, request.ReschedulingDeadlineHours,
-            request.NoShowCreditPenalty, request.MaxNoShowsBeforeBlock,
-            request.NoShowBlockWindowDays);
+            request.NoShowCreditPenalty ?? true, request.MaxNoShowsBeforeBlock,
+            request.NoShowBlockWindowDays ?? 30);
 
         await packageRepository.AddAsync(package, ct);
 
