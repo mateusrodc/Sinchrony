@@ -78,7 +78,7 @@ public class Package
     public void UpdateFull(
     string name, string? description, int credits, decimal price,
     int validityDays, bool popular, bool active, int displayOrder,
-    Guid packageTypeId, string purchaseStrategy,
+    Guid? packageTypeId, string purchaseStrategy,
     int maxDependents, int? creditsPerMember,
     int? maxFutureBookings, int? maxBookingsPerDay,
     int? maxBookingsPerWeek, int? maxBookingsPerMonth,

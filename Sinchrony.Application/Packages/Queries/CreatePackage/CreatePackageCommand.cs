@@ -47,7 +47,7 @@ public class CreatePackageCommandHandler(
             request.Name, request.Description, request.Credits,
             request.Price, request.ValidityDays, request.Popular,
             request.Active, request.DisplayOrder,
-            request.PackageTypeId.Value, request.PurchaseStrategy,
+            request.PackageTypeId, request.PurchaseStrategy,
             request.MaxDependents, request.CreditsPerMember,
             request.MaxFutureBookings, request.MaxBookingsPerDay,
             request.MaxBookingsPerWeek, request.MaxBookingsPerMonth,
