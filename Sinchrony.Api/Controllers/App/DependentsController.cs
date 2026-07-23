@@ -74,7 +74,8 @@ public class DependentsController(
             ?? throw DomainException.NotFound("Responsible student not found.");
 
         // Cria User para o dependente
-        var hash = passwordService.HashPassword(Guid.NewGuid().ToString());
+        var hash = passwordService.HashPassword(
+            string.IsNullOrEmpty(req.password) ? Guid.NewGuid().ToString() : req.password);
         var dependentUser = Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.student,
             string.IsNullOrEmpty(req.cpf) ? null : req.cpf);
 
@@ -156,7 +157,7 @@ public class DependentsController(
 
 public record CreateDependentRequest(
     string name, string email, string? phone,
-    string? birthDate, string? cpf);
+    string? birthDate, string? cpf, string? password);
 
 public record UpdateDependentRequest(
     string name, string? email, string? phone,
