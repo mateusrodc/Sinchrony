@@ -44,7 +44,15 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
             req.name, req.description, req.credits, req.price,
             req.validityDays, req.popular, req.active, req.displayOrder,
             req.packageTypeId, req.purchaseStrategy ?? "block",
-            req.maxDependents ?? 0), ct);
+            req.maxDependents ?? 0, req.creditsPerMember,
+            req.maxFutureBookings, req.maxBookingsPerDay,
+            req.maxBookingsPerWeek, req.maxBookingsPerMonth,
+            req.cancellationDeadlineHours, req.bookingWindowDays,
+            req.earlyAccessHours, req.allowWaitlist, req.waitlistPriority,
+            req.reschedulingAllowed, req.reschedulingDeadlineHours,
+            req.noShowCreditPenalty ?? true, req.maxNoShowsBeforeBlock,
+            req.noShowBlockWindowDays ?? 30,
+            req.benefitIds), ct);
         return StatusCode(201, result);
     }
 
@@ -80,7 +88,23 @@ public record CreatePackageRequest(
     int validityDays, bool popular, bool active, int displayOrder,
     Guid? packageTypeId = null,
     string? purchaseStrategy = null,
-    int? maxDependents = null);
+    int? maxDependents = null,
+    int? creditsPerMember = null,
+    int? maxFutureBookings = null,
+    int? maxBookingsPerDay = null,
+    int? maxBookingsPerWeek = null,
+    int? maxBookingsPerMonth = null,
+    int? cancellationDeadlineHours = null,
+    int? bookingWindowDays = null,
+    int? earlyAccessHours = null,
+    bool? allowWaitlist = null,
+    int? waitlistPriority = null,
+    bool? reschedulingAllowed = null,
+    int? reschedulingDeadlineHours = null,
+    bool? noShowCreditPenalty = null,
+    int? maxNoShowsBeforeBlock = null,
+    int? noShowBlockWindowDays = null,
+    List<Guid>? benefitIds = null);
 
 public record UpdatePackageRequest(
     string name, string? description, int credits, decimal price,

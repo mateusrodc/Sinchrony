@@ -55,6 +55,7 @@ public class Package
             Description = description,
             Credits = credits,
             Price = price,
+            PricePerCredit = credits > 0 ? Math.Round(price / credits, 2) : 0, // <-- fix Gap 4
             ValidityDays = validityDays,
             Popular = popular,
             Active = active,
@@ -89,7 +90,6 @@ public class Package
         Name = name;
         Description = description;
         Credits = credits;
-        Price = price;
         ValidityDays = validityDays;
         Popular = popular;
         Active = active;
@@ -113,6 +113,8 @@ public class Package
         MaxNoShowsBeforeBlock = maxNoShowsBeforeBlock;
         NoShowBlockWindowDays = noShowBlockWindowDays;
         UpdatedAt = DateTime.UtcNow;
+        Price = price;
+        PricePerCredit = credits > 0 ? Math.Round(price / credits, 2) : 0;
     }
 
     public void Toggle() { Active = !Active; UpdatedAt = DateTime.UtcNow; }
