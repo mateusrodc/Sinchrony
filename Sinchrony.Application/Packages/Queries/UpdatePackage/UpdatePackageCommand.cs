@@ -53,10 +53,11 @@ public class UpdatePackageCommandHandler(
             request.NoShowCreditPenalty, request.MaxNoShowsBeforeBlock,
             request.NoShowBlockWindowDays);
 
-        // Atualiza benefícios — substitui tudo a cada update
         await packageRepository.UpdateBenefitsAsync(request.Id, request.BenefitIds, ct);
-
         await packageRepository.SaveAsync(ct);
-        return ListPackagesQueryHandler.MapToDto(package);
+
+        // Recarrega para garantir navigation properties atualizados
+        var updated = await packageRepository.GetByIdAsync(request.Id, ct);
+        return ListPackagesQueryHandler.MapToDto(updated!);
     }
 }
