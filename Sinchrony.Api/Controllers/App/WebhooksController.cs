@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -11,10 +12,7 @@ namespace Sinchrony.Api.Controllers.App;
 [Route("webhooks")]
 [Produces("application/json")]
 public class WebhooksController(
-    IPurchaseRepository purchaseRepository,
-    IUserRepository userRepository,
-    ICreditTransactionRepository creditTransactionRepository,
-    IStudentPackageRepository studentPackageRepository,
+    IServiceScopeFactory scopeFactory,
     IAuditService auditService,
     ILogger<WebhooksController> logger,
     IConfiguration configuration) : ControllerBase
@@ -36,13 +34,23 @@ public class WebhooksController(
             return Unauthorized();
         }
 
-        // Responde imediatamente para evitar timeout do Asaas
         var payloadCopy = payload.Clone();
+
+        // Cria novo escopo de DI para o background task — evita DbContext disposed
         _ = Task.Run(async () =>
         {
+            using var scope = scopeFactory.CreateScope();
+            var purchaseRepository = scope.ServiceProvider.GetRequiredService<IPurchaseRepository>();
+            var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            var creditTransactionRepository = scope.ServiceProvider.GetRequiredService<ICreditTransactionRepository>();
+            var studentPackageRepository = scope.ServiceProvider.GetRequiredService<IStudentPackageRepository>();
+            var auditSvc = scope.ServiceProvider.GetRequiredService<IAuditService>();
+
             try
             {
-                await ProcessWebhookAsync(payloadCopy, CancellationToken.None);
+                await ProcessWebhookAsync(payloadCopy, purchaseRepository, userRepository,
+                    creditTransactionRepository, studentPackageRepository, auditSvc,
+                    CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -53,7 +61,14 @@ public class WebhooksController(
         return Ok(new { message = "Received." });
     }
 
-    private async Task ProcessWebhookAsync(JsonElement payload, CancellationToken ct)
+    private async Task ProcessWebhookAsync(
+        JsonElement payload,
+        IPurchaseRepository purchaseRepository,
+        IUserRepository userRepository,
+        ICreditTransactionRepository creditTransactionRepository,
+        IStudentPackageRepository studentPackageRepository,
+        IAuditService auditSvc,
+        CancellationToken ct)
     {
         var eventType = payload.TryGetProperty("event", out var ev)
             ? ev.GetString() : null;
@@ -114,7 +129,7 @@ public class WebhooksController(
                 await creditTransactionRepository.AddAsync(creditTx, ct);
             }
 
-            // Ativa StudentPackage queued se existir para este pacote
+            // Ativa StudentPackage queued
             var queuedPackage = await studentPackageRepository
                 .GetQueuedByStudentAsync(purchase.UserId, ct);
 
@@ -132,7 +147,7 @@ public class WebhooksController(
                 }
             }
 
-            await auditService.LogAsync(
+            await auditSvc.LogAsync(
                 "payment.confirmed", "Purchase",
                 purchase.Id, purchase.UserId,
                 $"TransactionId: {transactionId}, Event: {eventType}, Credits: {credits}",
