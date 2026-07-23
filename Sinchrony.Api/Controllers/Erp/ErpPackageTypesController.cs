@@ -69,23 +69,44 @@ public class ErpPackageTypesController(IPackageTypeRepository packageTypeReposit
     {
         var pt = await packageTypeRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("PackageType not found.");
-        pt.Update(req.name, req.active ?? pt.Active, req.isFamily ?? pt.IsFamily, req.rank,
-            req.defaultMaxFutureBookings, req.defaultMaxBookingsPerDay,
-            req.defaultMaxBookingsPerWeek, req.defaultMaxBookingsPerMonth,
-            req.defaultCancellationDeadlineHours, req.defaultBookingWindowDays,
-            req.defaultEarlyAccessHours, req.defaultAllowWaitlist,
-            req.defaultReschedulingAllowed, req.defaultReschedulingDeadlineHours,
-            req.defaultNoShowCreditPenalty, req.defaultMaxNoShowsBeforeBlock);
+
+        pt.Update(
+            req.name ?? pt.Name,
+            req.active ?? pt.Active,
+            req.isFamily ?? pt.IsFamily,
+            req.rank ?? pt.Rank,
+            req.defaultMaxFutureBookings ?? pt.DefaultMaxFutureBookings,
+            req.defaultMaxBookingsPerDay ?? pt.DefaultMaxBookingsPerDay,
+            req.defaultMaxBookingsPerWeek ?? pt.DefaultMaxBookingsPerWeek,
+            req.defaultMaxBookingsPerMonth ?? pt.DefaultMaxBookingsPerMonth,
+            req.defaultCancellationDeadlineHours ?? pt.DefaultCancellationDeadlineHours,
+            req.defaultBookingWindowDays ?? pt.DefaultBookingWindowDays,
+            req.defaultEarlyAccessHours ?? pt.DefaultEarlyAccessHours,
+            req.defaultAllowWaitlist ?? pt.DefaultAllowWaitlist,
+            req.defaultReschedulingAllowed ?? pt.DefaultReschedulingAllowed,
+            req.defaultReschedulingDeadlineHours ?? pt.DefaultReschedulingDeadlineHours,
+            req.defaultNoShowCreditPenalty ?? pt.DefaultNoShowCreditPenalty,
+            req.defaultMaxNoShowsBeforeBlock ?? pt.DefaultMaxNoShowsBeforeBlock);
+
         await packageTypeRepository.SaveAsync(ct);
         return Ok(MapPackageType(pt));
     }
 }
 
 public record PackageTypeRequest(
-    string name, bool? active, bool? isFamily, int? rank,
-    int? defaultMaxFutureBookings, int? defaultMaxBookingsPerDay,
-    int? defaultMaxBookingsPerWeek, int? defaultMaxBookingsPerMonth,
-    int? defaultCancellationDeadlineHours, int? defaultBookingWindowDays,
-    int? defaultEarlyAccessHours, bool? defaultAllowWaitlist,
-    bool? defaultReschedulingAllowed, int? defaultReschedulingDeadlineHours,
-    bool? defaultNoShowCreditPenalty, int? defaultMaxNoShowsBeforeBlock);
+    string? name = null,
+    bool? active = null,
+    bool? isFamily = null,
+    int? rank = null,
+    int? defaultMaxFutureBookings = null,
+    int? defaultMaxBookingsPerDay = null,
+    int? defaultMaxBookingsPerWeek = null,
+    int? defaultMaxBookingsPerMonth = null,
+    int? defaultCancellationDeadlineHours = null,
+    int? defaultBookingWindowDays = null,
+    int? defaultEarlyAccessHours = null,
+    bool? defaultAllowWaitlist = null,
+    bool? defaultReschedulingAllowed = null,
+    int? defaultReschedulingDeadlineHours = null,
+    bool? defaultNoShowCreditPenalty = null,
+    int? defaultMaxNoShowsBeforeBlock = null);
