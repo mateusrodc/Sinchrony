@@ -39,6 +39,10 @@ public class PurchasePackageCommandHandler(
         if (!package.Active)
             throw DomainException.Validation("PACKAGE_INACTIVE", "Package is not available.");
 
+        if (!package.PackageTypeId.HasValue)
+            throw DomainException.Validation("PACKAGE_TYPE_REQUIRED",
+                "Este pacote não possui um tipo associado. Configure o tipo do pacote antes de disponibilizá-lo para compra.");
+
         Coupon? coupon = null;
         if (!string.IsNullOrEmpty(request.CouponCode))
         {
