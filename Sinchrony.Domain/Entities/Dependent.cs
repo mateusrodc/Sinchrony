@@ -15,6 +15,7 @@ public class Dependent
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
     public User? ResponsibleStudent { get; private set; }
+    public User? User { get; private set; }
 
     protected Dependent() { }
 
@@ -39,6 +40,11 @@ public class Dependent
         CanCancel = canCancel;
         CanViewHistory = canViewHistory;
         Active = active;
+    }
+
+    public void LinkUser(Guid userId)
+    {
+        UserId = userId;
     }
 
     public void Deactivate() => Active = false;
