@@ -8,6 +8,7 @@ public record ListAttendanceQuery(Guid ClassId) : IRequest<IEnumerable<Attendanc
 
 public record AttendanceDto(
     Guid Id, Guid StudentId, string StudentName,
+    string? StudentAvatar,
     string Status, int? BikeNumber,
     Guid? ConfirmedById, DateTime? ConfirmedAt,
     bool CheckedIn);
@@ -37,6 +38,7 @@ public class ListAttendanceQueryHandler(
                 attendance?.Id ?? Guid.Empty,
                 b.StudentId,
                 b.Student?.Name ?? string.Empty,
+                b.Student?.Avatar,
                 attendance?.Status.ToString() ?? "pending",
                 b.BikeNumber,
                 attendance?.ConfirmedById,

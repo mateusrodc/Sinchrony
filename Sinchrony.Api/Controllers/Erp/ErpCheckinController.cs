@@ -67,6 +67,8 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
         classId = r.ClassId,
         studentId = r.StudentId,
         studentName = r.Student?.Name,
+        studentAvatar = r.Student?.Avatar,
+        studentPhone = r.Student?.Phone,
         className = r.Class?.Name,
         date = r.CreatedAt.ToString("yyyy-MM-dd"),
         time = r.ConfirmedAt?.ToString("HH:mm"),

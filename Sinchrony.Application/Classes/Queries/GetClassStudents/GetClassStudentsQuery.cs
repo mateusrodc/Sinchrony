@@ -8,6 +8,8 @@ public record GetClassStudentsQuery(Guid ClassId) : IRequest<IEnumerable<ClassSt
 
 public record ClassStudentDto(
     Guid Id, string Name, string Email,
+    string? Avatar,
+    string? Phone,
     int? BikeNumber, string Status);
 
 public class GetClassStudentsQueryHandler(IBookingRepository bookingRepository, IClassRepository classRepository)
@@ -26,6 +28,8 @@ public class GetClassStudentsQueryHandler(IBookingRepository bookingRepository, 
                 b.Student!.Id,
                 b.Student.Name,
                 b.Student.Email,
+                b.Student.Avatar,
+                b.Student.Phone,
                 b.BikeNumber,
                 b.Status.ToString()));
     }
