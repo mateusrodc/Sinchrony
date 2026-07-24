@@ -6,7 +6,9 @@ using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Net.NetworkInformation;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -14,17 +16,26 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/classes")]
 [Produces("application/json")]
-public class ErpClassesController(IClassRepository classRepository) : ControllerBase
+public class ErpClassesController(IClassRepository classRepository, IUnitContext unitContext) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpClassListResponseExample))]
     public async Task<IActionResult> List(
-    [FromQuery] string? date, [FromQuery] string? type, [FromQuery] Guid? studioId,
+    [FromQuery] string? date, [FromQuery] string? type, [FromQuery] Guid? studioId, [FromQuery] string? status,
     CancellationToken ct)
     {
         DateOnly? parsedDate = DateOnly.TryParse(date, out var d) ? d : null;
         var classes = await classRepository.ListAsync(parsedDate, type, studioId, ct);
+        // Admin de unidade vê só aulas dos studios da sua unidade
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
+        {
+            var unitId = unitContext.UnitId.Value;
+            classes = classes.Where(c => c.Studio != null && c.Studio.UnitId == unitId);
+        }
+
+        if (!string.IsNullOrEmpty(status))
+            classes = classes.Where(c => c.Status.ToString() == status);
         return Ok(new { data = classes.Select(MapErpClass) });
     }
 

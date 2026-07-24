@@ -4,6 +4,7 @@ using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -12,14 +13,35 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/studios")]
 [Produces("application/json")]
-public class ErpStudiosController(IStudioRepository studioRepository) : ControllerBase
+public class ErpStudiosController(
+    IStudioRepository studioRepository,
+    IUnitContext unitContext) : ControllerBase
 {
+    private static object MapStudio(Studio s) => new
+    {
+        id = s.Id,
+        name = s.Name,
+        address = s.Address,
+        capacity = s.Capacity,
+        phone = s.Phone,
+        email = s.Email,
+        openingTime = s.OpeningTime,
+        closingTime = s.ClosingTime,
+        active = s.Active,
+        unitId = s.UnitId
+    };
+
     [HttpGet]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(StudioListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var studios = await studioRepository.ListAsync(ct);
+
+        // Admin de unidade vê só os studios da sua unidade
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
+            studios = studios.Where(s => s.UnitId == unitContext.UnitId.Value);
+
         return Ok(new { data = studios.Select(MapStudio) });
     }
 
@@ -30,44 +52,48 @@ public class ErpStudiosController(IStudioRepository studioRepository) : Controll
     {
         var studio = await studioRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Studio not found.");
+
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
+            && studio.UnitId != unitContext.UnitId)
+            return Forbid();
+
         return Ok(MapStudio(studio));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] StudioRequest req, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CreateStudioRequest req, CancellationToken ct)
     {
         var studio = Studio.Create(req.name, req.address, req.capacity,
-            req.phone, req.email, req.openingTime ?? "06:00", req.closingTime ?? "22:00");
+            req.phone, req.email, req.openingTime, req.closingTime);
+
+        // Vincula à unidade do admin ou à unidade informada
+        var unitId = req.unitId ?? unitContext.UnitId;
+        if (unitId.HasValue)
+            studio.SetUnit(unitId.Value);
+
         await studioRepository.AddAsync(studio, ct);
         await studioRepository.SaveAsync(ct);
         return StatusCode(201, MapStudio(studio));
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] StudioRequest req, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateStudioRequest req, CancellationToken ct)
     {
         var studio = await studioRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Studio not found.");
+
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
+            && studio.UnitId != unitContext.UnitId)
+            return Forbid();
 
         studio.Update(req.name, req.address, req.capacity,
-            req.phone, req.email,
-            req.openingTime ?? "06:00", req.closingTime ?? "22:00", req.active ?? true);
+            req.phone, req.email, req.openingTime, req.closingTime, req.active);
+
+        if (req.unitId.HasValue)
+            studio.SetUnit(req.unitId.Value);
+
         await studioRepository.SaveAsync(ct);
         return Ok(MapStudio(studio));
-    }
-
-    [HttpPatch("{id}/deactivate")]
-    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
-    {
-        var studio = await studioRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Studio not found.");
-
-        studio.Update(studio.Name, studio.Address, studio.Capacity,
-            studio.Phone, studio.Email,
-            studio.OpeningTime, studio.ClosingTime, active: false);
-
-        await studioRepository.SaveAsync(ct);
-        return Ok(new { success = true });
     }
 
     [HttpPatch("{id}/activate")]
@@ -84,19 +110,32 @@ public class ErpStudiosController(IStudioRepository studioRepository) : Controll
         return Ok(new { success = true });
     }
 
-    private static object MapStudio(Studio s) => new
+    [HttpPatch("{id}/deactivate")]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
-        id = s.Id,
-        name = s.Name,
-        address = s.Address,
-        phone = s.Phone,
-        email = s.Email,
-        active = s.Active,
-        capacity = s.Capacity,
-        openingTime = s.OpeningTime,
-        closingTime = s.ClosingTime
-    };
+        var studio = await studioRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Studio not found.");
+
+        studio.Update(studio.Name, studio.Address, studio.Capacity,
+            studio.Phone, studio.Email,
+            studio.OpeningTime, studio.ClosingTime, active: false);
+
+        await studioRepository.SaveAsync(ct);
+        return Ok(new { success = true });
+    }
 }
+
+public record CreateStudioRequest(
+    string name, string address, int capacity,
+    string? phone, string? email,
+    string openingTime, string closingTime,
+    Guid? unitId = null);
+
+public record UpdateStudioRequest(
+    string name, string address, int capacity,
+    string? phone, string? email,
+    string openingTime, string closingTime,
+    bool active = true, Guid? unitId = null);
 
 public record StudioRequest(string name, string address, int capacity,
     string? phone, string? email, string? openingTime, string? closingTime, bool? active);

@@ -5,6 +5,9 @@ using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Infrastructure.Persistence.Repositories;
+using Sinchrony.Infrastructure.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -12,15 +15,34 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Authorize(Roles = "admin")]
 [ApiController]
 [Produces("application/json")]
-public class ErpBikesController(IBikeRepository bikeRepository) : ControllerBase
+public class ErpBikesController(
+    IBikeRepository bikeRepository,
+    IStudioRepository studioRepository,
+    IUnitContext unitContext) : ControllerBase
 {
     [HttpGet("api/studios/{studioId}/bikes")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(BikeListResponseExample))]
     public async Task<IActionResult> List(Guid studioId, CancellationToken ct)
     {
+        var studio = await studioRepository.GetByIdAsync(studioId, ct)
+            ?? throw DomainException.NotFound("Studio not found.");
+
+        // Admin de unidade só vê bikes dos seus studios
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
+            && studio.UnitId != unitContext.UnitId)
+            return Forbid();
+
         var bikes = await bikeRepository.ListByStudioAsync(studioId, ct);
-        return Ok(new { data = bikes.Select(MapBike) });
+        return Ok(new
+        {
+            data = bikes.Select(b => new
+            {
+                id = b.Id,
+                number = b.Number,
+                studioId = b.StudioId
+            })
+        });
     }
 
     [HttpPost("api/studios/{studioId}/bikes")]

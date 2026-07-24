@@ -34,7 +34,8 @@ public record StudioDto(
     string Address,
     int Capacity,
     string OpeningTime,
-    string ClosingTime);
+    string ClosingTime,
+    Guid? UnitId);
 
 public class ListClassesQueryHandler(IClassRepository classRepository)
     : IRequestHandler<ListClassesQuery, PagedResult<ClassDto>>
@@ -65,6 +66,6 @@ public class ListClassesQueryHandler(IClassRepository classRepository)
             c.Status.ToString(),
             new StudioDto(
                 c.Studio!.Id, c.Studio.Name, c.Studio.Address,
-                c.Studio.Capacity, c.Studio.OpeningTime, c.Studio.ClosingTime));
+                c.Studio.Capacity, c.Studio.OpeningTime, c.Studio.ClosingTime, c.Studio.UnitId));
     }
 }

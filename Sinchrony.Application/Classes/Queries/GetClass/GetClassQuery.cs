@@ -58,7 +58,7 @@ public class GetClassQueryHandler(IClassRepository classRepository, IBikeReposit
             @class.Status.ToString(),
             new StudioDto(
                 @class.Studio!.Id, @class.Studio.Name, @class.Studio.Address,
-                @class.Studio.Capacity, @class.Studio.OpeningTime, @class.Studio.ClosingTime),
+                @class.Studio.Capacity, @class.Studio.OpeningTime, @class.Studio.ClosingTime, @class.Studio.UnitId),
             bikes);
     }
 }
