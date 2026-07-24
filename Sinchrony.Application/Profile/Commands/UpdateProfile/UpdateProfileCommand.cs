@@ -34,7 +34,7 @@ public class UpdateProfileCommandHandler(IUserRepository userRepository)
         if (!string.IsNullOrEmpty(request.Cpf) && !CpfValidator.IsValid(request.Cpf))
             throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
 
-        user.UpdateProfile(request.Name, request.Email, request.Phone, request.Avatar);
+        user.UpdateProfile(request.Name, request.Email, request.Phone, request.Avatar ?? user.Avatar);
         if (request.Cpf is not null) user.UpdateCpf(request.Cpf);
 
         await userRepository.SaveAsync(ct);
