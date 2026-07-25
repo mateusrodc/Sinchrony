@@ -10,12 +10,14 @@ public class PackageRepository(ApplicationDbContext db) : IPackageRepository
     => await db.Packages
         .Include(p => p.PackageType)
         .Include(p => p.PackageBenefits).ThenInclude(pb => pb.Benefit)
+        .Include(p => p.Unit)
         .FirstOrDefaultAsync(p => p.Id == id, ct);
 
     public async Task<IEnumerable<Package>> ListAsync(bool? activeOnly, CancellationToken ct = default)
     => await db.Packages
         .Include(p => p.PackageType)
         .Include(p => p.PackageBenefits).ThenInclude(pb => pb.Benefit)
+        .Include(p => p.Unit)
         .Where(p => activeOnly == null || p.Active == activeOnly)
         .OrderBy(p => p.DisplayOrder)
         .ToListAsync(ct);

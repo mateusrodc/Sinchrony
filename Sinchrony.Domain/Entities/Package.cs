@@ -41,6 +41,15 @@ public class Package
 
     public ICollection<Purchase> Purchases { get; private set; } = [];
 
+    public Guid? UnitId { get; private set; }
+    public Unit? Unit { get; private set; }
+
+    public void SetUnit(Guid? unitId)
+    {
+        UnitId = unitId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     protected Package() { }
 
     public static Package Create(

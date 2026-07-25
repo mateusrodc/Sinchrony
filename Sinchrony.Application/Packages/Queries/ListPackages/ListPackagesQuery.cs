@@ -18,7 +18,9 @@ public record PackageDto(
     int? EarlyAccessHours, bool? AllowWaitlist, int? WaitlistPriority,
     bool? ReschedulingAllowed, int? ReschedulingDeadlineHours,
     bool NoShowCreditPenalty, int? MaxNoShowsBeforeBlock, int NoShowBlockWindowDays,
-    List<BenefitDto> Benefits);
+    List<BenefitDto> Benefits,
+    Guid? UnitId,
+    string? UnitName);
 
 public record ListPackagesQuery(bool? ActiveOnly) : IRequest<IEnumerable<PackageDto>>;
 
@@ -46,5 +48,7 @@ public class ListPackagesQueryHandler(IPackageRepository packageRepository)
                 pb.BenefitId,
                 pb.Benefit?.Name ?? string.Empty,
                 pb.Benefit?.Description,
-                pb.Benefit?.Icon)).ToList());
+                pb.Benefit?.Icon)).ToList(),
+            p.UnitId,
+            p.Unit?.Name);
 }
