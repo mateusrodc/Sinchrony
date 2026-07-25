@@ -1796,17 +1796,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateClassTypeRequest"
+                "$ref": "#/components/schemas/ClassTypeRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateClassTypeRequest"
+                "$ref": "#/components/schemas/ClassTypeRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateClassTypeRequest"
+                "$ref": "#/components/schemas/ClassTypeRequest"
               }
             }
           }
@@ -1865,17 +1865,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateClassTypeRequest"
+                "$ref": "#/components/schemas/ClassTypeRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateClassTypeRequest"
+                "$ref": "#/components/schemas/ClassTypeRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateClassTypeRequest"
+                "$ref": "#/components/schemas/ClassTypeRequest"
               }
             }
           }
@@ -1934,6 +1934,14 @@
             "in": "query",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -2619,6 +2627,14 @@
         ],
         "parameters": [
           {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "active",
             "in": "query",
             "schema": {
@@ -2628,13 +2644,7 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { },
-                "example": {"data":[{"id":"2fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Ádria Silva","email":"adria@sinchrony.com","phone":"(63) 98888-0000","active":true,"specialties":["Bike","Pilates"]}]}
-              }
-            }
+            "description": "OK"
           }
         }
       },
@@ -2686,13 +2696,7 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { },
-                "example": {"data":[{"id":"2fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Ádria Silva","email":"adria@sinchrony.com","phone":"(63) 98888-0000","active":true,"specialties":["Bike","Pilates"]}]}
-              }
-            }
+            "description": "OK"
           }
         }
       },
@@ -2730,75 +2734,6 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/teachers/{id}/deactivate": {
-      "patch": {
-        "tags": [
-          "ErpTeachers"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/teachers/{id}/activate": {
-      "patch": {
-        "tags": [
-          "ErpTeachers"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/teachers/{id}/send-password": {
-      "post": {
-        "tags": [
-          "ErpTeachers"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -3669,6 +3604,24 @@
         },
         "additionalProperties": false
       },
+      "ClassTypeRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "usesBikes": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateBikeRequest": {
         "type": "object",
         "properties": {
@@ -3740,22 +3693,6 @@
           "status": {
             "type": "string",
             "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "CreateClassTypeRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "active": {
-            "type": "boolean"
-          },
-          "usesBikes": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -3916,6 +3853,11 @@
               "format": "uuid"
             },
             "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -4053,6 +3995,42 @@
             "items": {
               "type": "string"
             },
+            "nullable": true
+          },
+          "unitIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true
+          },
+          "logradouro": {
+            "type": "string",
+            "nullable": true
+          },
+          "numero": {
+            "type": "string",
+            "nullable": true
+          },
+          "complemento": {
+            "type": "string",
+            "nullable": true
+          },
+          "bairro": {
+            "type": "string",
+            "nullable": true
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
             "nullable": true
           }
         },
@@ -4367,6 +4345,34 @@
           "active": {
             "type": "boolean",
             "nullable": true
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true
+          },
+          "logradouro": {
+            "type": "string",
+            "nullable": true
+          },
+          "numero": {
+            "type": "string",
+            "nullable": true
+          },
+          "complemento": {
+            "type": "string",
+            "nullable": true
+          },
+          "bairro": {
+            "type": "string",
+            "nullable": true
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -4445,22 +4451,6 @@
           "status": {
             "type": "string",
             "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "UpdateClassTypeRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "active": {
-            "type": "boolean"
-          },
-          "usesBikes": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -4631,6 +4621,11 @@
               "type": "string",
               "format": "uuid"
             },
+            "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
             "nullable": true
           }
         },
@@ -4920,6 +4915,42 @@
             "items": {
               "type": "string"
             },
+            "nullable": true
+          },
+          "unitIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "cep": {
+            "type": "string",
+            "nullable": true
+          },
+          "logradouro": {
+            "type": "string",
+            "nullable": true
+          },
+          "numero": {
+            "type": "string",
+            "nullable": true
+          },
+          "complemento": {
+            "type": "string",
+            "nullable": true
+          },
+          "bairro": {
+            "type": "string",
+            "nullable": true
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
             "nullable": true
           }
         },

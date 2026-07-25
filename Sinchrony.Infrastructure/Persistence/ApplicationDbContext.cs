@@ -31,6 +31,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Dependent> Dependents => Set<Dependent>();
     public DbSet<DependentPackageAllocation> DependentPackageAllocations => Set<DependentPackageAllocation>();
     public DbSet<Unit> Units => Set<Unit>();
+    public DbSet<TeacherUnit> TeacherUnits => Set<TeacherUnit>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

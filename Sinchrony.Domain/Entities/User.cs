@@ -35,6 +35,8 @@ public class User
     public ICollection<Purchase> Purchases { get; private set; } = [];
     public ICollection<Card> Cards { get; private set; } = [];
 
+    public ICollection<TeacherUnit> TeacherUnits { get; private set; } = [];
+
     public Guid? UnitId { get; private set; }
     public bool IsGlobalAdmin { get; private set; }
 

@@ -8,7 +8,7 @@ public interface IUserRepository
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
     Task<User?> GetByRefreshTokenAsync(string token, CancellationToken ct = default);
     Task<IEnumerable<User>> ListStudentsAsync(string? status, CancellationToken ct = default);
-    Task<IEnumerable<User>> ListTeachersAsync(bool? active, CancellationToken ct = default);
+    Task<IEnumerable<User>> ListTeachersAsync(string? active, CancellationToken ct = default);
     Task AddAsync(User user, CancellationToken ct = default);
     Task AddRefreshTokenAsync(RefreshToken refreshToken, CancellationToken ct = default);
     Task<User?> GetByGoogleIdAsync(string googleId, CancellationToken ct = default);

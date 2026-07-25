@@ -1,14 +1,11 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Domain.Services;
-using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -18,20 +15,54 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Produces("application/json")]
 public class ErpTeachersController(
     IUserRepository userRepository,
-    IPasswordService passwordService) : ControllerBase
+    ITeacherUnitRepository teacherUnitRepository,
+    IPasswordService passwordService,
+    IUnitContext unitContext) : ControllerBase
 {
-    [HttpGet]
-    [ProducesResponseType(typeof(object), 200)]
-    [SwaggerResponseExample(200, typeof(TeacherListResponseExample))]
-    public async Task<IActionResult> List([FromQuery] bool? active, CancellationToken ct)
+    private static object MapTeacher(User u) => new
     {
-        var teachers = await userRepository.ListTeachersAsync(active, ct);
+        id = u.Id,
+        name = u.Name,
+        email = u.Email,
+        cpf = u.Cpf,
+        phone = u.Phone,
+        active = u.Active,
+        avatar = u.Avatar,
+        unitIds = u.TeacherUnits.Select(tu => tu.UnitId).ToList(),
+        units = u.TeacherUnits.Select(tu => new { id = tu.UnitId, name = tu.Unit?.Name }).ToList(),
+        specialties = string.IsNullOrEmpty(u.Specialties)
+            ? new List<string>()
+            : System.Text.Json.JsonSerializer.Deserialize<List<string>>(u.Specialties),
+        cep = u.Cep,
+        logradouro = u.Logradouro,
+        numero = u.Numero,
+        complemento = u.Complemento,
+        bairro = u.Bairro,
+        cidade = u.Cidade,
+        estado = u.Estado
+    };
+
+    [HttpGet]
+    public async Task<IActionResult> List(
+        [FromQuery] Guid? unitId,
+        [FromQuery] bool? active,
+        CancellationToken ct)
+    {
+        var teachers = await userRepository.ListTeachersAsync(null, ct);
+
+        // Filtro por unidade
+        var filterUnitId = unitId ?? (!unitContext.IsGlobalAdmin ? unitContext.UnitId : null);
+        if (filterUnitId.HasValue)
+            teachers = teachers.Where(t =>
+                t.TeacherUnits.Any(tu => tu.UnitId == filterUnitId.Value));
+
+        if (active.HasValue)
+            teachers = teachers.Where(t => t.Active == active.Value);
+
         return Ok(new { data = teachers.Select(MapTeacher) });
     }
 
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(object), 200)]
-    [SwaggerResponseExample(200, typeof(TeacherListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
@@ -47,13 +78,11 @@ public class ErpTeachersController(
         if (existing is not null)
             throw DomainException.Conflict("EMAIL_IN_USE", "Email already in use.");
 
-        if (!string.IsNullOrEmpty(req.cpf) && !CpfValidator.IsValid(req.cpf))
-            throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
-
         if (!string.IsNullOrEmpty(req.cpf))
         {
-            var cpfSanitized = CpfValidator.Sanitize(req.cpf);
-            var cpfInUse = await userRepository.GetByCpfAsync(cpfSanitized, ct);
+            if (!CpfValidator.IsValid(req.cpf))
+                throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
+            var cpfInUse = await userRepository.GetByCpfAsync(CpfValidator.Sanitize(req.cpf), ct);
             if (cpfInUse is not null)
                 throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
         }
@@ -62,109 +91,67 @@ public class ErpTeachersController(
         var teacher = Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.teacher,
             string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
 
-        teacher.UpdateAddress(req.cep, req.logradouro, req.numero,
-    req.complemento, req.bairro, req.cidade, req.estado);
-
         teacher.UpdateSpecialties(req.specialties);
+        teacher.UpdateAddress(req.cep, req.logradouro, req.numero,
+            req.complemento, req.bairro, req.cidade, req.estado);
+
+        if (!req.active) teacher.Deactivate();
 
         await userRepository.AddAsync(teacher, ct);
         await userRepository.SaveAsync(ct);
-        return StatusCode(201, MapTeacher(teacher));
+
+        // Vincula às unidades
+        var unitIds = req.unitIds ?? [];
+        if (!unitIds.Any() && unitContext.UnitId.HasValue)
+            unitIds = [unitContext.UnitId.Value];
+
+        if (unitIds.Any())
+        {
+            await teacherUnitRepository.UpdateTeacherUnitsAsync(teacher.Id, unitIds, ct);
+            await teacherUnitRepository.SaveAsync(ct);
+        }
+
+        var created = await userRepository.GetByIdAsync(teacher.Id, ct);
+        return StatusCode(201, MapTeacher(created!));
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTeacherRequest req, CancellationToken ct)
     {
-        var teacher = await userRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Teacher not found.");
-
-        teacher.UpdateProfile(req.name, req.email, req.phone, teacher.Avatar);
-
-        teacher.UpdateAddress(req.cep, req.logradouro, req.numero,
-    req.complemento, req.bairro, req.cidade, req.estado);
+        var teacher = await userRepository.GetByIdAsync(id, ct);
+        if (teacher is null || teacher.Role != Role.teacher)
+            throw DomainException.NotFound("Teacher not found.");
 
         if (!string.IsNullOrEmpty(req.cpf))
         {
             if (!CpfValidator.IsValid(req.cpf))
                 throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
-
-            var cpfSanitized = CpfValidator.Sanitize(req.cpf);
-            var cpfInUse = await userRepository.GetByCpfAsync(cpfSanitized, ct);
+            var cpfInUse = await userRepository.GetByCpfAsync(CpfValidator.Sanitize(req.cpf), ct);
             if (cpfInUse is not null && cpfInUse.Id != id)
                 throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
-
             teacher.UpdateCpf(req.cpf);
         }
+
+        teacher.UpdateProfile(req.name, req.email, req.phone, teacher.Avatar);
+        teacher.UpdateSpecialties(req.specialties);
+        teacher.UpdateAddress(req.cep, req.logradouro, req.numero,
+            req.complemento, req.bairro, req.cidade, req.estado);
 
         if (req.active == false) teacher.Deactivate();
         else if (req.active == true) teacher.Reactivate();
 
-        teacher.UpdateSpecialties(req.specialties);
-
         await userRepository.SaveAsync(ct);
-        return Ok(MapTeacher(teacher));
+
+        // Atualiza unidades se enviado
+        if (req.unitIds is not null)
+        {
+            await teacherUnitRepository.UpdateTeacherUnitsAsync(id, req.unitIds, ct);
+            await teacherUnitRepository.SaveAsync(ct);
+        }
+
+        var updated = await userRepository.GetByIdAsync(id, ct);
+        return Ok(MapTeacher(updated!));
     }
-
-    [HttpPatch("{id}/deactivate")]
-    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
-    {
-        var teacher = await userRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Teacher not found.");
-        teacher.Deactivate();
-        await userRepository.SaveAsync(ct);
-        return Ok(new { success = true });
-    }
-
-    [HttpPatch("{id}/activate")]
-    public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
-    {
-        var teacher = await userRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Teacher not found.");
-        teacher.Reactivate();
-        await userRepository.SaveAsync(ct);
-        return Ok(new { success = true });
-    }
-
-    [HttpPost("{id}/send-password")]
-    public async Task<IActionResult> SendPassword(Guid id, CancellationToken ct)
-    {
-        var teacher = await userRepository.GetByIdAsync(id, ct);
-        if (teacher is null || teacher.Role != Role.teacher)
-            throw DomainException.NotFound("Teacher not found.");
-
-        var tempPassword = Guid.NewGuid().ToString("N")[..10];
-        var hash = passwordService.HashPassword(tempPassword);
-        teacher.ChangePassword(hash);
-
-        foreach (var token in teacher.RefreshTokens.Where(t => !t.Revoked))
-            token.Revoke();
-
-        await userRepository.SaveAsync(ct);
-        return Ok(new { success = true, message = "Senha temporária gerada.", temporaryPassword = tempPassword });
-    }
-
-    private static object MapTeacher(User u) => new
-    {
-        id = u.Id,
-        name = u.Name,
-        email = u.Email,
-        cpf = u.Cpf,
-        phone = u.Phone,
-        active = u.Active,
-        avatar = u.Avatar,
-        unitId = u.UnitId,
-        unitName = u.Unit?.Name,
-        specialties = string.IsNullOrEmpty(u.Specialties)
-        ? new List<string>()
-        : System.Text.Json.JsonSerializer.Deserialize<List<string>>(u.Specialties),
-        cep = u.Cep,
-        logradouro = u.Logradouro,
-        numero = u.Numero,
-        complemento = u.Complemento,
-        bairro = u.Bairro,
-        cidade = u.Cidade,
-        estado = u.Estado
-    };
 }
 
 public record CreateTeacherRequest(
@@ -172,6 +159,7 @@ public record CreateTeacherRequest(
     string password, bool active,
     string? cpf = null,
     List<string>? specialties = null,
+    List<Guid>? unitIds = null,
     string? cep = null, string? logradouro = null, string? numero = null,
     string? complemento = null, string? bairro = null, string? cidade = null,
     string? estado = null);
@@ -181,6 +169,7 @@ public record UpdateTeacherRequest(
     bool? active = null,
     string? cpf = null,
     List<string>? specialties = null,
+    List<Guid>? unitIds = null,
     string? cep = null, string? logradouro = null, string? numero = null,
     string? complemento = null, string? bairro = null, string? cidade = null,
     string? estado = null);

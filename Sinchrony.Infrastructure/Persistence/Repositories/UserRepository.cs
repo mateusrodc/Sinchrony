@@ -8,11 +8,11 @@ namespace Sinchrony.Infrastructure.Persistence.Repositories;
 public class UserRepository(ApplicationDbContext db) : IUserRepository
 {
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await db.Users
-            .Include(u => u.RefreshTokens)
-            .Include(u => u.Unit)
-            .Include(u => u.Cards)
-            .FirstOrDefaultAsync(u => u.Id == id, ct);
+    => await db.Users
+        .Include(u => u.RefreshTokens)
+        .Include(u => u.Unit)
+        .Include(u => u.TeacherUnits).ThenInclude(tu => tu.Unit)
+        .FirstOrDefaultAsync(u => u.Id == id, ct);
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
         => await db.Users
@@ -32,12 +32,13 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
         return await query.OrderBy(u => u.Name).ToListAsync(ct);
     }
 
-    public async Task<IEnumerable<User>> ListTeachersAsync(bool? active, CancellationToken ct = default)
-    {
-        var query = db.Users.Where(u => u.Role == Domain.Enums.Role.teacher);
-        if (active.HasValue) query = query.Where(u => u.Active == active.Value);
-        return await query.OrderBy(u => u.Name).ToListAsync(ct);
-    }
+    public async Task<IEnumerable<User>> ListTeachersAsync(string? active, CancellationToken ct = default)
+    => await db.Users
+        .Include(u => u.TeacherUnits).ThenInclude(tu => tu.Unit)
+        .Where(u => u.Role == Role.teacher &&
+            (string.IsNullOrEmpty(active) || u.Active.ToString().ToLower() == active.ToLower()))
+        .OrderBy(u => u.Name)
+        .ToListAsync(ct);
 
     public async Task AddAsync(User user, CancellationToken ct = default)
         => await db.Users.AddAsync(user, ct);

@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IUnitRepository, UnitRepository>();
         services.AddScoped<IUnitContext, UnitContext>();
+        services.AddScoped<ITeacherUnitRepository, TeacherUnitRepository>();
 
         services.AddHttpClient<IStorageService, SupabaseStorageService>(client =>
         {
