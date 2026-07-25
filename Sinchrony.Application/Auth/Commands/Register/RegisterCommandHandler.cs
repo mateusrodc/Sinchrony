@@ -5,6 +5,7 @@ using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 
 namespace Sinchrony.Application.Auth.Commands.Register;
 
@@ -19,6 +20,15 @@ public class RegisterCommandHandler(
         if (existing is not null)
             throw DomainException.Conflict("EMAIL_IN_USE", "Email already in use.");
 
+        // Valida CPF duplicado
+        if (!string.IsNullOrEmpty(request.Cpf))
+        {
+            var cpfSanitized = CpfValidator.Sanitize(request.Cpf);
+            var cpfInUse = await userRepository.GetByCpfAsync(cpfSanitized, ct);
+            if (cpfInUse is not null)
+                throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
+        }
+
         var hash = passwordService.HashPassword(request.Password);
         var user = User.Create(request.Name, request.Email, request.Phone, hash, Role.student, request.Cpf);
 
@@ -26,14 +36,14 @@ public class RegisterCommandHandler(
             user.SetUnit(request.UnitId.Value);
 
         user.UpdateAddress(request.Cep, request.Logradouro, request.Numero,
-    request.Complemento, request.Bairro, request.Cidade, request.Estado);
+            request.Complemento, request.Bairro, request.Cidade, request.Estado);
 
         await userRepository.AddAsync(user, ct);
         await userRepository.SaveAsync(ct);
 
         var accessToken = tokenService.GenerateAccessToken(user);
         var refreshStr = tokenService.GenerateRefreshToken();
-        var refreshToken = Sinchrony.Domain.Entities.RefreshToken.Create(user.Id, refreshStr);
+        var refreshToken = Domain.Entities.RefreshToken.Create(user.Id, refreshStr);
 
         await userRepository.AddRefreshTokenAsync(refreshToken, ct);
         await userRepository.SaveAsync(ct);

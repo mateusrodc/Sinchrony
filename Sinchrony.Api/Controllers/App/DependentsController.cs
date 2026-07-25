@@ -5,6 +5,7 @@ using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -68,6 +69,14 @@ public class DependentsController(
         var existing = await userRepository.GetByEmailAsync(req.email, ct);
         if (existing is not null)
             throw DomainException.Conflict("EMAIL_IN_USE", "Email já cadastrado.");
+
+        if (!string.IsNullOrEmpty(req.cpf))
+        {
+            var cpfSanitized = CpfValidator.Sanitize(req.cpf);
+            var cpfInUse = await userRepository.GetByCpfAsync(cpfSanitized, ct);
+            if (cpfInUse is not null)
+                throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
+        }
 
         // Busca o responsável para herdar UnitId
         var responsible = await userRepository.GetByIdAsync(UserId, ct)

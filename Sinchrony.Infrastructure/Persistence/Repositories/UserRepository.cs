@@ -79,4 +79,7 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
             .Where(u => u.Role == Role.teacher && u.UnitId == unitId)
             .OrderBy(u => u.Name)
             .ToListAsync(ct);
+
+    public async Task<User?> GetByCpfAsync(string cpf, CancellationToken ct = default)
+    => await db.Users.FirstOrDefaultAsync(u => u.Cpf == cpf, ct);
 }

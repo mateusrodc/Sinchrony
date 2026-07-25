@@ -1651,6 +1651,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2468,17 +2475,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StudioRequest"
+                "$ref": "#/components/schemas/CreateStudioRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/StudioRequest"
+                "$ref": "#/components/schemas/CreateStudioRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/StudioRequest"
+                "$ref": "#/components/schemas/CreateStudioRequest"
               }
             }
           }
@@ -2537,17 +2544,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StudioRequest"
+                "$ref": "#/components/schemas/UpdateStudioRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/StudioRequest"
+                "$ref": "#/components/schemas/UpdateStudioRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/StudioRequest"
+                "$ref": "#/components/schemas/UpdateStudioRequest"
               }
             }
           }
@@ -2559,7 +2566,7 @@
         }
       }
     },
-    "/api/studios/{id}/deactivate": {
+    "/api/studios/{id}/activate": {
       "patch": {
         "tags": [
           "ErpStudios"
@@ -2582,7 +2589,7 @@
         }
       }
     },
-    "/api/studios/{id}/activate": {
+    "/api/studios/{id}/deactivate": {
       "patch": {
         "tags": [
           "ErpStudios"
@@ -3760,11 +3767,23 @@
             "type": "string",
             "nullable": true
           },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
           "birthDate": {
             "type": "string",
             "nullable": true
           },
           "cpf": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
             "type": "string",
             "nullable": true
           }
@@ -3953,6 +3972,45 @@
             "nullable": true
           },
           "estado": {
+            "type": "string",
+            "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateStudioRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "openingTime": {
+            "type": "string",
+            "nullable": true
+          },
+          "closingTime": {
             "type": "string",
             "nullable": true
           },
@@ -4287,44 +4345,6 @@
         },
         "additionalProperties": false
       },
-      "StudioRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "address": {
-            "type": "string",
-            "nullable": true
-          },
-          "capacity": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "phone": {
-            "type": "string",
-            "nullable": true
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
-          "openingTime": {
-            "type": "string",
-            "nullable": true
-          },
-          "closingTime": {
-            "type": "string",
-            "nullable": true
-          },
-          "active": {
-            "type": "boolean",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "UnitRequest": {
         "type": "object",
         "properties": {
@@ -4449,6 +4469,14 @@
         "type": "object",
         "properties": {
           "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
             "type": "string",
             "nullable": true
           },
@@ -4813,6 +4841,48 @@
           "estado": {
             "type": "string",
             "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateStudioRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "openingTime": {
+            "type": "string",
+            "nullable": true
+          },
+          "closingTime": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
           },
           "unitId": {
             "type": "string",

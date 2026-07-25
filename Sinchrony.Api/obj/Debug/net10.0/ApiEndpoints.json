@@ -460,6 +460,11 @@
         "Name": "studioId",
         "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
       }
     ],
     "ReturnTypes": [
@@ -954,7 +959,7 @@
     "Parameters": [
       {
         "Name": "req",
-        "Type": "Sinchrony.Api.Controllers.Erp.StudioRequest",
+        "Type": "Sinchrony.Api.Controllers.Erp.CreateStudioRequest",
         "IsRequired": true
       }
     ],
@@ -999,7 +1004,7 @@
       },
       {
         "Name": "req",
-        "Type": "Sinchrony.Api.Controllers.Erp.StudioRequest",
+        "Type": "Sinchrony.Api.Controllers.Erp.UpdateStudioRequest",
         "IsRequired": true
       }
     ],

@@ -107,6 +107,14 @@ public class ErpStudentsController(
         var student = Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.student,
             string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
 
+        if (!string.IsNullOrEmpty(req.cpf))
+        {
+            var cpfSanitized = CpfValidator.Sanitize(req.cpf);
+            var cpfInUse = await userRepository.GetByCpfAsync(cpfSanitized, ct);
+            if (cpfInUse is not null)
+                throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
+        }
+
         if (!string.IsNullOrEmpty(req.plan))
             student.UpdatePlan(req.plan);
 
@@ -140,6 +148,14 @@ public class ErpStudentsController(
             if (!CpfValidator.IsValid(req.cpf))
                 throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
             student.UpdateCpf(req.cpf);
+        }
+
+        if (!string.IsNullOrEmpty(req.cpf))
+        {
+            var cpfSanitized = CpfValidator.Sanitize(req.cpf);
+            var cpfInUse = await userRepository.GetByCpfAsync(cpfSanitized, ct);
+            if (cpfInUse is not null && cpfInUse.Id != id)
+                throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
         }
 
         if (!string.IsNullOrEmpty(req.status))

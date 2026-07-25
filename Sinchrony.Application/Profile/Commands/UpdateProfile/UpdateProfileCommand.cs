@@ -31,6 +31,14 @@ public class UpdateProfileCommandHandler(IUserRepository userRepository)
         if (emailInUse is not null && emailInUse.Id != request.UserId)
             throw DomainException.Conflict("EMAIL_IN_USE", "Email already in use.");
 
+        if (!string.IsNullOrEmpty(request.Cpf))
+        {
+            var cpfSanitized = CpfValidator.Sanitize(request.Cpf);
+            var cpfInUse = await userRepository.GetByCpfAsync(cpfSanitized, ct);
+            if (cpfInUse is not null && cpfInUse.Id != request.UserId)
+                throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
+        }
+
         if (!string.IsNullOrEmpty(request.Cpf) && !CpfValidator.IsValid(request.Cpf))
             throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
 
