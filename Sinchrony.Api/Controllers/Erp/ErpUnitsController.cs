@@ -34,11 +34,11 @@ public class ErpUnitsController(
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
     {
-        // Só admin global vê todas as unidades
-        if (!unitContext.IsGlobalAdmin)
-            return Forbid();
-
         var units = await unitRepository.ListAsync(ct);
+
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
+            units = units.Where(u => u.Id == unitContext.UnitId.Value);
+
         return Ok(new { data = units.Select(MapUnit) });
     }
 
