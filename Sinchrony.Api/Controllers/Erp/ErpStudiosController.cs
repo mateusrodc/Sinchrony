@@ -28,7 +28,8 @@ public class ErpStudiosController(
         openingTime = s.OpeningTime,
         closingTime = s.ClosingTime,
         active = s.Active,
-        unitId = s.UnitId
+        unitId = s.UnitId,
+        unitName = s.Unit?.Name
     };
 
     [HttpGet]

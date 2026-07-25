@@ -9,10 +9,11 @@ public class StudioRepository(ApplicationDbContext db) : IStudioRepository
     public async Task<Studio?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await db.Studios
             .Include(s => s.Bikes)
+            .Include(s => s.Unit)
             .FirstOrDefaultAsync(s => s.Id == id, ct);
 
     public async Task<IEnumerable<Studio>> ListAsync(CancellationToken ct = default)
-        => await db.Studios.OrderBy(s => s.Name).ToListAsync(ct);
+        => await db.Studios.Include(s => s.Unit).OrderBy(s => s.Name).ToListAsync(ct);
 
     public async Task AddAsync(Studio studio, CancellationToken ct = default)
         => await db.Studios.AddAsync(studio, ct);

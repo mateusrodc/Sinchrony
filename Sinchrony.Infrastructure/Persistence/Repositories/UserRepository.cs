@@ -10,6 +10,7 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await db.Users
             .Include(u => u.RefreshTokens)
+            .Include(u => u.Unit)
             .Include(u => u.Cards)
             .FirstOrDefaultAsync(u => u.Id == id, ct);
 
@@ -25,7 +26,7 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
 
     public async Task<IEnumerable<User>> ListStudentsAsync(string? status, CancellationToken ct = default)
     {
-        var query = db.Users.Where(u => u.Role == Domain.Enums.Role.student);
+        var query = db.Users.Include(u => u.Unit).Where(u => u.Role == Domain.Enums.Role.student);
         if (!string.IsNullOrEmpty(status))
             query = query.Where(u => u.Status.ToString() == status);
         return await query.OrderBy(u => u.Name).ToListAsync(ct);
@@ -50,7 +51,7 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
     public async Task<(IEnumerable<User> Items, int Total)> ListStudentsPagedAsync(
     string? status, int page, int pageSize, CancellationToken ct = default)
     {
-        var query = db.Users.Where(u => u.Role == Domain.Enums.Role.student);
+        var query = db.Users.Include(u => u.Unit).Where(u => u.Role == Domain.Enums.Role.student);
         if (!string.IsNullOrEmpty(status))
             query = query.Where(u => u.Status.ToString() == status);
 

@@ -31,6 +31,7 @@ public class ErpStudentsController(
         credits = u.Credits,
         avatar = u.Avatar,
         unitId = u.UnitId,
+        unitName = u.Unit?.Name,
         registeredAt = u.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
         lastVisit = (string?)null,
         totalClasses = 0,
