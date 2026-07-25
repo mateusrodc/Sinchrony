@@ -36,6 +36,8 @@ public class ErpBookingsController(IBookingRepository bookingRepository) : Contr
             studentId = b.StudentId,
             studentName = b.Student?.Name,
             studentEmail = b.Student?.Email,
+            studentAvatar = b.Student?.Avatar,
+            studentPhone = b.Student?.Phone,
             status = b.Status.ToString(),
             bikeNumber = b.BikeNumber,
             bookedAt = b.BookedAt,
