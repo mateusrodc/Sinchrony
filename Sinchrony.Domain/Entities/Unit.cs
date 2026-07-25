@@ -11,6 +11,14 @@ public class Unit
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
+    public string? Cep { get; private set; }
+    public string? Logradouro { get; private set; }
+    public string? Numero { get; private set; }
+    public string? Complemento { get; private set; }
+    public string? Bairro { get; private set; }
+    public string? Cidade { get; private set; }
+    public string? Estado { get; private set; }
+
     public ICollection<User> Users { get; private set; } = [];
     public ICollection<Studio> Studios { get; private set; } = [];
 
@@ -27,6 +35,18 @@ public class Unit
         Phone = phone;
         Email = email;
         Active = active;
+        UpdatedAt = DateTime.UtcNow;
+    }
+    public void UpdateAddress(string? cep, string? logradouro, string? numero,
+        string? complemento, string? bairro, string? cidade, string? estado)
+    {
+        Cep = string.IsNullOrEmpty(cep) ? null : cep.Replace("-", "").Trim();
+        Logradouro = logradouro;
+        Numero = numero;
+        Complemento = complemento;
+        Bairro = bairro;
+        Cidade = cidade;
+        Estado = estado;
         UpdatedAt = DateTime.UtcNow;
     }
 }

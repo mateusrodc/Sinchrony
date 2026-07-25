@@ -28,7 +28,14 @@ public class ErpUnitsController(
         email = u.Email,
         active = u.Active,
         studiosCount = u.Studios.Count,
-        createdAt = u.CreatedAt
+        createdAt = u.CreatedAt,
+        cep = u.Cep,
+        logradouro = u.Logradouro,
+        numero = u.Numero,
+        complemento = u.Complemento,
+        bairro = u.Bairro,
+        cidade = u.Cidade,
+        estado = u.Estado
     };
 
     [HttpGet]
@@ -62,6 +69,8 @@ public class ErpUnitsController(
             return Forbid();
 
         var unit = Unit.Create(req.name, req.address, req.phone, req.email);
+        unit.UpdateAddress(req.cep, req.logradouro, req.numero,
+            req.complemento, req.bairro, req.cidade, req.estado);
         await unitRepository.AddAsync(unit, ct);
         await unitRepository.SaveAsync(ct);
         return StatusCode(201, MapUnit(unit));
@@ -77,6 +86,8 @@ public class ErpUnitsController(
             ?? throw DomainException.NotFound("Unit not found.");
 
         unit.Update(req.name, req.address, req.phone, req.email, req.active ?? true);
+        unit.UpdateAddress(req.cep, req.logradouro, req.numero,
+            req.complemento, req.bairro, req.cidade, req.estado);
         await unitRepository.SaveAsync(ct);
         return Ok(MapUnit(unit));
     }
@@ -133,4 +144,8 @@ public class ErpUnitsController(
     }
 }
 
-public record UnitRequest(string name, string? address, string? phone, string? email, bool? active);
+public record UnitRequest(
+    string name, string? address, string? phone, string? email, bool? active,
+    string? cep = null, string? logradouro = null, string? numero = null,
+    string? complemento = null, string? bairro = null, string? cidade = null,
+    string? estado = null);

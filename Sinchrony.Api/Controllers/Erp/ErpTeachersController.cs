@@ -62,6 +62,9 @@ public class ErpTeachersController(
         var teacher = Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.teacher,
             string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
 
+        teacher.UpdateAddress(req.cep, req.logradouro, req.numero,
+    req.complemento, req.bairro, req.cidade, req.estado);
+
         teacher.UpdateSpecialties(req.specialties);
 
         await userRepository.AddAsync(teacher, ct);
@@ -76,6 +79,9 @@ public class ErpTeachersController(
             ?? throw DomainException.NotFound("Teacher not found.");
 
         teacher.UpdateProfile(req.name, req.email, req.phone, teacher.Avatar);
+
+        teacher.UpdateAddress(req.cep, req.logradouro, req.numero,
+    req.complemento, req.bairro, req.cidade, req.estado);
 
         if (!string.IsNullOrEmpty(req.cpf))
         {
@@ -146,9 +152,18 @@ public class ErpTeachersController(
         phone = u.Phone,
         active = u.Active,
         avatar = u.Avatar,
+        unitId = u.UnitId,
+        unitName = u.Unit?.Name,
         specialties = string.IsNullOrEmpty(u.Specialties)
         ? new List<string>()
-        : System.Text.Json.JsonSerializer.Deserialize<List<string>>(u.Specialties)
+        : System.Text.Json.JsonSerializer.Deserialize<List<string>>(u.Specialties),
+        cep = u.Cep,
+        logradouro = u.Logradouro,
+        numero = u.Numero,
+        complemento = u.Complemento,
+        bairro = u.Bairro,
+        cidade = u.Cidade,
+        estado = u.Estado
     };
 }
 
@@ -156,10 +171,16 @@ public record CreateTeacherRequest(
     string name, string email, string? phone,
     string password, bool active,
     string? cpf = null,
-    List<string>? specialties = null);
+    List<string>? specialties = null,
+    string? cep = null, string? logradouro = null, string? numero = null,
+    string? complemento = null, string? bairro = null, string? cidade = null,
+    string? estado = null);
 
 public record UpdateTeacherRequest(
     string name, string email, string? phone,
     bool? active = null,
     string? cpf = null,
-    List<string>? specialties = null);
+    List<string>? specialties = null,
+    string? cep = null, string? logradouro = null, string? numero = null,
+    string? complemento = null, string? bairro = null, string? cidade = null,
+    string? estado = null);
