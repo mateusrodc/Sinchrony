@@ -33,6 +33,26 @@ public class PurchasePackageCommandHandler(
         var user = await userRepository.GetByIdAsync(request.UserId, ct)
             ?? throw DomainException.NotFound("User not found.");
 
+        // Validações obrigatórias — retorna 400 em vez de 500
+        if (string.IsNullOrEmpty(request.PaymentMethod))
+            throw DomainException.Validation("PAYMENT_METHOD_REQUIRED", "Método de pagamento é obrigatório.");
+
+        if (request.PaymentMethod != "pix" && request.PaymentMethod != "card")
+            throw DomainException.Validation("INVALID_PAYMENT_METHOD", "Método de pagamento inválido. Use 'pix' ou 'card'.");
+
+        if (request.Amount <= 0)
+            throw DomainException.Validation("AMOUNT_REQUIRED", "O valor da compra é obrigatório e deve ser maior que zero.");
+
+        if (request.PaymentMethod == "pix")
+        {
+            var cpfReq = request.Cpf ?? user.Cpf;
+            if (string.IsNullOrEmpty(cpfReq))
+                throw DomainException.Validation("CPF_REQUIRED", "CPF é obrigatório para pagamento via PIX.");
+        }
+
+        if (request.PaymentMethod == "card" && string.IsNullOrEmpty(request.CardToken))
+            throw DomainException.Validation("CARD_TOKEN_REQUIRED", "Token do cartão é obrigatório para pagamento via cartão.");
+
         var package = await packageRepository.GetByIdAsync(request.PackageId, ct)
             ?? throw DomainException.NotFound("Package not found.");
 
