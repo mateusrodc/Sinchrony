@@ -1,11 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
-using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
-using Sinchrony.Infrastructure.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -19,50 +17,37 @@ public class ErpDashboardController(
     IStudioRepository studioRepository,
     IBookingRepository bookingRepository,
     IPurchaseRepository purchaseRepository,
-    IAttendanceRepository attendanceRepository,
-    IUnitContext unitContext) : ControllerBase
+    IAttendanceRepository attendanceRepository) : ControllerBase
 {
     [HttpGet("admin/dashboard")]
     [HttpGet("api/dashboard")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(DashboardResponseExample))]
-    public async Task<IActionResult> Dashboard(CancellationToken ct)
+    public async Task<IActionResult> Dashboard(
+        [FromQuery] int? year,
+        CancellationToken ct)
     {
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(now);
+        var targetYear = year ?? now.Year;
 
-        IEnumerable<User> students;
-        IEnumerable<User> teachers;
-
-        if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
-        {
-            students = await userRepository.ListStudentsAsync(null, ct);
-            teachers = await userRepository.ListTeachersAsync(null, ct);
-        }
-        else
-        {
-            students = await userRepository.ListStudentsByUnitAsync(unitContext.UnitId.Value, ct);
-            teachers = await userRepository.ListTeachersByUnitAsync(unitContext.UnitId.Value, ct);
-        }
+        var students = await userRepository.ListStudentsAsync(null, ct);
+        var teachers = await userRepository.ListTeachersAsync(null, ct);
         var studios = await studioRepository.ListAsync(ct);
         var classes = await classRepository.ListAsync(null, null, null, ct);
         var allPurchases = await purchaseRepository.ListAllAsync(ct);
         var allBookings = await bookingRepository.ListErpAsync(null, null, null, ct);
 
-        // Aulas do mês
         var monthClasses = classes
             .Where(c => c.Date.Month == now.Month && c.Date.Year == now.Year)
             .ToList();
 
-        // Compras confirmadas do mês
-        var monthPurchases = allPurchases
+        // Receita do mês atual
+        var revenueThisMonth = allPurchases
             .Where(p => p.Status == "confirmed" &&
                 p.CreatedAt.Month == now.Month &&
                 p.CreatedAt.Year == now.Year)
-            .ToList();
-
-        // Receita do mês
-        var revenueThisMonth = monthPurchases.Sum(p => p.Amount);
+            .Sum(p => p.Amount);
 
         // Taxa de ocupação
         var occupancyRate = 0.0;
@@ -80,16 +65,10 @@ public class ErpDashboardController(
             }
         }
 
-        // Alunos ativos
         var activeSubscriptions = students.Count(s => s.Status == StudentStatus.active);
-
-        // Check-ins hoje
         var checkinsToday = allBookings.Count(b =>
-            b.Class != null &&
-            b.Class.Date == today &&
-            b.CheckedIn);
+            b.Class != null && b.Class.Date == today && b.CheckedIn);
 
-        // Próximas aulas (hoje e futuras, até 5)
         var upcomingClasses = classes
             .Where(c => c.Date >= today && c.Status == ClassStatus.scheduled)
             .OrderBy(c => c.Date).ThenBy(c => c.StartTime)
@@ -103,10 +82,8 @@ public class ErpDashboardController(
                 instructor = c.Teacher?.Name ?? string.Empty,
                 enrolledCount = allBookings.Count(b =>
                     b.ClassId == c.Id && b.Status == BookingStatus.confirmed)
-            })
-            .ToList();
+            }).ToList();
 
-        // Últimos check-ins (até 5)
         var recentCheckins = allBookings
             .Where(b => b.CheckedIn && b.Class != null)
             .OrderByDescending(b => b.BookedAt)
@@ -117,33 +94,39 @@ public class ErpDashboardController(
                 className = b.Class?.Name ?? string.Empty,
                 date = b.Class?.Date.ToString("yyyy-MM-dd"),
                 startTime = b.Class?.StartTime
-            })
-            .ToList();
+            }).ToList();
 
-        // Receita mensal — últimos 6 meses
-        var monthlyRevenue = Enumerable.Range(0, 6)
-            .Select(i =>
+        // Receita mensal — 12 meses do ano informado
+        var monthlyRevenue = Enumerable.Range(1, 12).Select(month =>
+        {
+            var revenue = allPurchases
+                .Where(p =>
+                    p.Status == "confirmed" &&
+                    p.CreatedAt.Month == month &&
+                    p.CreatedAt.Year == targetYear)
+                .Sum(p => p.Amount);
+
+            return new
             {
-                var month = now.AddMonths(-i);
-                var revenue = allPurchases
-                    .Where(p =>
-                        p.Status == "confirmed" &&
-                        p.CreatedAt.Month == month.Month &&
-                        p.CreatedAt.Year == month.Year)
-                    .Sum(p => p.Amount);
+                month,
+                monthName = new DateTime(targetYear, month, 1).ToString("MMM"),
+                year = targetYear,
+                revenue
+            };
+        }).ToList();
 
-                return new
-                {
-                    month = month.ToString("MMM/yyyy"),
-                    revenue
-                };
-            })
-            .OrderBy(x => x.month)
+        // Anos disponíveis para o seletor
+        var availableYears = allPurchases
+            .Where(p => p.Status == "confirmed")
+            .Select(p => p.CreatedAt.Year)
+            .Distinct()
+            .OrderByDescending(y => y)
             .ToList();
 
-        // Atividades recentes — últimas 10 (reservas, cancelamentos, pagamentos)
-        var recentActivities = new List<object>();
+        if (!availableYears.Contains(now.Year))
+            availableYears.Insert(0, now.Year);
 
+        // Atividades recentes
         var recentBookings = allBookings
             .OrderByDescending(b => b.BookedAt)
             .Take(10)
@@ -167,10 +150,8 @@ public class ErpDashboardController(
                 timestamp = p.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ")
             });
 
-        recentActivities.AddRange(recentBookings);
-        recentActivities.AddRange(recentPayments);
-
-        var sortedActivities = recentActivities
+        var recentActivities = recentBookings.Cast<object>()
+            .Concat(recentPayments.Cast<object>())
             .OrderByDescending(a => ((dynamic)a).timestamp)
             .Take(10)
             .ToList();
@@ -187,8 +168,10 @@ public class ErpDashboardController(
             checkinsToday,
             upcomingClasses,
             recentCheckins,
-            recentActivities = sortedActivities,
-            monthlyRevenue
+            recentActivities,
+            monthlyRevenue,
+            availableYears,
+            year = targetYear
         });
     }
 }
