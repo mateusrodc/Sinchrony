@@ -17,7 +17,8 @@ public class ErpDashboardController(
     IStudioRepository studioRepository,
     IBookingRepository bookingRepository,
     IPurchaseRepository purchaseRepository,
-    IAttendanceRepository attendanceRepository) : ControllerBase
+    IAttendanceRepository attendanceRepository,
+    IUnitContext unitContext) : ControllerBase
 {
     [HttpGet("admin/dashboard")]
     [HttpGet("api/dashboard")]
@@ -31,18 +32,42 @@ public class ErpDashboardController(
         var today = DateOnly.FromDateTime(now);
         var targetYear = year ?? now.Year;
 
-        var students = await userRepository.ListStudentsAsync(null, ct);
-        var teachers = await userRepository.ListTeachersAsync(null, ct);
+        IEnumerable<Domain.Entities.User> students;
+        IEnumerable<Domain.Entities.User> teachers;
+
+        if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
+        {
+            students = await userRepository.ListStudentsAsync(null, ct);
+            teachers = await userRepository.ListTeachersAsync(null, ct);
+        }
+        else
+        {
+            students = await userRepository.ListStudentsByUnitAsync(unitContext.UnitId.Value, ct);
+            teachers = await userRepository.ListTeachersByUnitAsync(unitContext.UnitId.Value, ct);
+        }
+
         var studios = await studioRepository.ListAsync(ct);
         var classes = await classRepository.ListAsync(null, null, null, ct);
         var allPurchases = await purchaseRepository.ListAllAsync(ct);
         var allBookings = await bookingRepository.ListErpAsync(null, null, null, ct);
 
+        // Filtra por unidade se admin de unidade
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
+        {
+            var unitStudioIds = studios
+                .Where(s => s.UnitId == unitContext.UnitId.Value)
+                .Select(s => s.Id).ToHashSet();
+
+            classes = classes.Where(c => unitStudioIds.Contains(c.StudioId));
+            allBookings = allBookings.Where(b =>
+                b.Class != null && unitStudioIds.Contains(b.Class.StudioId));
+        }
+
         var monthClasses = classes
             .Where(c => c.Date.Month == now.Month && c.Date.Year == now.Year)
             .ToList();
 
-        // Receita do mês atual
+        // Receita do mês atual (sempre mês/ano corrente independente do filtro)
         var revenueThisMonth = allPurchases
             .Where(p => p.Status == "confirmed" &&
                 p.CreatedAt.Month == now.Month &&
@@ -96,7 +121,7 @@ public class ErpDashboardController(
                 startTime = b.Class?.StartTime
             }).ToList();
 
-        // Receita mensal — 12 meses do ano informado
+        // monthlyRevenue — 12 meses do ano filtrado, formato "YYYY-MM", em ordem
         var monthlyRevenue = Enumerable.Range(1, 12).Select(month =>
         {
             var revenue = allPurchases
@@ -108,9 +133,7 @@ public class ErpDashboardController(
 
             return new
             {
-                month,
-                monthName = new DateTime(targetYear, month, 1).ToString("MMM"),
-                year = targetYear,
+                month = $"{targetYear}-{month:D2}",
                 revenue
             };
         }).ToList();
