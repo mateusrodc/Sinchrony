@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -34,6 +36,8 @@ public class ErpPackageTypesController(IPackageTypeRepository packageTypeReposit
     };
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(PackageTypeListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var items = await packageTypeRepository.ListAsync(ct);
@@ -41,6 +45,8 @@ public class ErpPackageTypesController(IPackageTypeRepository packageTypeReposit
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(PackageTypeListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var pt = await packageTypeRepository.GetByIdAsync(id, ct)
@@ -51,8 +57,8 @@ public class ErpPackageTypesController(IPackageTypeRepository packageTypeReposit
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] PackageTypeRequest req, CancellationToken ct)
     {
-        var pt = PackageType.Create(req.name, req.isFamily ?? false, req.rank);
-        pt.Update(req.name, true, req.isFamily ?? false, req.rank,
+        var pt = PackageType.Create(req.name ?? string.Empty, req.isFamily ?? false, req.rank);
+        pt.Update(req.name ?? string.Empty, req.active ?? true, req.isFamily ?? false, req.rank,
             req.defaultMaxFutureBookings, req.defaultMaxBookingsPerDay,
             req.defaultMaxBookingsPerWeek, req.defaultMaxBookingsPerMonth,
             req.defaultCancellationDeadlineHours, req.defaultBookingWindowDays,
@@ -69,12 +75,9 @@ public class ErpPackageTypesController(IPackageTypeRepository packageTypeReposit
     {
         var pt = await packageTypeRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("PackageType not found.");
-
         pt.Update(
-            req.name ?? pt.Name,
-            req.active ?? pt.Active,
-            req.isFamily ?? pt.IsFamily,
-            req.rank ?? pt.Rank,
+            req.name ?? pt.Name, req.active ?? pt.Active,
+            req.isFamily ?? pt.IsFamily, req.rank ?? pt.Rank,
             req.defaultMaxFutureBookings ?? pt.DefaultMaxFutureBookings,
             req.defaultMaxBookingsPerDay ?? pt.DefaultMaxBookingsPerDay,
             req.defaultMaxBookingsPerWeek ?? pt.DefaultMaxBookingsPerWeek,
@@ -87,26 +90,16 @@ public class ErpPackageTypesController(IPackageTypeRepository packageTypeReposit
             req.defaultReschedulingDeadlineHours ?? pt.DefaultReschedulingDeadlineHours,
             req.defaultNoShowCreditPenalty ?? pt.DefaultNoShowCreditPenalty,
             req.defaultMaxNoShowsBeforeBlock ?? pt.DefaultMaxNoShowsBeforeBlock);
-
         await packageTypeRepository.SaveAsync(ct);
         return Ok(MapPackageType(pt));
     }
 }
 
 public record PackageTypeRequest(
-    string? name = null,
-    bool? active = null,
-    bool? isFamily = null,
-    int? rank = null,
-    int? defaultMaxFutureBookings = null,
-    int? defaultMaxBookingsPerDay = null,
-    int? defaultMaxBookingsPerWeek = null,
-    int? defaultMaxBookingsPerMonth = null,
-    int? defaultCancellationDeadlineHours = null,
-    int? defaultBookingWindowDays = null,
-    int? defaultEarlyAccessHours = null,
-    bool? defaultAllowWaitlist = null,
-    bool? defaultReschedulingAllowed = null,
-    int? defaultReschedulingDeadlineHours = null,
-    bool? defaultNoShowCreditPenalty = null,
-    int? defaultMaxNoShowsBeforeBlock = null);
+    string? name = null, bool? active = null, bool? isFamily = null, int? rank = null,
+    int? defaultMaxFutureBookings = null, int? defaultMaxBookingsPerDay = null,
+    int? defaultMaxBookingsPerWeek = null, int? defaultMaxBookingsPerMonth = null,
+    int? defaultCancellationDeadlineHours = null, int? defaultBookingWindowDays = null,
+    int? defaultEarlyAccessHours = null, bool? defaultAllowWaitlist = null,
+    bool? defaultReschedulingAllowed = null, int? defaultReschedulingDeadlineHours = null,
+    bool? defaultNoShowCreditPenalty = null, int? defaultMaxNoShowsBeforeBlock = null);

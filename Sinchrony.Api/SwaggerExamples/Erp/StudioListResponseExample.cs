@@ -11,14 +11,16 @@ public class StudioListResponseExample : IExamplesProvider<object>
             new
             {
                 id = "4fa85f64-5717-4562-b3fc-2c963f66afa6",
-                name = "Palmas",
+                name = "Palmas Auditoria",
                 address = "Rua das Flores, 123 - Palmas/TO",
                 phone = "(63) 99999-0000",
                 email = "palmas@sinchrony.com",
                 active = true,
                 capacity = 20,
                 openingTime = "06:00",
-                closingTime = "22:00"
+                closingTime = "22:00",
+                unitId = "00000000-0000-0000-0000-000000000001",
+                unitName = "4Sinchrony Experience"
             }
         }
     };

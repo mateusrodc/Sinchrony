@@ -17,6 +17,12 @@ public class SettingsResponseExample : IExamplesProvider<object>
         autoConfirmBookings = true,
         sendBookingConfirmationEmail = true,
         sendReminderEmail = true,
-        reminderHoursBefore = 24
+        reminderHoursBefore = 24,
+        smtpHost = "smtp.gmail.com",
+        smtpPort = 587,
+        smtpUser = "contato@studio.com",
+        smtpPassword = "••••••••",
+        smtpFrom = "4Sinchrony <contato@studio.com>",
+        smtpSecure = false
     };
 }

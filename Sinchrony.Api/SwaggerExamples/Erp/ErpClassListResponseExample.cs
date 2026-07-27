@@ -11,21 +11,23 @@ public class ErpClassListResponseExample : IExamplesProvider<object>
             new
             {
                 id = "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                name = "Yoga Matinal",
-                type = "yoga",
+                name = "Velo Power",
+                type = "Bike",
+                usesBikes = true,
                 classTypeId = "1fa85f64-5717-4562-b3fc-2c963f66afa6",
-                instructor = "Ana Lima",
+                instructor = "Ádria Silva",
+                instructorAvatar = "https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/2fa85f64_1784827850.jpg",
                 teacherId = "2fa85f64-5717-4562-b3fc-2c963f66afa6",
                 studioId = "4fa85f64-5717-4562-b3fc-2c963f66afa6",
-                studioName = "Palmas",
-                date = "2026-06-10",
-                startTime = "07:00",
-                endTime = "07:45",
+                studioName = "Palmas Auditoria",
+                date = "2026-07-27",
+                startTime = "06:30",
+                endTime = "07:15",
                 duration = 45,
                 totalSpots = 20,
-                availableSpots = 8,
-                status = "scheduled",
-                enrolledCount = 12
+                availableSpots = 12,
+                enrolledCount = 8,
+                status = "scheduled"
             }
         }
     };

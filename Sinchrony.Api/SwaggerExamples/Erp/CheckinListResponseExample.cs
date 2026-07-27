@@ -15,12 +15,14 @@ public class CheckinListResponseExample : IExamplesProvider<object>
                 classId = "2fa85f64-5717-4562-b3fc-2c963f66afa6",
                 studentId = "a5c10101-5aa0-47a0-ab3d-6189ecec2a99",
                 studentName = "Carlos Silva",
+                studentAvatar = "https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784827794.jpg",
+                studentPhone = "63984745681",
                 className = "Velo Power",
-                date = "2026-06-06",
+                date = "2026-07-27",
                 time = "06:45",
                 status = "attended",
-                confirmedBy = "Admin",
-                confirmedAt = "2026-06-06T06:45:00Z"
+                confirmedBy = "Ádria Silva",
+                confirmedAt = "2026-07-27T06:45:00Z"
             }
         }
     };

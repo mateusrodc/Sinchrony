@@ -10,9 +10,9 @@ public class ReportSummaryResponseExample : IExamplesProvider<object>
         activeStudents = 198,
         totalClasses = 184,
         totalBookings = 1240,
-        occupancyRate = 76,
-        checkinRate = 82,
+        occupancyRate = 76.5,
+        checkinRate = 82.3,
         revenue = 45800.00,
-        period = "Jun/2026"
+        period = "Jul/2026"
     };
 }

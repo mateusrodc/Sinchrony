@@ -12,6 +12,17 @@ public class MeResponseExample : IExamplesProvider<object>
         role = "student",
         credits = 10,
         phone = "63984745681",
-        avatar = (string?)null
+        avatar = "https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784853105.jpg",
+        cpf = "05885186111",
+        cep = "77015012",
+        logradouro = "Avenida Teotônio Segurado",
+        numero = "1500",
+        complemento = (string?)null,
+        bairro = "Plano Diretor Sul",
+        cidade = "Palmas",
+        estado = "TO",
+        plan = "Premium",
+        isGlobalAdmin = false,
+        unitId = "00000000-0000-0000-0000-000000000001"
     };
 }

@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -39,60 +41,31 @@ public class ErpUnitsController(
     };
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(UnitListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var units = await unitRepository.ListAsync(ct);
-
         if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
             units = units.Where(u => u.Id == unitContext.UnitId.Value);
-
         return Ok(new { data = units.Select(MapUnit) });
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(UnitListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
-        // Admin de unidade só vê a própria unidade
         if (!unitContext.IsGlobalAdmin && unitContext.UnitId != id)
             return Forbid();
-
         var unit = await unitRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Unit not found.");
-
-        return Ok(MapUnit(unit));
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] UnitRequest req, CancellationToken ct)
-    {
-        if (!unitContext.IsGlobalAdmin)
-            return Forbid();
-
-        var unit = Unit.Create(req.name, req.address, req.phone, req.email);
-        unit.UpdateAddress(req.cep, req.logradouro, req.numero,
-            req.complemento, req.bairro, req.cidade, req.estado);
-        await unitRepository.AddAsync(unit, ct);
-        await unitRepository.SaveAsync(ct);
-        return StatusCode(201, MapUnit(unit));
-    }
-
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UnitRequest req, CancellationToken ct)
-    {
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId != id)
-            return Forbid();
-
-        var unit = await unitRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Unit not found.");
-
-        unit.Update(req.name, req.address, req.phone, req.email, req.active ?? true);
-        unit.UpdateAddress(req.cep, req.logradouro, req.numero,
-            req.complemento, req.bairro, req.cidade, req.estado);
-        await unitRepository.SaveAsync(ct);
         return Ok(MapUnit(unit));
     }
 
     [HttpGet("{id}/dashboard")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(UnitDashboardResponseExample))]
     public async Task<IActionResult> Dashboard(Guid id, CancellationToken ct)
     {
         if (!unitContext.IsGlobalAdmin && unitContext.UnitId != id)
@@ -102,8 +75,6 @@ public class ErpUnitsController(
             ?? throw DomainException.NotFound("Unit not found.");
 
         var now = DateTime.UtcNow;
-        var today = DateOnly.FromDateTime(now);
-
         var students = await userRepository.ListStudentsByUnitAsync(id, ct);
         var classes = await classRepository.ListAsync(null, null, null, ct);
         var unitStudioIds = unit.Studios.Select(s => s.Id).ToHashSet();
@@ -141,6 +112,31 @@ public class ErpUnitsController(
             occupancyRate,
             activeStudents = students.Count(s => s.Status == Domain.Enums.StudentStatus.active)
         });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] UnitRequest req, CancellationToken ct)
+    {
+        if (!unitContext.IsGlobalAdmin) return Forbid();
+        var unit = Unit.Create(req.name, req.address, req.phone, req.email);
+        unit.UpdateAddress(req.cep, req.logradouro, req.numero,
+            req.complemento, req.bairro, req.cidade, req.estado);
+        await unitRepository.AddAsync(unit, ct);
+        await unitRepository.SaveAsync(ct);
+        return StatusCode(201, MapUnit(unit));
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UnitRequest req, CancellationToken ct)
+    {
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId != id) return Forbid();
+        var unit = await unitRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Unit not found.");
+        unit.Update(req.name, req.address, req.phone, req.email, req.active ?? true);
+        unit.UpdateAddress(req.cep, req.logradouro, req.numero,
+            req.complemento, req.bairro, req.cidade, req.estado);
+        await unitRepository.SaveAsync(ct);
+        return Ok(MapUnit(unit));
     }
 }
 

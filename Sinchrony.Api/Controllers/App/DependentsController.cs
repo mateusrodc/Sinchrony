@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.App;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Domain.Services;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -41,6 +43,8 @@ public class DependentsController(
     };
 
     [HttpGet]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(DependentListResponseExample))]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var dependents = await dependentRepository.ListByStudentAsync(UserId, ct);

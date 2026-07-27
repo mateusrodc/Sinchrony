@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.SwaggerExamples.App;
+using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -32,6 +35,8 @@ public class StudentPackageController(
     };
 
     [HttpGet("students/me/package")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(StudentPackageResponseExample))]
     public async Task<IActionResult> GetActive(CancellationToken ct)
     {
         var sp = await studentPackageRepository.GetActiveByStudentAsync(UserId, ct);
@@ -40,7 +45,9 @@ public class StudentPackageController(
     }
 
     [HttpGet("api/students/{id}/packages")]
-    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin")]
+    [ProducesResponseType(typeof(object), 200)]
+    [SwaggerResponseExample(200, typeof(StudentPackagesErpResponseExample))]
     public async Task<IActionResult> ListByStudent(Guid id, CancellationToken ct)
     {
         var packages = await studentPackageRepository.ListByStudentAsync(id, ct);

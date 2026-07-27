@@ -36,7 +36,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","refresh_token":"2E54304158CD88CCC232A5A3DD3C883E939E72E196CA1C8D6A33D935B99F73C9","token_type":"Bearer","expires_in":900,"user":{"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Mateus Rodrigues","email":"mateus@email.com","role":"student","credits":10,"phone":"63984745681","avatar":null}}
+                "example": {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","refreshToken":"28E295CE1CE3B0FC39AD08EBC22CBF3613B45950623ED0F8AC81F95AB5CB3646","tokenType":"Bearer","expiresIn":900,"user":{"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Mateus Rodrigues","email":"mateus@email.com","role":"student","credits":10,"phone":"63984745681","avatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784853105.jpg","cpf":"05885186111","cep":"77015012","logradouro":"Avenida Teotônio Segurado","numero":"1500","complemento":null,"bairro":"Plano Diretor Sul","cidade":"Palmas","estado":"TO","plan":"Premium","isGlobalAdmin":false,"unitId":"00000000-0000-0000-0000-000000000001"}}
               }
             }
           }
@@ -128,7 +128,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Mateus Rodrigues","email":"mateus@email.com","role":"student","credits":10,"phone":"63984745681","avatar":null}
+                "example": {"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Mateus Rodrigues","email":"mateus@email.com","role":"student","credits":10,"phone":"63984745681","avatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784853105.jpg","cpf":"05885186111","cep":"77015012","logradouro":"Avenida Teotônio Segurado","numero":"1500","complemento":null,"bairro":"Plano Diretor Sul","cidade":"Palmas","estado":"TO","plan":"Premium","isGlobalAdmin":false,"unitId":"00000000-0000-0000-0000-000000000001"}
               }
             }
           }
@@ -308,7 +308,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"permissions":["class:read","class:book","class:cancel","purchase:create","purchase:read","card:manage","profile:manage","booking:read","booking:create"]}
+                "example": {"id":"1921e791-ae0a-4550-aff1-4e370e631cb1","packageId":"d558b61c-f62e-48f1-88f3-58032a16ab38","packageName":"10 Aulas Premium","packageType":"Premium","status":"active","purchasedAt":"2026-07-23T21:14:35Z","startDate":"2026-07-23T21:46:22Z","endDate":"2026-10-21T21:46:22Z","allocations":[{"dependentId":null,"creditsRemaining":10}]}
               }
             }
           }
@@ -655,7 +655,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"bike","classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":null,"teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","date":"2026-06-10","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas","address":"Rua das Flores, 123","capacity":20,"openingTime":"06:00","closingTime":"22:00"},"bikes":[{"number":1,"status":"available"},{"number":2,"status":"occupied"},{"number":3,"status":"available"}]}
+                "example": {"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"Bike","usesBikes":true,"classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/2fa85f64_1784827850.jpg","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","date":"2026-07-27","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas Auditoria","address":"Rua das Flores, 123","capacity":20,"openingTime":"06:00","closingTime":"22:00","unitId":"00000000-0000-0000-0000-000000000001"},"bikes":[{"id":"b1a85f64-5717-4562-b3fc-2c963f66afa6","number":1,"isAvailable":true},{"id":"b2a85f64-5717-4562-b3fc-2c963f66afa6","number":2,"isAvailable":false},{"id":"b3a85f64-5717-4562-b3fc-2c963f66afa6","number":3,"isAvailable":true}]}
               }
             }
           }
@@ -684,7 +684,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Carlos Silva","email":"carlos@email.com","bikeNumber":7,"status":"confirmed"},{"id":"b6d20202-6bb1-58b1-bc4e-7290fdfdd3aa","name":"Ana Lima","email":"ana@email.com","bikeNumber":3,"status":"attended"}]}
+                "example": {"data":[{"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Carlos Silva","email":"carlos@email.com","avatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784853105.jpg","phone":"63984745681","bikeNumber":3,"status":"confirmed"}]}
               }
             }
           }
@@ -817,7 +817,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Carlos Silva","email":"carlos@email.com","bikeNumber":7,"status":"confirmed"},{"id":"b6d20202-6bb1-58b1-bc4e-7290fdfdd3aa","name":"Ana Lima","email":"ana@email.com","bikeNumber":3,"status":"attended"}]}
+                "example": {"data":[{"id":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Carlos Silva","email":"carlos@email.com","avatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784853105.jpg","phone":"63984745681","bikeNumber":3,"status":"confirmed"}]}
               }
             }
           }
@@ -965,7 +965,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"58339857-533c-4f1c-9e40-0088717eff67","userId":"5c9bcd5b-8ce6-4c26-8a22-35b5febfe813","name":"Filho Teste","email":"filho.teste@email.com","phone":"63999999998","birthDate":"2010-05-15","cpf":null,"canBook":true,"canCancel":true,"canViewHistory":true,"active":true,"responsibleStudentId":"763b0346-a192-4b7d-ac5f-2bd74f8d20a0","createdAt":"2026-07-23T23:20:23Z"}]}
+              }
+            }
           }
         }
       },
@@ -1161,7 +1167,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"98201f47-1886-4a09-827c-1c4e78527b9c","name":"Acesso VIP","description":"Acesso antecipado às aulas 48h antes","icon":"star","active":true},{"id":"a1b2c3d4-1234-5678-abcd-ef0123456789","name":"Sala Exclusiva","description":"Acesso à sala exclusiva de treinos","icon":"lock","active":true}]}
+              }
+            }
           }
         }
       },
@@ -1213,7 +1225,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"98201f47-1886-4a09-827c-1c4e78527b9c","name":"Acesso VIP","description":"Acesso antecipado às aulas 48h antes","icon":"star","active":true},{"id":"a1b2c3d4-1234-5678-abcd-ef0123456789","name":"Sala Exclusiva","description":"Acesso à sala exclusiva de treinos","icon":"lock","active":true}]}
+              }
+            }
           }
         }
       },
@@ -1444,7 +1462,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","classId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","className":"Velo Power","studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","studentName":"Carlos Silva","studentEmail":"carlos@email.com","status":"attended","bikeNumber":3,"bookedAt":"2026-06-06T10:00:00Z","checkedIn":true}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","classId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","className":"Velo Power","studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","studentName":"Carlos Silva","studentEmail":"carlos@email.com","studentAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784853105.jpg","studentPhone":"63984745681","status":"confirmed","bikeNumber":3,"bookedAt":"2026-07-27T10:00:00Z","checkedIn":true}],"pagination":{"page":1,"pageSize":20,"total":1,"totalPages":1}}
               }
             }
           }
@@ -1473,7 +1491,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","classId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","status":"confirmed","bikeNumber":5,"bookedAt":"2026-06-06T10:00:00Z","checkedIn":false}
+                "example": {"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","classId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","className":"Velo Power","studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","studentName":"Carlos Silva","studentEmail":"carlos@email.com","studentAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784853105.jpg","studentPhone":"63984745681","status":"confirmed","bikeNumber":3,"bookedAt":"2026-07-27T10:00:00Z","checkedIn":true}
               }
             }
           }
@@ -1537,7 +1555,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","bookingId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","classId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","studentName":"Carlos Silva","className":"Velo Power","date":"2026-06-06","time":"06:45","status":"attended","confirmedBy":"Admin","confirmedAt":"2026-06-06T06:45:00Z"}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","bookingId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","classId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","studentName":"Carlos Silva","studentAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784827794.jpg","studentPhone":"63984745681","className":"Velo Power","date":"2026-07-27","time":"06:45","status":"attended","confirmedBy":"Ádria Silva","confirmedAt":"2026-07-27T06:45:00Z"}]}
               }
             }
           }
@@ -1566,7 +1584,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","bookingId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","classId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","studentName":"Carlos Silva","className":"Velo Power","date":"2026-06-06","time":"06:45","status":"attended","confirmedBy":"Admin","confirmedAt":"2026-06-06T06:45:00Z"}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","bookingId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","classId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","studentName":"Carlos Silva","studentAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/a5c10101_1784827794.jpg","studentPhone":"63984745681","className":"Velo Power","date":"2026-07-27","time":"06:45","status":"attended","confirmedBy":"Ádria Silva","confirmedAt":"2026-07-27T06:45:00Z"}]}
               }
             }
           }
@@ -1666,7 +1684,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Yoga Matinal","type":"yoga","classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ana Lima","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","studioId":"4fa85f64-5717-4562-b3fc-2c963f66afa6","studioName":"Palmas","date":"2026-06-10","startTime":"07:00","endTime":"07:45","duration":45,"totalSpots":20,"availableSpots":8,"status":"scheduled","enrolledCount":12}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"Bike","usesBikes":true,"classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/2fa85f64_1784827850.jpg","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","studioId":"4fa85f64-5717-4562-b3fc-2c963f66afa6","studioName":"Palmas Auditoria","date":"2026-07-27","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled"}]}
               }
             }
           }
@@ -1724,7 +1742,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Yoga Matinal","type":"yoga","classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ana Lima","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","studioId":"4fa85f64-5717-4562-b3fc-2c963f66afa6","studioName":"Palmas","date":"2026-06-10","startTime":"07:00","endTime":"07:45","duration":45,"totalSpots":20,"availableSpots":8,"status":"scheduled","enrolledCount":12}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"Bike","usesBikes":true,"classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/2fa85f64_1784827850.jpg","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","studioId":"4fa85f64-5717-4562-b3fc-2c963f66afa6","studioName":"Palmas Auditoria","date":"2026-07-27","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled"}]}
               }
             }
           }
@@ -1782,7 +1800,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"1fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Bike","active":true},{"id":"2fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Yoga","active":true},{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Pilates","active":true}]}
+                "example": {"data":[{"id":"1fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Bike","active":true,"usesBikes":true},{"id":"2fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Yoga","active":true,"usesBikes":false},{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Pilates","active":true,"usesBikes":false}]}
               }
             }
           }
@@ -1840,7 +1858,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"1fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Bike","active":true},{"id":"2fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Yoga","active":true},{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Pilates","active":true}]}
+                "example": {"data":[{"id":"1fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Bike","active":true,"usesBikes":true},{"id":"2fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Yoga","active":true,"usesBikes":false},{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Pilates","active":true,"usesBikes":false}]}
               }
             }
           }
@@ -1892,13 +1910,23 @@
         "tags": [
           "ErpDashboard"
         ],
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"totalStudios":2,"totalTeachers":5,"totalStudents":248,"totalClassesThisMonth":184,"revenueThisMonth":45800,"activeSubscriptions":198,"occupancyRate":74,"recentActivities":[],"monthlyRevenue":[]}
+                "example": {"totalStudios":2,"totalTeachers":5,"totalStudents":248,"totalClassesThisMonth":184,"revenueThisMonth":45800,"activeSubscriptions":198,"occupancyRate":74.5,"checkinsToday":12,"year":2026,"upcomingClasses":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","date":"2026-07-27","startTime":"06:30","instructor":"Ádria Silva","enrolledCount":18}],"recentCheckins":[{"studentName":"Carlos Silva","className":"Velo Power","date":"2026-07-27","startTime":"06:30"}],"recentActivities":[{"type":"booking","description":"Carlos Silva reservou vaga em Velo Power","timestamp":"2026-07-27T06:00:00Z"},{"type":"payment","description":"Pagamento de R$ 150.00 confirmado","timestamp":"2026-07-26T15:30:00Z"}],"monthlyRevenue":[{"month":"2026-01","revenue":38000},{"month":"2026-02","revenue":41200},{"month":"2026-03","revenue":39800},{"month":"2026-04","revenue":43500},{"month":"2026-05","revenue":44100},{"month":"2026-06","revenue":45800},{"month":"2026-07","revenue":42300},{"month":"2026-08","revenue":0},{"month":"2026-09","revenue":0},{"month":"2026-10","revenue":0},{"month":"2026-11","revenue":0},{"month":"2026-12","revenue":0}],"availableYears":[2026,2025]}
               }
             }
           }
@@ -1910,13 +1938,23 @@
         "tags": [
           "ErpDashboard"
         ],
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"totalStudios":2,"totalTeachers":5,"totalStudents":248,"totalClassesThisMonth":184,"revenueThisMonth":45800,"activeSubscriptions":198,"occupancyRate":74,"recentActivities":[],"monthlyRevenue":[]}
+                "example": {"totalStudios":2,"totalTeachers":5,"totalStudents":248,"totalClassesThisMonth":184,"revenueThisMonth":45800,"activeSubscriptions":198,"occupancyRate":74.5,"checkinsToday":12,"year":2026,"upcomingClasses":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","date":"2026-07-27","startTime":"06:30","instructor":"Ádria Silva","enrolledCount":18}],"recentCheckins":[{"studentName":"Carlos Silva","className":"Velo Power","date":"2026-07-27","startTime":"06:30"}],"recentActivities":[{"type":"booking","description":"Carlos Silva reservou vaga em Velo Power","timestamp":"2026-07-27T06:00:00Z"},{"type":"payment","description":"Pagamento de R$ 150.00 confirmado","timestamp":"2026-07-26T15:30:00Z"}],"monthlyRevenue":[{"month":"2026-01","revenue":38000},{"month":"2026-02","revenue":41200},{"month":"2026-03","revenue":39800},{"month":"2026-04","revenue":43500},{"month":"2026-05","revenue":44100},{"month":"2026-06","revenue":45800},{"month":"2026-07","revenue":42300},{"month":"2026-08","revenue":0},{"month":"2026-09","revenue":0},{"month":"2026-10","revenue":0},{"month":"2026-11","revenue":0},{"month":"2026-12","revenue":0}],"availableYears":[2026,2025]}
               }
             }
           }
@@ -1951,7 +1989,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas","description":"O mais popular","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas Premium","description":"O mais popular do estúdio","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-07-01T00:00:00Z","packageTypeId":"fc8a0038-cd1f-4234-b8c8-5d81fde59577","packageTypeName":"Premium","isFamily":false,"purchaseStrategy":"block","maxDependents":0,"creditsPerMember":null,"maxFutureBookings":5,"maxBookingsPerDay":1,"maxBookingsPerWeek":null,"maxBookingsPerMonth":null,"cancellationDeadlineHours":2,"bookingWindowDays":7,"earlyAccessHours":48,"allowWaitlist":true,"waitlistPriority":null,"reschedulingAllowed":true,"reschedulingDeadlineHours":24,"noShowCreditPenalty":true,"maxNoShowsBeforeBlock":null,"noShowBlockWindowDays":30,"benefits":[{"id":"98201f47-1886-4a09-827c-1c4e78527b9c","name":"Acesso VIP","description":"Acesso antecipado às aulas","icon":"star"}],"unitId":"00000000-0000-0000-0000-000000000001","unitName":"4Sinchrony Experience"}]}
               }
             }
           }
@@ -2009,7 +2047,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas","description":"O mais popular","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas Premium","description":"O mais popular do estúdio","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-07-01T00:00:00Z","packageTypeId":"fc8a0038-cd1f-4234-b8c8-5d81fde59577","packageTypeName":"Premium","isFamily":false,"purchaseStrategy":"block","maxDependents":0,"creditsPerMember":null,"maxFutureBookings":5,"maxBookingsPerDay":1,"maxBookingsPerWeek":null,"maxBookingsPerMonth":null,"cancellationDeadlineHours":2,"bookingWindowDays":7,"earlyAccessHours":48,"allowWaitlist":true,"waitlistPriority":null,"reschedulingAllowed":true,"reschedulingDeadlineHours":24,"noShowCreditPenalty":true,"maxNoShowsBeforeBlock":null,"noShowBlockWindowDays":30,"benefits":[{"id":"98201f47-1886-4a09-827c-1c4e78527b9c","name":"Acesso VIP","description":"Acesso antecipado às aulas","icon":"star"}],"unitId":"00000000-0000-0000-0000-000000000001","unitName":"4Sinchrony Experience"}]}
               }
             }
           }
@@ -2086,7 +2124,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"fc8a0038-cd1f-4234-b8c8-5d81fde59577","name":"Premium","active":true,"isFamily":false,"rank":1,"defaultMaxFutureBookings":5,"defaultMaxBookingsPerDay":1,"defaultMaxBookingsPerWeek":null,"defaultMaxBookingsPerMonth":null,"defaultCancellationDeadlineHours":2,"defaultBookingWindowDays":7,"defaultEarlyAccessHours":48,"defaultAllowWaitlist":true,"defaultReschedulingAllowed":true,"defaultReschedulingDeadlineHours":24,"defaultNoShowCreditPenalty":true,"defaultMaxNoShowsBeforeBlock":null}]}
+              }
+            }
           }
         }
       },
@@ -2138,7 +2182,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"fc8a0038-cd1f-4234-b8c8-5d81fde59577","name":"Premium","active":true,"isFamily":false,"rank":1,"defaultMaxFutureBookings":5,"defaultMaxBookingsPerDay":1,"defaultMaxBookingsPerWeek":null,"defaultMaxBookingsPerMonth":null,"defaultCancellationDeadlineHours":2,"defaultBookingWindowDays":7,"defaultEarlyAccessHours":48,"defaultAllowWaitlist":true,"defaultReschedulingAllowed":true,"defaultReschedulingDeadlineHours":24,"defaultNoShowCreditPenalty":true,"defaultMaxNoShowsBeforeBlock":null}]}
+              }
+            }
           }
         }
       },
@@ -2203,7 +2253,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"totalStudents":248,"activeStudents":198,"totalClasses":184,"totalBookings":1240,"occupancyRate":76,"checkinRate":82,"revenue":45800,"period":"Jun/2026"}
+                "example": {"totalStudents":248,"activeStudents":198,"totalClasses":184,"totalBookings":1240,"occupancyRate":76.5,"checkinRate":82.3,"revenue":45800,"period":"Jul/2026"}
               }
             }
           }
@@ -2232,7 +2282,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"date":"2026-06-06","className":"Velo Power","totalSpots":20,"booked":12,"attended":10,"occupancyPercent":60},{"date":"2026-06-07","className":"Yoga Matinal","totalSpots":15,"booked":15,"attended":14,"occupancyPercent":100}]}
+                "example": {"days":30,"from":"2026-06-27","data":[{"date":"2026-07-27","className":"Velo Power","instructor":"Ádria Silva","studio":"Palmas Auditoria","totalSpots":20,"booked":18,"attended":15,"occupancyPercent":90,"checkinPercent":83.3}]}
               }
             }
           }
@@ -2250,7 +2300,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"day":"Dom","count":12},{"day":"Seg","count":45},{"day":"Ter","count":52},{"day":"Qua","count":38},{"day":"Qui","count":49},{"day":"Sex","count":55},{"day":"Sáb","count":30}]}
+                "example": {"byDayOfWeek":[{"day":"Dom","dayIndex":0,"count":0},{"day":"Seg","dayIndex":1,"count":12},{"day":"Ter","dayIndex":2,"count":18},{"day":"Qua","dayIndex":3,"count":15},{"day":"Qui","dayIndex":4,"count":20},{"day":"Sex","dayIndex":5,"count":25},{"day":"Sáb","dayIndex":6,"count":8}],"byClassType":[{"classType":"Bike","count":45},{"classType":"Yoga","count":30},{"classType":"Pilates","count":23}],"topStudents":[{"studentId":"a5c10101-5aa0-47a0-ab3d-6189ecec2a99","name":"Carlos Silva","count":18},{"studentId":"b6c20202-6bb1-58b1-bc6e-3ce85f9e31b0","name":"Ana Souza","count":14}]}
               }
             }
           }
@@ -2268,7 +2318,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"studioName":"4Sinchrony Experience","studioEmail":"contato@studio.com","studioPhone":"(63) 99999-0000","studioAddress":"Rua das Flores, 123 - Palmas/TO","bookingWindowDays":7,"cancellationDeadlineHours":2,"maxBookingsPerStudent":5,"allowWaitlist":true,"autoConfirmBookings":true,"sendBookingConfirmationEmail":true,"sendReminderEmail":true,"reminderHoursBefore":24}
+                "example": {"studioName":"4Sinchrony Experience","studioEmail":"contato@studio.com","studioPhone":"(63) 99999-0000","studioAddress":"Rua das Flores, 123 - Palmas/TO","bookingWindowDays":7,"cancellationDeadlineHours":2,"maxBookingsPerStudent":5,"allowWaitlist":true,"autoConfirmBookings":true,"sendBookingConfirmationEmail":true,"sendReminderEmail":true,"reminderHoursBefore":24,"smtpHost":"smtp.gmail.com","smtpPort":587,"smtpUser":"contato@studio.com","smtpPassword":"••••••••","smtpFrom":"4Sinchrony <contato@studio.com>","smtpSecure":false}
               }
             }
           }
@@ -2469,7 +2519,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas","address":"Rua das Flores, 123 - Palmas/TO","phone":"(63) 99999-0000","email":"palmas@sinchrony.com","active":true,"capacity":20,"openingTime":"06:00","closingTime":"22:00"}]}
+                "example": {"data":[{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas Auditoria","address":"Rua das Flores, 123 - Palmas/TO","phone":"(63) 99999-0000","email":"palmas@sinchrony.com","active":true,"capacity":20,"openingTime":"06:00","closingTime":"22:00","unitId":"00000000-0000-0000-0000-000000000001","unitName":"4Sinchrony Experience"}]}
               }
             }
           }
@@ -2527,7 +2577,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas","address":"Rua das Flores, 123 - Palmas/TO","phone":"(63) 99999-0000","email":"palmas@sinchrony.com","active":true,"capacity":20,"openingTime":"06:00","closingTime":"22:00"}]}
+                "example": {"data":[{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas Auditoria","address":"Rua das Flores, 123 - Palmas/TO","phone":"(63) 99999-0000","email":"palmas@sinchrony.com","active":true,"capacity":20,"openingTime":"06:00","closingTime":"22:00","unitId":"00000000-0000-0000-0000-000000000001","unitName":"4Sinchrony Experience"}]}
               }
             }
           }
@@ -2748,7 +2798,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"00000000-0000-0000-0000-000000000001","name":"4Sinchrony Experience","address":"Av. JK, Quadra 103 Sul","phone":"(63) 99999-0000","email":"contato@4sinchrony.com.br","active":true,"studiosCount":3,"createdAt":"2026-06-01T00:00:00Z","cep":"77015012","logradouro":"Avenida JK","numero":"103","complemento":null,"bairro":"Plano Diretor Sul","cidade":"Palmas","estado":"TO"}]}
+              }
+            }
           }
         }
       },
@@ -2800,7 +2856,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"00000000-0000-0000-0000-000000000001","name":"4Sinchrony Experience","address":"Av. JK, Quadra 103 Sul","phone":"(63) 99999-0000","email":"contato@4sinchrony.com.br","active":true,"studiosCount":3,"createdAt":"2026-06-01T00:00:00Z","cep":"77015012","logradouro":"Avenida JK","numero":"103","complemento":null,"bairro":"Plano Diretor Sul","cidade":"Palmas","estado":"TO"}]}
+              }
+            }
           }
         }
       },
@@ -2863,7 +2925,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"unitId":"00000000-0000-0000-0000-000000000001","unitName":"4Sinchrony Experience","totalStudents":120,"totalClassesThisMonth":48,"revenueThisMonth":18500,"occupancyRate":72.5,"activeStudents":98}
+              }
+            }
           }
         }
       }
@@ -3018,7 +3086,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"1 Aula","description":"Experimente uma aula avulsa","credits":1,"price":45,"pricePerCredit":45,"validityDays":30,"popular":false,"active":true,"displayOrder":1,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"},{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas","description":"O mais popular do estúdio","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas Premium","description":"O mais popular do estúdio","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-07-01T00:00:00Z","packageTypeId":"fc8a0038-cd1f-4234-b8c8-5d81fde59577","packageTypeName":"Premium","isFamily":false,"purchaseStrategy":"block","maxDependents":0,"creditsPerMember":null,"maxFutureBookings":5,"maxBookingsPerDay":1,"maxBookingsPerWeek":null,"maxBookingsPerMonth":null,"cancellationDeadlineHours":2,"bookingWindowDays":7,"earlyAccessHours":48,"allowWaitlist":true,"waitlistPriority":null,"reschedulingAllowed":true,"reschedulingDeadlineHours":24,"noShowCreditPenalty":true,"maxNoShowsBeforeBlock":null,"noShowBlockWindowDays":30,"benefits":[{"id":"98201f47-1886-4a09-827c-1c4e78527b9c","name":"Acesso VIP","description":"Acesso antecipado às aulas","icon":"star"}],"unitId":"00000000-0000-0000-0000-000000000001","unitName":"4Sinchrony Experience"}]}
               }
             }
           }
@@ -3047,7 +3115,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"1 Aula","description":"Experimente uma aula avulsa","credits":1,"price":45,"pricePerCredit":45,"validityDays":30,"popular":false,"active":true,"displayOrder":1,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"},{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas","description":"O mais popular do estúdio","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"10 Aulas Premium","description":"O mais popular do estúdio","credits":10,"price":340,"pricePerCredit":34,"validityDays":90,"popular":true,"active":true,"displayOrder":3,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-07-01T00:00:00Z","packageTypeId":"fc8a0038-cd1f-4234-b8c8-5d81fde59577","packageTypeName":"Premium","isFamily":false,"purchaseStrategy":"block","maxDependents":0,"creditsPerMember":null,"maxFutureBookings":5,"maxBookingsPerDay":1,"maxBookingsPerWeek":null,"maxBookingsPerMonth":null,"cancellationDeadlineHours":2,"bookingWindowDays":7,"earlyAccessHours":48,"allowWaitlist":true,"waitlistPriority":null,"reschedulingAllowed":true,"reschedulingDeadlineHours":24,"noShowCreditPenalty":true,"maxNoShowsBeforeBlock":null,"noShowBlockWindowDays":30,"benefits":[{"id":"98201f47-1886-4a09-827c-1c4e78527b9c","name":"Acesso VIP","description":"Acesso antecipado às aulas","icon":"star"}],"unitId":"00000000-0000-0000-0000-000000000001","unitName":"4Sinchrony Experience"}]}
               }
             }
           }
@@ -3231,7 +3299,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"classesAttended":12,"classesGoal":50,"streakWeeks":3,"activeBookings":2,"nextClass":{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"bike","instructor":"Ádria Silva","date":"2026-06-10","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas","address":"Rua das Flores, 123","capacity":20,"openingTime":"06:00","closingTime":"22:00"}},"credits":5}
+                "example": {"classesAttended":12,"classesGoal":50,"streakWeeks":3,"activeBookings":2,"nextClass":{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"Bike","usesBikes":true,"classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/2fa85f64_1784827850.jpg","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","date":"2026-07-28","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas Auditoria","address":"Rua das Flores, 123","capacity":20,"openingTime":"06:00","closingTime":"22:00","unitId":"00000000-0000-0000-0000-000000000001"}},"credits":5}
               }
             }
           }
@@ -3319,7 +3387,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"id":"1921e791-ae0a-4550-aff1-4e370e631cb1","packageId":"d558b61c-f62e-48f1-88f3-58032a16ab38","packageName":"10 Aulas Premium","packageType":"Premium","status":"active","purchasedAt":"2026-07-23T21:14:35Z","startDate":"2026-07-23T21:46:22Z","endDate":"2026-10-21T21:46:22Z","allocations":[{"dependentId":null,"creditsRemaining":10}]}
+              }
+            }
           }
         }
       }
@@ -3342,7 +3416,13 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { },
+                "example": {"data":[{"id":"1921e791-ae0a-4550-aff1-4e370e631cb1","packageId":"d558b61c-f62e-48f1-88f3-58032a16ab38","packageName":"10 Aulas Premium","packageType":"Premium","status":"active","purchasedAt":"2026-07-23T21:14:35Z","startDate":"2026-07-23T21:46:22Z","endDate":"2026-10-21T21:46:22Z","allocations":[{"dependentId":null,"creditsRemaining":10}]}]}
+              }
+            }
           }
         }
       }
@@ -3367,7 +3447,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"bike","instructor":"Ádria Silva","date":"2026-06-10","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas","address":"Rua das Flores, 123"}}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"Bike","usesBikes":true,"classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/2fa85f64_1784827850.jpg","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","date":"2026-07-27","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas Auditoria","address":"Rua das Flores, 123","capacity":20,"openingTime":"06:00","closingTime":"22:00","unitId":"00000000-0000-0000-0000-000000000001"}}]}
               }
             }
           }
@@ -3385,7 +3465,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"bike","instructor":"Ádria Silva","date":"2026-06-10","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas","address":"Rua das Flores, 123"}}]}
+                "example": {"data":[{"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"Bike","usesBikes":true,"classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/2fa85f64_1784827850.jpg","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","date":"2026-07-27","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas Auditoria","address":"Rua das Flores, 123","capacity":20,"openingTime":"06:00","closingTime":"22:00","unitId":"00000000-0000-0000-0000-000000000001"}}]}
               }
             }
           }
@@ -3414,7 +3494,7 @@
             "content": {
               "application/json": {
                 "schema": { },
-                "example": {"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"bike","classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":null,"teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","date":"2026-06-10","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas","address":"Rua das Flores, 123","capacity":20,"openingTime":"06:00","closingTime":"22:00"}}
+                "example": {"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Velo Power","type":"Bike","usesBikes":true,"classTypeId":"1fa85f64-5717-4562-b3fc-2c963f66afa6","instructor":"Ádria Silva","instructorAvatar":"https://wqswkpblilxaubdoswbc.supabase.co/storage/v1/object/public/sinchrony-avatars/avatars/2fa85f64_1784827850.jpg","teacherId":"2fa85f64-5717-4562-b3fc-2c963f66afa6","date":"2026-07-27","startTime":"06:30","endTime":"07:15","duration":45,"totalSpots":20,"availableSpots":12,"enrolledCount":8,"status":"scheduled","studio":{"id":"4fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Palmas Auditoria","address":"Rua das Flores, 123","capacity":20,"openingTime":"06:00","closingTime":"22:00","unitId":"00000000-0000-0000-0000-000000000001"},"bikes":[{"id":"b1a85f64-5717-4562-b3fc-2c963f66afa6","number":1,"isAvailable":true},{"id":"b2a85f64-5717-4562-b3fc-2c963f66afa6","number":2,"isAvailable":false},{"id":"b3a85f64-5717-4562-b3fc-2c963f66afa6","number":3,"isAvailable":true}]}
               }
             }
           }
