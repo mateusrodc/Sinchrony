@@ -92,6 +92,8 @@ public class DependentsController(
         if (responsible.UnitId.HasValue)
             dependentUser.SetUnit(responsible.UnitId.Value);
 
+        dependentUser.SetAsDependent(UserId);
+
         await userRepository.AddAsync(dependentUser, ct);
         await userRepository.SaveAsync(ct);
 

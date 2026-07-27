@@ -41,7 +41,9 @@ public class ErpStudentsController(
         complemento = u.Complemento,
         bairro = u.Bairro,
         cidade = u.Cidade,
-        estado = u.Estado
+        estado = u.Estado,
+        isDependent = u.IsDependent,
+        responsibleStudentId = u.ResponsibleStudentId
     };
 
     [HttpGet]

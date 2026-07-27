@@ -30,6 +30,9 @@ public class User
     public string? Cidade { get; private set; }
     public string? Estado { get; private set; }
 
+    public bool IsDependent { get; private set; }
+    public Guid? ResponsibleStudentId { get; private set; }
+
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
     public ICollection<Booking> Bookings { get; private set; } = [];
     public ICollection<Purchase> Purchases { get; private set; } = [];
@@ -51,6 +54,13 @@ public class User
     public void SetGlobalAdmin(bool value)
     {
         IsGlobalAdmin = value;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetAsDependent(Guid responsibleStudentId)
+    {
+        IsDependent = true;
+        ResponsibleStudentId = responsibleStudentId;
         UpdatedAt = DateTime.UtcNow;
     }
 
