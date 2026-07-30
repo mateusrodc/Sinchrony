@@ -151,6 +151,12 @@ public class User
     }
 
     public void Deactivate() { Status = StudentStatus.inactive; Active = false; UpdatedAt = DateTime.UtcNow; }
+    public void ClearDependent()
+    {
+        IsDependent = false;
+        ResponsibleStudentId = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
     public void Reactivate() { Status = StudentStatus.active; Active = true; UpdatedAt = DateTime.UtcNow; }
     public void Block() { Status = StudentStatus.blocked; UpdatedAt = DateTime.UtcNow; }
 

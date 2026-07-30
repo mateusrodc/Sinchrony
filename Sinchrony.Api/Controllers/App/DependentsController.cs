@@ -133,6 +133,9 @@ public class DependentsController(
                     req.email ?? dependentUser.Email,
                     req.phone ?? dependentUser.Phone,
                     dependentUser.Avatar);
+
+                dependentUser.SetAsDependent(UserId);
+
                 await userRepository.SaveAsync(ct);
             }
         }
@@ -162,6 +165,7 @@ public class DependentsController(
         {
             var dependentUser = await userRepository.GetByIdAsync(dependent.UserId.Value, ct);
             dependentUser?.Deactivate();
+            dependentUser.ClearDependent();
             await userRepository.SaveAsync(ct);
         }
 
