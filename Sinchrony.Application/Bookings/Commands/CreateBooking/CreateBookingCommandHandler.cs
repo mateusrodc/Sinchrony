@@ -16,6 +16,7 @@ public class CreateBookingCommandHandler(
     ICreditTransactionRepository creditTransactionRepository,
     IStudentPackageRepository studentPackageRepository,
     ISettingsRepository settingsRepository,
+    IDependentRepository dependentRepository,
     IAuditService auditService,
     IUnitOfWork unitOfWork) : IRequestHandler<CreateBookingCommand, BookingDto>
 {
@@ -26,6 +27,19 @@ public class CreateBookingCommandHandler(
         {
             var user = await userRepository.GetByIdAsync(request.StudentId, ct)
                 ?? throw DomainException.NotFound("User not found.");
+
+            // Valida permissão do dependente
+            if (request.DependentId.HasValue)
+            {
+                var dependent = await dependentRepository.GetByIdAsync(request.DependentId.Value, ct)
+                    ?? throw DomainException.NotFound("Dependent not found.");
+
+                if (dependent.ResponsibleStudentId != request.StudentId)
+                    throw DomainException.Forbidden("Not your dependent.");
+
+                if (!dependent.CanBook)
+                    throw DomainException.Forbidden("Este dependente não tem permissão para reservar aulas.");
+            }
 
             if (user.Status == StudentStatus.blocked)
                 throw DomainException.Forbidden("Account is blocked.");

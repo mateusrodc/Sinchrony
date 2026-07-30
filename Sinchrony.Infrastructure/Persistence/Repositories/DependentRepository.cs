@@ -23,4 +23,7 @@ public class DependentRepository(ApplicationDbContext db) : IDependentRepository
 
     public async Task SaveAsync(CancellationToken ct = default)
         => await db.SaveChangesAsync(ct);
+
+    public async Task<Dependent?> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+    => await db.Dependents.FirstOrDefaultAsync(d => d.UserId == userId, ct);
 }

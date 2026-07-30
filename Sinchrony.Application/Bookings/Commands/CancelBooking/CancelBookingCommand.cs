@@ -15,6 +15,7 @@ public class CancelBookingCommandHandler(
     IUserRepository userRepository,
     IStudentPackageRepository studentPackageRepository,
     ISettingsRepository settingsRepository,
+    IDependentRepository dependentRepository,
     IAuditService auditService) : IRequestHandler<CancelBookingCommand>
 {
     public async Task Handle(CancelBookingCommand request, CancellationToken ct)
@@ -27,6 +28,14 @@ public class CancelBookingCommandHandler(
 
         if (booking.Status == BookingStatus.cancelled)
             throw DomainException.Conflict("ALREADY_CANCELLED", "Booking is already cancelled.");
+
+        // Após buscar o booking — verifica se é reserva de dependente
+        if (booking.DependentId.HasValue)
+        {
+            var dependent = await dependentRepository.GetByIdAsync(booking.DependentId.Value, ct);
+            if (dependent is not null && !dependent.CanCancel)
+                throw DomainException.Forbidden("Este dependente não tem permissão para cancelar reservas.");
+        }
 
         // Valida deadline via cascata
         var studentPackage = await studentPackageRepository.GetActiveByStudentAsync(request.StudentId, ct);

@@ -8,4 +8,5 @@ public interface IDependentRepository
     Task<Dependent?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task AddAsync(Dependent dependent, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
+    Task<Dependent?> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
 }

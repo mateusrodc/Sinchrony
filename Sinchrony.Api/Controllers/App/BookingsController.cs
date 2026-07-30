@@ -5,6 +5,9 @@ using Sinchrony.Api.SwaggerExamples.Bookings;
 using Sinchrony.Application.Bookings.Commands.CreateBooking;
 using Sinchrony.Application.Bookings.Commands.RescheduleBooking;
 using Sinchrony.Application.Bookings.Queries.ListBookings;
+using Sinchrony.Domain.Exceptions;
+using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Infrastructure.Persistence.Repositories;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
@@ -14,7 +17,7 @@ namespace Sinchrony.Api.Controllers.App;
 [ApiController]
 [Route("bookings")]
 [Produces("application/json")]
-public class BookingsController(IMediator mediator) : ControllerBase
+public class BookingsController(IMediator mediator, IDependentRepository dependentRepository) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? User.FindFirstValue("sub")!);
@@ -29,6 +32,9 @@ public class BookingsController(IMediator mediator) : ControllerBase
     [FromQuery] int pageSize = 20,
     CancellationToken ct = default)
     {
+        var dependentCheck = await dependentRepository.GetByUserIdAsync(UserId, ct);
+        if (dependentCheck is not null && !dependentCheck.CanViewHistory)
+            throw DomainException.Forbidden("Este dependente não tem permissão para visualizar o histórico.");
         var result = await mediator.Send(
             new ListBookingsQuery(UserId, status, history, page, pageSize), ct);
         return Ok(result);
@@ -37,7 +43,7 @@ public class BookingsController(IMediator mediator) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBookingRequest req, CancellationToken ct)
     {
-        var result = await mediator.Send(new CreateBookingCommand(UserId, req.classId, req.bikeNumber), ct);
+        var result = await mediator.Send(new CreateBookingCommand(UserId, req.classId, req.bikeNumber, req.dependentId), ct);
         return StatusCode(201, result);
     }
 
@@ -58,4 +64,4 @@ public class BookingsController(IMediator mediator) : ControllerBase
     public record RescheduleRequest(Guid newClassId);
 }
 
-public record CreateBookingRequest(Guid classId, int? bikeNumber);
+public record CreateBookingRequest(Guid classId, int? bikeNumber, Guid? dependentId = null);
