@@ -65,6 +65,16 @@ public class DependentsController(
                     $"Limite de {maxDependents} dependente(s) atingido para este pacote.");
         }
 
+        if (string.IsNullOrEmpty(req.phone))
+            throw DomainException.Validation("PHONE_REQUIRED", "Telefone é obrigatório para o dependente.");
+
+
+        if (string.IsNullOrEmpty(req.cpf))
+            throw DomainException.Validation("CPF_REQUIRED", "CPF é obrigatório para o dependente.");
+
+        if (!CpfValidator.IsValid(req.cpf))
+            throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
+
         // Valida email obrigatório
         if (string.IsNullOrEmpty(req.email))
             throw DomainException.Validation("EMAIL_REQUIRED", "Email é obrigatório para o dependente.");
@@ -73,6 +83,7 @@ public class DependentsController(
         var existing = await userRepository.GetByEmailAsync(req.email, ct);
         if (existing is not null)
             throw DomainException.Conflict("EMAIL_IN_USE", "Email já cadastrado.");
+
 
         if (!string.IsNullOrEmpty(req.cpf))
         {
@@ -122,27 +133,45 @@ public class DependentsController(
         if (dependent is null || dependent.ResponsibleStudentId != UserId)
             throw DomainException.NotFound("Dependent not found.");
 
+        // Valida campos obrigatórios
+        if (string.IsNullOrEmpty(req.phone))
+            throw DomainException.Validation("PHONE_REQUIRED", "Telefone é obrigatório para o dependente.");
+
+        if (string.IsNullOrEmpty(req.cpf))
+            throw DomainException.Validation("CPF_REQUIRED", "CPF é obrigatório para o dependente.");
+
+        if (!CpfValidator.IsValid(req.cpf))
+            throw DomainException.Validation("INVALID_CPF", "CPF inválido.");
+
         // Atualiza o User vinculado
         if (dependent.UserId.HasValue)
         {
             var dependentUser = await userRepository.GetByIdAsync(dependent.UserId.Value, ct);
             if (dependentUser is not null)
             {
+                // Verifica CPF duplicado (exceto o próprio)
+                var cpfSanitized = CpfValidator.Sanitize(req.cpf);
+                var existingCpf = await userRepository.GetByCpfAsync(cpfSanitized, ct);
+                if (existingCpf is not null && existingCpf.Id != dependentUser.Id)
+                    throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
+
                 dependentUser.UpdateProfile(
                     req.name,
                     req.email ?? dependentUser.Email,
-                    req.phone ?? dependentUser.Phone,
+                    req.phone,
                     dependentUser.Avatar);
 
-                dependentUser.SetAsDependent(UserId);
+                if (!string.IsNullOrEmpty(req.cpf))
+                    dependentUser.UpdateCpf(cpfSanitized);
 
+                dependentUser.SetAsDependent(UserId);
                 await userRepository.SaveAsync(ct);
             }
         }
 
         dependent.Update(req.name,
             string.IsNullOrEmpty(req.birthDate) ? null : DateOnly.Parse(req.birthDate),
-            req.cpf, req.canBook ?? true, req.canCancel ?? true,
+            CpfValidator.Sanitize(req.cpf), req.canBook ?? true, req.canCancel ?? true,
             req.canViewHistory ?? true, req.active ?? true);
 
         await dependentRepository.SaveAsync(ct);
@@ -175,10 +204,15 @@ public class DependentsController(
 }
 
 public record CreateDependentRequest(
-    string name, string email, string? phone,
-    string? birthDate, string? cpf, string? password);
+    string name, string email, string phone,
+    string cpf,                                 
+    string? birthDate = null,
+    string? password = null);
 
 public record UpdateDependentRequest(
-    string name, string? email, string? phone,
-    string? birthDate, string? cpf,
-    bool? canBook, bool? canCancel, bool? canViewHistory, bool? active);
+    string name, string phone,   
+    string cpf,                  
+    string? email = null,
+    string? birthDate = null,
+    bool? canBook = null, bool? canCancel = null,
+    bool? canViewHistory = null, bool? active = null);
