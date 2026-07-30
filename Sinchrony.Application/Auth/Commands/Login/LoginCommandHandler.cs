@@ -46,5 +46,7 @@ public class LoginCommandHandler(
             user.Role.ToString(), user.Credits, user.Phone, user.Avatar, user.Cpf,
             user.Cep, user.Logradouro, user.Numero,
             user.Complemento, user.Bairro, user.Cidade, user.Estado,
-            user.PlanName));
+            user.PlanName,
+            user.IsDependent,
+            user.ResponsibleStudentId));
 }

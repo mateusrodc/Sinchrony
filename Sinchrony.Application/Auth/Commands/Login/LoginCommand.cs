@@ -17,4 +17,6 @@ public record UserDto(
     int Credits, string? Phone, string? Avatar, string? Cpf,
     string? Cep, string? Logradouro, string? Numero,
     string? Complemento, string? Bairro, string? Cidade, string? Estado,
-    string? Plan = null);
+    string? Plan = null,
+    bool IsDependent = false,
+    Guid? ResponsibleStudentId = null);
