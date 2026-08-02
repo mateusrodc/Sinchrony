@@ -25,27 +25,30 @@ public class CreateBookingCommandHandler(
         await unitOfWork.BeginTransactionAsync(ct);
         try
         {
-            var user = await userRepository.GetByIdAsync(request.StudentId, ct)
+            // Quem paga o crédito é sempre o CallerId (responsável ou o próprio aluno)
+            var caller = await userRepository.GetByIdAsync(request.CallerId, ct)
                 ?? throw DomainException.NotFound("User not found.");
 
-            // Valida permissão do dependente
-            if (request.DependentId.HasValue)
-            {
-                var dependent = await dependentRepository.GetByIdAsync(request.DependentId.Value, ct)
-                    ?? throw DomainException.NotFound("Dependent not found.");
-
-                if (dependent.ResponsibleStudentId != request.StudentId)
-                    throw DomainException.Forbidden("Not your dependent.");
-
-                if (!dependent.CanBook)
-                    throw DomainException.Forbidden("Este dependente não tem permissão para reservar aulas.");
-            }
-
-            if (user.Status == StudentStatus.blocked)
+            if (caller.Status == StudentStatus.blocked)
                 throw DomainException.Forbidden("Account is blocked.");
 
-            if (user.Credits <= 0)
+            if (caller.Credits <= 0)
                 throw DomainException.Validation("INSUFFICIENT_CREDITS", "Insufficient credits.");
+
+            // Reserva em nome de dependente — valida vínculo e permissão
+            var isBookingForDependent = request.StudentId != request.CallerId;
+            if (isBookingForDependent)
+            {
+                var dependentUser = await userRepository.GetByIdAsync(request.StudentId, ct)
+                    ?? throw DomainException.NotFound("Student not found.");
+
+                if (!dependentUser.IsDependent || dependentUser.ResponsibleStudentId != request.CallerId)
+                    throw DomainException.Forbidden("Você não tem permissão para reservar em nome deste aluno.");
+
+                var dependent = await dependentRepository.GetByUserIdAsync(request.StudentId, ct);
+                if (dependent is not null && !dependent.CanBook)
+                    throw DomainException.Forbidden("Este dependente não tem permissão para reservar aulas.");
+            }
 
             var @class = await classRepository.GetByIdAsync(request.ClassId, ct)
                 ?? throw DomainException.NotFound("Class not found.");
@@ -53,6 +56,7 @@ public class CreateBookingCommandHandler(
             if (@class.Status != ClassStatus.scheduled)
                 throw DomainException.Conflict("CLASS_UNAVAILABLE", "Class is not available for booking.");
 
+            // Verifica conflito para o StudentId (dependente ou o próprio)
             var alreadyBooked = await bookingRepository.HasActiveBookingAsync(
                 request.StudentId, request.ClassId, ct);
             if (alreadyBooked)
@@ -63,57 +67,52 @@ public class CreateBookingCommandHandler(
             if (hasConflict)
                 throw DomainException.Conflict("TIME_CONFLICT", "Time conflict with another booking.");
 
-            // Cascata de regras
-            var studentPackage = await studentPackageRepository.GetActiveByStudentAsync(request.StudentId, ct);
+            // Cascata de regras baseada no pacote do CALLER
+            var studentPackage = await studentPackageRepository.GetActiveByStudentAsync(request.CallerId, ct);
             var settings = await settingsRepository.GetAsync(ct);
 
             if (settings is not null)
             {
-                // bookingWindowDays
                 var bookingWindowDays = PackageRuleResolver.GetBookingWindowDays(studentPackage, settings);
                 var today = DateOnly.FromDateTime(DateTime.UtcNow);
                 if (@class.Date > today.AddDays(bookingWindowDays))
                     throw DomainException.Validation("BOOKING_WINDOW_EXCEEDED",
                         $"Reservas só podem ser feitas com até {bookingWindowDays} dias de antecedência.");
 
-                // maxFutureBookings
                 var maxFuture = PackageRuleResolver.GetMaxFutureBookings(studentPackage);
                 if (maxFuture.HasValue)
                 {
-                    var futureCount = await bookingRepository.CountFutureBookingsAsync(request.StudentId, ct);
+                    var futureCount = await bookingRepository.CountFutureBookingsAsync(request.CallerId, ct);
                     if (futureCount >= maxFuture.Value)
                         throw DomainException.Validation("BOOKING_LIMIT_EXCEEDED",
                             $"Limite de {maxFuture.Value} reservas futuras atingido.");
                 }
 
-                // maxBookingsPerDay
                 var maxPerDay = PackageRuleResolver.GetMaxBookingsPerDay(studentPackage);
                 if (maxPerDay.HasValue)
                 {
                     var dayCount = await bookingRepository.CountBookingsOnDateAsync(
-                        request.StudentId, @class.Date, ct);
+                        request.CallerId, @class.Date, ct);
                     if (dayCount >= maxPerDay.Value)
                         throw DomainException.Validation("BOOKING_LIMIT_EXCEEDED",
                             $"Limite de {maxPerDay.Value} reservas por dia atingido.");
                 }
 
-                // maxBookingsPerWeek
                 var maxPerWeek = PackageRuleResolver.GetMaxBookingsPerWeek(studentPackage);
                 if (maxPerWeek.HasValue)
                 {
                     var weekCount = await bookingRepository.CountBookingsInWeekAsync(
-                        request.StudentId, @class.Date, ct);
+                        request.CallerId, @class.Date, ct);
                     if (weekCount >= maxPerWeek.Value)
                         throw DomainException.Validation("BOOKING_LIMIT_EXCEEDED",
                             $"Limite de {maxPerWeek.Value} reservas por semana atingido.");
                 }
 
-                // maxBookingsPerMonth
                 var maxPerMonth = PackageRuleResolver.GetMaxBookingsPerMonth(studentPackage);
                 if (maxPerMonth.HasValue)
                 {
                     var monthCount = await bookingRepository.CountBookingsInMonthAsync(
-                        request.StudentId, @class.Date.Month, @class.Date.Year, ct);
+                        request.CallerId, @class.Date.Month, @class.Date.Year, ct);
                     if (monthCount >= maxPerMonth.Value)
                         throw DomainException.Validation("BOOKING_LIMIT_EXCEEDED",
                             $"Limite de {maxPerMonth.Value} reservas por mês atingido.");
@@ -132,14 +131,17 @@ public class CreateBookingCommandHandler(
                     throw DomainException.Conflict("BIKE_OCCUPIED", "Bike is already taken.");
             }
 
-            user.DeductCredits(1);
+            // Debita crédito do CALLER
+            caller.DeductCredits(1);
 
             var creditTx = CreditTransaction.Create(
-                user.Id, -1, user.Credits,
-                $"Booking for class {@class.Name} on {@class.Date}",
+                caller.Id, -1, caller.Credits,
+                $"Booking for class {@class.Name} on {@class.Date}" +
+                (isBookingForDependent ? $" (dependente {request.StudentId})" : ""),
                 "booking", null);
             await creditTransactionRepository.AddAsync(creditTx, ct);
 
+            // Cria booking para o StudentId (dependente ou o próprio)
             var booking = Booking.Create(request.ClassId, request.StudentId, request.BikeNumber);
             var attendance = AttendanceRecord.Create(booking.Id, request.ClassId, request.StudentId);
 
@@ -151,8 +153,9 @@ public class CreateBookingCommandHandler(
 
             await auditService.LogAsync(
                 "booking.created", "Booking",
-                booking.Id, request.StudentId,
-                $"Class: {request.ClassId}, Bike: {request.BikeNumber}", ct: ct);
+                booking.Id, request.CallerId,
+                $"Class: {request.ClassId}, Student: {request.StudentId}, Bike: {request.BikeNumber}",
+                ct: ct);
 
             await unitOfWork.CommitAsync(ct);
 

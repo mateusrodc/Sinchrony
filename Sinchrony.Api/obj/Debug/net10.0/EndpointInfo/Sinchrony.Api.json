@@ -3727,6 +3727,11 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -3792,11 +3797,11 @@
             "type": "string",
             "nullable": true
           },
-          "birthDate": {
+          "cpf": {
             "type": "string",
             "nullable": true
           },
-          "cpf": {
+          "birthDate": {
             "type": "string",
             "nullable": true
           },
@@ -4542,19 +4547,19 @@
             "type": "string",
             "nullable": true
           },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
           "phone": {
             "type": "string",
             "nullable": true
           },
-          "birthDate": {
+          "cpf": {
             "type": "string",
             "nullable": true
           },
-          "cpf": {
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
             "type": "string",
             "nullable": true
           },

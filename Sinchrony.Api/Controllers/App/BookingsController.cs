@@ -43,7 +43,12 @@ public class BookingsController(IMediator mediator, IDependentRepository depende
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBookingRequest req, CancellationToken ct)
     {
-        var result = await mediator.Send(new CreateBookingCommand(UserId, req.classId, req.bikeNumber, req.dependentId), ct);
+        var targetStudentId = req.studentId.HasValue && req.studentId.Value != UserId
+            ? req.studentId.Value
+            : UserId;
+
+        var result = await mediator.Send(
+            new CreateBookingCommand(UserId, targetStudentId, req.classId, req.bikeNumber), ct);
         return StatusCode(201, result);
     }
 
@@ -64,4 +69,7 @@ public class BookingsController(IMediator mediator, IDependentRepository depende
     public record RescheduleRequest(Guid newClassId);
 }
 
-public record CreateBookingRequest(Guid classId, int? bikeNumber, Guid? dependentId = null);
+public record CreateBookingRequest(
+    Guid classId,
+    int? bikeNumber = null,
+    Guid? studentId = null);
