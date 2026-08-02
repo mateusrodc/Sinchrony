@@ -13,9 +13,9 @@ public class CancelBookingCommandHandler(
     IBookingRepository bookingRepository,
     IAttendanceRepository attendanceRepository,
     IUserRepository userRepository,
+    IDependentRepository dependentRepository,
     IStudentPackageRepository studentPackageRepository,
     ISettingsRepository settingsRepository,
-    IDependentRepository dependentRepository,
     IAuditService auditService) : IRequestHandler<CancelBookingCommand>
 {
     public async Task Handle(CancelBookingCommand request, CancellationToken ct)
@@ -23,16 +23,31 @@ public class CancelBookingCommandHandler(
         var booking = await bookingRepository.GetByIdAsync(request.BookingId, ct)
             ?? throw DomainException.NotFound("Booking not found.");
 
-        if (booking.StudentId != request.StudentId)
+        // Permite cancelar se: é o próprio aluno OU é o responsável de um dependente
+        var isOwner = booking.StudentId == request.StudentId;
+        var isResponsible = false;
+
+        if (!isOwner)
+        {
+            var bookingStudent = await userRepository.GetByIdAsync(booking.StudentId, ct);
+            if (bookingStudent is not null &&
+                bookingStudent.IsDependent &&
+                bookingStudent.ResponsibleStudentId == request.StudentId)
+            {
+                isResponsible = true;
+            }
+        }
+
+        if (!isOwner && !isResponsible)
             throw DomainException.Forbidden("Not your booking.");
 
         if (booking.Status == BookingStatus.cancelled)
             throw DomainException.Conflict("ALREADY_CANCELLED", "Booking is already cancelled.");
 
-        // Após buscar o booking — verifica se é reserva de dependente
-        if (booking.DependentId.HasValue)
+        // Valida canCancel do dependente
+        if (isResponsible)
         {
-            var dependent = await dependentRepository.GetByIdAsync(booking.DependentId.Value, ct);
+            var dependent = await dependentRepository.GetByUserIdAsync(booking.StudentId, ct);
             if (dependent is not null && !dependent.CanCancel)
                 throw DomainException.Forbidden("Este dependente não tem permissão para cancelar reservas.");
         }
@@ -51,11 +66,13 @@ public class CancelBookingCommandHandler(
                     $"Cancelamento deve ser feito com no mínimo {deadlineHours}h de antecedência.");
         }
 
-        var user = await userRepository.GetByIdAsync(request.StudentId, ct)
+        // Estorna crédito para o responsável (ou o próprio aluno)
+        var creditOwnerId = isResponsible ? request.StudentId : booking.StudentId;
+        var creditOwner = await userRepository.GetByIdAsync(creditOwnerId, ct)
             ?? throw DomainException.NotFound("User not found.");
 
         booking.Cancel();
-        user.AddCredits(1);
+        creditOwner.AddCredits(1);
 
         // Sincroniza attendance → no_show
         var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
