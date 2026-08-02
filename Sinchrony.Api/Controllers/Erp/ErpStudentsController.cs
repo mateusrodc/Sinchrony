@@ -17,9 +17,10 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpStudentsController(
     IUserRepository userRepository,
     IPasswordService passwordService,
-    IUnitContext unitContext) : ControllerBase
+    IUnitContext unitContext,
+    IStudentPackageRepository studentPackageRepository) : ControllerBase
 {
-    private static object MapStudent(User u) => new
+    private static object MapStudent(User u, string? derivedPlan = null) => new
     {
         id = u.Id,
         name = u.Name,
@@ -27,11 +28,13 @@ public class ErpStudentsController(
         cpf = u.Cpf,
         phone = u.Phone,
         status = u.Status.ToString(),
-        plan = u.PlanName,
+        plan = derivedPlan ?? u.PlanName,
         credits = u.Credits,
         avatar = u.Avatar,
         unitId = u.UnitId,
         unitName = u.Unit?.Name,
+        isDependent = u.IsDependent,
+        responsibleStudentId = u.ResponsibleStudentId,
         registeredAt = u.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
         lastVisit = (string?)null,
         totalClasses = 0,
@@ -41,9 +44,7 @@ public class ErpStudentsController(
         complemento = u.Complemento,
         bairro = u.Bairro,
         cidade = u.Cidade,
-        estado = u.Estado,
-        isDependent = u.IsDependent,
-        responsibleStudentId = u.ResponsibleStudentId
+        estado = u.Estado
     };
 
     [HttpGet]
@@ -56,7 +57,7 @@ public class ErpStudentsController(
         if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
         {
             var (items, total) = await userRepository.ListStudentsPagedAsync(status, page, pageSize, ct);
-            return Ok(PagedResult.Create(items.Select(MapStudent), page, pageSize, total));
+            return Ok(PagedResult.Create(items.Select(u => MapStudent(u)), page, pageSize, total));
         }
         else
         {
@@ -66,7 +67,7 @@ public class ErpStudentsController(
             var list = all.ToList();
             var total = list.Count;
             var items = list.Skip((page - 1) * pageSize).Take(pageSize);
-            return Ok(PagedResult.Create(items.Select(MapStudent), page, pageSize, total));
+            return Ok(PagedResult.Create(items.Select(u => MapStudent(u)), page, pageSize, total));
         }
     }
 
@@ -80,7 +81,11 @@ public class ErpStudentsController(
             && student.UnitId != unitContext.UnitId)
             return Forbid();
 
-        return Ok(MapStudent(student));
+        // Deriva o plano do StudentPackage ativo
+        var activePackage = await studentPackageRepository.GetActiveByStudentAsync(id, ct);
+        var derivedPlan = activePackage?.Package?.PackageType?.Name ?? student.PlanName;
+
+        return Ok(MapStudent(student, derivedPlan));
     }
 
     [HttpGet("{id}/history")]
