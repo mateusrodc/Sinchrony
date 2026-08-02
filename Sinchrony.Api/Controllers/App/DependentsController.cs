@@ -204,14 +204,14 @@ public class DependentsController(
 }
 
 public record CreateDependentRequest(
-    string name, string email, string phone,
-    string cpf,                                 
+    string name, string email, string? phone = null,
+    string? cpf = null,                                 
     string? birthDate = null,
     string? password = null);
 
 public record UpdateDependentRequest(
-    string name, string phone,   
-    string cpf,                  
+    string name, string? phone = null,   
+    string? cpf = null,                  
     string? email = null,
     string? birthDate = null,
     bool? canBook = null, bool? canCancel = null,
