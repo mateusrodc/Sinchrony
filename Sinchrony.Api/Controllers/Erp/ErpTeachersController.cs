@@ -6,6 +6,8 @@ using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Domain.Services;
+using Sinchrony.Infrastructure.Persistence.Repositories;
+using Sinchrony.Infrastructure.Services;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -17,6 +19,8 @@ public class ErpTeachersController(
     IUserRepository userRepository,
     ITeacherUnitRepository teacherUnitRepository,
     IPasswordService passwordService,
+    ISettingsRepository settingsRepository,
+    IEmailService emailService,
     IUnitContext unitContext) : ControllerBase
 {
     private static object MapTeacher(User u) => new
@@ -151,6 +155,72 @@ public class ErpTeachersController(
 
         var updated = await userRepository.GetByIdAsync(id, ct);
         return Ok(MapTeacher(updated!));
+    }
+    [HttpPatch("{id}/deactivate")]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
+    {
+        var teacher = await userRepository.GetByIdAsync(id, ct);
+        if (teacher is null || teacher.Role != Role.teacher)
+            throw DomainException.NotFound("Teacher not found.");
+
+        teacher.Deactivate();
+        await userRepository.SaveAsync(ct);
+        return Ok(new { success = true, active = false });
+    }
+
+    [HttpPatch("{id}/activate")]
+    public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
+    {
+        var teacher = await userRepository.GetByIdAsync(id, ct);
+        if (teacher is null || teacher.Role != Role.teacher)
+            throw DomainException.NotFound("Teacher not found.");
+
+        teacher.Reactivate();
+        await userRepository.SaveAsync(ct);
+        return Ok(new { success = true, active = true });
+    }
+    [HttpPost("{id}/send-password")]
+    public async Task<IActionResult> SendPassword(Guid id, CancellationToken ct)
+    {
+        var teacher = await userRepository.GetByIdAsync(id, ct);
+        if (teacher is null || teacher.Role != Role.teacher)
+            throw DomainException.NotFound("Teacher not found.");
+
+        // Gera senha temporária
+        var tempPassword = Guid.NewGuid().ToString("N")[..8].ToUpper();
+        var hash = passwordService.HashPassword(tempPassword);
+        teacher.ChangePassword(hash);
+        await userRepository.SaveAsync(ct);
+
+        // Tenta enviar por email em background (pode falhar no Render gratuito)
+        var teacherEmail = teacher.Email;
+        var teacherName = teacher.Name;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var settings = await settingsRepository.GetAsync(ct);
+                var body = $"""
+                <h2>Senha Temporária — 4Sinchrony</h2>
+                <p>Olá, {teacherName}!</p>
+                <p>Sua senha temporária é: <strong>{tempPassword}</strong></p>
+                <p>Por favor, altere sua senha após o primeiro acesso.</p>
+                <br><small>4Sinchrony Experience</small>
+                """;
+                await emailService.SendWithSettingsAsync(
+                    teacherEmail, "Sua senha temporária — 4Sinchrony", body, settings,
+                    CancellationToken.None);
+            }
+            catch { /* SMTP pode estar bloqueado no Render gratuito */ }
+        });
+
+        // Retorna a senha para o admin poder comunicar manualmente se o email falhar
+        return Ok(new
+        {
+            success = true,
+            temporaryPassword = tempPassword,
+            message = "Senha temporária gerada. Se o email não chegar, use a senha retornada."
+        });
     }
 }
 

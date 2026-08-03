@@ -109,7 +109,6 @@ try
 
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseMiddleware<RequestIdMiddleware>();
-    app.UseIpRateLimiting();
 
     if (app.Environment.IsDevelopment())
     {
@@ -136,6 +135,7 @@ try
     if (app.Environment.IsDevelopment())
         app.UseHttpsRedirection();
 
+    app.UseIpRateLimiting();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapHealthChecks("/health");

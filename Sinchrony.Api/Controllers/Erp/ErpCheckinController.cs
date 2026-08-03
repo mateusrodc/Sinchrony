@@ -38,7 +38,9 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
     [HttpPost("{id}/confirm")]
     public async Task<IActionResult> Confirm(Guid id, CancellationToken ct)
     {
+        // Tenta por AttendanceRecord.Id primeiro, depois por BookingId
         var record = await attendanceRepository.GetByIdAsync(id, ct)
+            ?? await attendanceRepository.GetByBookingAsync(id, ct)
             ?? throw DomainException.NotFound("Checkin record not found.");
 
         record.Confirm(UserId);

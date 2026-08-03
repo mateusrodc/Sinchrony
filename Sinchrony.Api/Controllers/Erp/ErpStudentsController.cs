@@ -187,6 +187,27 @@ public class ErpStudentsController(
         await userRepository.SaveAsync(ct);
         return Ok(MapStudent(student));
     }
+    [HttpPatch("{id}/deactivate")]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
+    {
+        var student = await userRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Student not found.");
+
+        student.Deactivate();
+        await userRepository.SaveAsync(ct);
+        return Ok(new { success = true, status = "inactive" });
+    }
+
+    [HttpPatch("{id}/reactivate")]
+    public async Task<IActionResult> Reactivate(Guid id, CancellationToken ct)
+    {
+        var student = await userRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Student not found.");
+
+        student.Reactivate();
+        await userRepository.SaveAsync(ct);
+        return Ok(new { success = true, status = "active" });
+    }
 }
 
 public record CreateStudentRequest(
