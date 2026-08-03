@@ -87,6 +87,9 @@ public class AuthController(IMediator mediator) : ControllerBase
     [HttpPost("google")]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest req, CancellationToken ct)
     {
+        if (string.IsNullOrEmpty(req.idToken))
+            return BadRequest(new { error = new { code = "ID_TOKEN_REQUIRED", message = "idToken é obrigatório." } });
+
         var result = await mediator.Send(new GoogleLoginCommand(req.idToken), ct);
         return Ok(result);
     }
@@ -109,7 +112,7 @@ public class AuthController(IMediator mediator) : ControllerBase
         return Ok(new { message = "Senha redefinida com sucesso." });
     }
 
-    public record GoogleLoginRequest(string idToken);
+    public record GoogleLoginRequest(string? idToken);
 
     private static string[] GetPermissionsByRole(string? role) => role switch
     {
