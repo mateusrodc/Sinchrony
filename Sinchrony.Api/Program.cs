@@ -1,4 +1,5 @@
 using AspNetCoreRateLimit;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
 using Sinchrony.Api.Extensions;
@@ -6,7 +7,7 @@ using Sinchrony.Api.Middlewares;
 using Sinchrony.Application;
 using Sinchrony.Infrastructure;
 using Sinchrony.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
+using Sinchrony.Infrastructure.Persistence.Seeders;
 
 // Serilog bootstrap logger — captura erros antes do host iniciar
 Log.Logger = new LoggerConfiguration()
@@ -58,6 +59,8 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<ApplicationDbContext>("database");
+
+    builder.Services.AddScoped<AdminSeeder>();
 
     var app = builder.Build();
 
@@ -137,6 +140,13 @@ try
     app.UseAuthorization();
     app.MapHealthChecks("/health");
     app.MapControllers();
+
+    // Seeder
+    using (var scope = app.Services.CreateScope())
+    {
+        var seeder = scope.ServiceProvider.GetRequiredService<AdminSeeder>();
+        await seeder.SeedAsync();
+    }
 
     app.Run();
 }
