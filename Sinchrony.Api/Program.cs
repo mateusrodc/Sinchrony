@@ -109,6 +109,7 @@ try
 
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseMiddleware<RequestIdMiddleware>();
+    app.UseMiddleware<SwaggerBasicAuthMiddleware>();
 
     if (app.Environment.IsDevelopment())
     {
