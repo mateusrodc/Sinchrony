@@ -1,12 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Application.Common;
+using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Domain.Services;
+using Sinchrony.Infrastructure.Persistence.Repositories;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -18,7 +21,13 @@ public class ErpStudentsController(
     IUserRepository userRepository,
     IPasswordService passwordService,
     IUnitContext unitContext,
-    IStudentPackageRepository studentPackageRepository) : ControllerBase
+    IStudentPackageRepository studentPackageRepository,
+    IPackageRepository packageRepository,
+    IDependentPackageAllocationRepository allocationRepository,
+    IPurchaseRepository purchaseRepository,
+    ICreditTransactionRepository creditTransactionRepository,
+    PurchasePackageService purchasePackageService,
+    IAuditService auditService) : ControllerBase
 {
     private static object MapStudent(User u, string? derivedPlan = null) => new
     {
@@ -208,6 +217,93 @@ public class ErpStudentsController(
         await userRepository.SaveAsync(ct);
         return Ok(new { success = true, status = "active" });
     }
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+    ?? User.FindFirstValue("sub")!);
+
+    [HttpPost("{studentId}/packages")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> AssignPackage(
+        Guid studentId,
+        [FromBody] AssignPackageRequest req,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.reason) || req.reason.Trim().Length < 3)
+            throw DomainException.Validation("REASON_REQUIRED",
+                "O motivo da concessão é obrigatório (mínimo 3 caracteres).");
+
+        if (req.paymentMethod != "cash" && req.paymentMethod != "courtesy")
+            throw DomainException.Validation("INVALID_PAYMENT_METHOD",
+                "Método de pagamento inválido. Use 'cash' ou 'courtesy'.");
+
+        if (req.paymentMethod == "cash" && (req.amount == null || req.amount <= 0))
+            throw DomainException.Validation("AMOUNT_REQUIRED",
+                "O valor é obrigatório para pagamento em dinheiro.");
+
+        var student = await userRepository.GetByIdAsync(studentId, ct)
+            ?? throw DomainException.NotFound("Student not found.");
+
+        var package = await packageRepository.GetByIdAsync(req.packageId, ct)
+            ?? throw DomainException.NotFound("Package not found.");
+
+        if (!package.Active)
+            throw DomainException.Validation("PACKAGE_INACTIVE", "Package is not available.");
+
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
+        {
+            if (package.UnitId.HasValue && package.UnitId != unitContext.UnitId)
+                throw DomainException.Forbidden("Você não tem permissão para conceder pacotes de outra unidade.");
+        }
+
+        var amount = req.paymentMethod == "courtesy" ? 0 : (req.amount ?? 0);
+
+        var purchase = Purchase.CreateConfirmed(
+            studentId, package.Id, amount,
+            req.paymentMethod, null);
+        await purchaseRepository.AddAsync(purchase, ct);
+        await purchaseRepository.SaveAsync(ct);
+
+        await purchasePackageService.ProcessAsync(studentId, package, ct);
+
+        // Recarrega student para pegar Credits já creditados pelo ProcessAsync
+        student = await userRepository.GetByIdAsync(studentId, ct)!;
+
+        var creditedAmount = package.CreditsPerMember ?? package.Credits;
+        var creditTx = CreditTransaction.Create(
+            studentId,
+            creditedAmount,
+            student!.Credits,
+            $"Concessão manual ({req.paymentMethod}): {package.Name} — {req.reason}",
+            "manual",
+            purchase.Id);
+        await creditTransactionRepository.AddAsync(creditTx, ct);
+        await creditTransactionRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(
+            "package.granted_by_admin", "Purchase",
+            purchase.Id, AdminId,
+            $"Aluno: {student.Name}, Pacote: {package.Name}, Método: {req.paymentMethod}, Motivo: {req.reason}",
+            ct: ct);
+
+        var sp = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct);
+
+        return StatusCode(201, new
+        {
+            id = sp?.Id,
+            packageId = package.Id,
+            packageName = package.Name,
+            status = sp?.Status.ToString() ?? "queued",
+            startDate = sp?.StartDate,
+            endDate = sp?.EndDate,
+            transactionId = (string?)null,
+            paymentMethod = req.paymentMethod
+        });
+    }
+
+    public record AssignPackageRequest(
+        Guid packageId,
+        string paymentMethod,
+        decimal? amount,
+        string reason);
 }
 
 public record CreateStudentRequest(
@@ -223,3 +319,10 @@ public record UpdateStudentRequest(
     string? cep, string? logradouro, string? numero,
     string? complemento, string? bairro, string? cidade, string? estado,
     Guid? unitId = null);
+
+public record AssignPackageRequest(
+    Guid packageId,
+    string? status = "active",
+    DateOnly? startDate = null,
+    DateOnly? endDate = null,
+    int? creditsOverride = null);

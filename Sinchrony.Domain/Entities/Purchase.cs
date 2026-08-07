@@ -47,4 +47,13 @@ public class Purchase
         CouponId = couponId,
         Status = "pending"  // aguarda webhook
     };
+
+    public static Purchase CreateConfirmed(
+    Guid userId, Guid packageId, decimal amount,
+    string paymentMethod, string? transactionId)
+    {
+        var purchase = CreatePending(userId, packageId, amount, paymentMethod, transactionId, null);
+        purchase.Confirm();
+        return purchase;
+    }
 }

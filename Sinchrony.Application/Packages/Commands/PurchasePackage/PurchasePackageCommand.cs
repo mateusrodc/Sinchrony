@@ -25,6 +25,7 @@ public class PurchasePackageCommandHandler(
     IStudentPackageRepository studentPackageRepository,
     IDependentPackageAllocationRepository allocationRepository,
     IDependentRepository dependentRepository,
+    ICreditTransactionRepository creditTransactionRepository,
     IAsaasService asaasService,
     IAuditService auditService) : IRequestHandler<PurchasePackageCommand, StudentPackageResultDto>
 {
@@ -116,7 +117,11 @@ public class PurchasePackageCommandHandler(
 
         // Aplica estratégia e cria StudentPackage
         var purchaseService = new PurchasePackageService(
-            studentPackageRepository, allocationRepository, dependentRepository);
+            studentPackageRepository,
+            allocationRepository,
+            dependentRepository,
+            userRepository,
+            creditTransactionRepository);
 
         StudentPackage? studentPackage = null;
 
