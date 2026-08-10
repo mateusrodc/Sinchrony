@@ -1042,6 +1042,32 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpStudentsController",
+    "Method": "RemovePackage",
+    "RelativePath": "api/students/{studentId}/packages/{studentPackageId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "studentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "studentPackageId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "req",
+        "Type": "Sinchrony.Api.Controllers.Erp.RemovePackageRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Sinchrony.Api.Controllers.Erp.ErpStudiosController",
     "Method": "List",
     "RelativePath": "api/studios",

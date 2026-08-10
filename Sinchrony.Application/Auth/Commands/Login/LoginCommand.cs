@@ -19,4 +19,6 @@ public record UserDto(
     string? Complemento, string? Bairro, string? Cidade, string? Estado,
     string? Plan = null,
     bool IsDependent = false,
-    Guid? ResponsibleStudentId = null);
+    Guid? ResponsibleStudentId = null,
+    DateTime? TermsAcceptedAt = null,
+    string? TermsVersion = null);

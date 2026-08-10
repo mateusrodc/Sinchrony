@@ -8,4 +8,5 @@ public record RegisterCommand(
     string Password, string? Cpf,
     string? Cep, string? Logradouro, string? Numero,
     string? Complemento, string? Bairro, string? Cidade, string? Estado,
-    Guid? UnitId) : IRequest<AuthResponseDto>;
+    Guid? UnitId, DateTime? TermsAcceptedAt = null,
+    string? TermsVersion = null) : IRequest<AuthResponseDto>;

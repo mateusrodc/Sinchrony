@@ -27,6 +27,8 @@ public class GetMeQueryHandler(
                 user.Complemento, user.Bairro, user.Cidade, user.Estado,
                 derivedPlan,
                 user.IsDependent,
-                user.ResponsibleStudentId);
+                user.ResponsibleStudentId,
+                user.TermsAcceptedAt,
+                user.TermsVersion);
     }
 }

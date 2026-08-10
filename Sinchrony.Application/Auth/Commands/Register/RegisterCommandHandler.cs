@@ -29,6 +29,10 @@ public class RegisterCommandHandler(
                 throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
         }
 
+        if (request.TermsAcceptedAt is null || string.IsNullOrEmpty(request.TermsVersion))
+            throw DomainException.Validation("TERMS_REQUIRED",
+                "É obrigatório aceitar os Termos de Uso para criar uma conta.");
+
         var hash = passwordService.HashPassword(request.Password);
         var user = User.Create(request.Name, request.Email, request.Phone, hash, Role.student, request.Cpf);
 
@@ -37,6 +41,8 @@ public class RegisterCommandHandler(
 
         user.UpdateAddress(request.Cep, request.Logradouro, request.Numero,
             request.Complemento, request.Bairro, request.Cidade, request.Estado);
+
+        user.AcceptTerms(request.TermsAcceptedAt.Value, request.TermsVersion);
 
         await userRepository.AddAsync(user, ct);
         await userRepository.SaveAsync(ct);

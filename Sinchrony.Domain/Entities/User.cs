@@ -33,6 +33,9 @@ public class User
     public bool IsDependent { get; private set; }
     public Guid? ResponsibleStudentId { get; private set; }
 
+    public DateTime? TermsAcceptedAt { get; private set; }
+    public string? TermsVersion { get; private set; }
+
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
     public ICollection<Booking> Bookings { get; private set; } = [];
     public ICollection<Purchase> Purchases { get; private set; } = [];
@@ -175,6 +178,12 @@ public class User
         Specialties = specialties is null || !specialties.Any()
             ? null
             : System.Text.Json.JsonSerializer.Serialize(specialties);
+        UpdatedAt = DateTime.UtcNow;
+    }
+    public void AcceptTerms(DateTime acceptedAt, string version)
+    {
+        TermsAcceptedAt = acceptedAt;
+        TermsVersion = version;
         UpdatedAt = DateTime.UtcNow;
     }
 }

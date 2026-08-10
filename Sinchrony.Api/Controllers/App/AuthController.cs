@@ -38,7 +38,9 @@ public class AuthController(IMediator mediator) : ControllerBase
         req.name, req.email, req.phone, req.password, req.cpf,
         req.cep, req.logradouro, req.numero,
         req.complemento, req.bairro, req.cidade, req.estado,
-        req.unitId), ct);
+        req.unitId,
+        req.termsAcceptedAt,
+        req.termsVersion), ct);
         return StatusCode(201, result);
     }
 
@@ -131,7 +133,9 @@ public record RegisterRequest(
     string name, string email, string? phone, string password, string? cpf,
     string? cep, string? logradouro, string? numero,
     string? complemento, string? bairro, string? cidade, string? estado,
-    Guid? unitId);
+    Guid? unitId,
+    DateTime? termsAcceptedAt = null,
+    string? termsVersion = null);
 public record RefreshRequest(string refresh_token);
 public record ForgotPasswordRequest(string email);
 public record ResetPasswordRequest(string token, string newPassword);

@@ -53,6 +53,8 @@ public class UpdateProfileCommandHandler(IUserRepository userRepository)
             user.Complemento, user.Bairro, user.Cidade, user.Estado,
             user.PlanName,
             user.IsDependent,
-            user.ResponsibleStudentId);
+            user.ResponsibleStudentId,
+            user.TermsAcceptedAt,
+            user.TermsVersion);
     }
 }

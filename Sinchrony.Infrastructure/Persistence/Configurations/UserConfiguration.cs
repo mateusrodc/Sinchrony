@@ -28,6 +28,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Bairro).HasMaxLength(100);
         builder.Property(u => u.Cidade).HasMaxLength(100);
         builder.Property(u => u.Estado).HasMaxLength(2);
+        builder.Property(u => u.TermsAcceptedAt).IsRequired(false);
+        builder.Property(u => u.TermsVersion).HasMaxLength(20).IsRequired(false);
 
         builder.Property(u => u.Cpf).HasMaxLength(11);
         builder.HasIndex(u => u.Cpf)
