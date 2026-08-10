@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Swashbuckle.AspNetCore.Filters;
@@ -58,7 +59,8 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
         {
             confirmed = records.Count(r => r.Status == Domain.Enums.BookingStatus.confirmed),
             attended = records.Count(r => r.Status == Domain.Enums.BookingStatus.attended),
-            noShow = records.Count(r => r.Status == Domain.Enums.BookingStatus.no_show)
+            noShow = records.Count(r => r.Status == Domain.Enums.BookingStatus.no_show),
+            cancelledWithinDeadline = records.Count(r => r.Status == BookingStatus.cancelled)
         });
     }
 

@@ -5,5 +5,6 @@ public enum BookingStatus
     confirmed,
     cancelled,
     attended,
-    no_show
+    no_show,
+    waitlisted
 }

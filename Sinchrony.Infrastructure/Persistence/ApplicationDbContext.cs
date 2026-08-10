@@ -32,6 +32,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<DependentPackageAllocation> DependentPackageAllocations => Set<DependentPackageAllocation>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<TeacherUnit> TeacherUnits => Set<TeacherUnit>();
+    public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

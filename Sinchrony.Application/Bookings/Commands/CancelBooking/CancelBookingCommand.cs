@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Logging;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -16,7 +17,9 @@ public class CancelBookingCommandHandler(
     IDependentRepository dependentRepository,
     IStudentPackageRepository studentPackageRepository,
     ISettingsRepository settingsRepository,
-    IAuditService auditService) : IRequestHandler<CancelBookingCommand>
+    IAuditService auditService,
+    IWaitlistRepository waitlistRepository,
+    ILogger<CancelBookingCommandHandler> logger) : IRequestHandler<CancelBookingCommand>
 {
     public async Task Handle(CancelBookingCommand request, CancellationToken ct)
     {
@@ -77,7 +80,29 @@ public class CancelBookingCommandHandler(
         // Sincroniza attendance → no_show
         var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
         if (attendance is not null)
-            attendance.UpdateStatus("no_show");
+            attendance.UpdateStatus("cancelled");
+
+        var nextInWaitlist = await waitlistRepository.GetNextWaitingAsync(booking.ClassId, ct);
+        if (nextInWaitlist is not null)
+        {
+            nextInWaitlist.Notify(); // marca como notified + seta ExpiresAt = Now + 5min
+            await waitlistRepository.SaveAsync(ct);
+
+            // Email/push em background (SMTP pode estar bloqueado no Render gratuito)
+            var notifiedStudentId = nextInWaitlist.StudentId;
+            var classId = booking.ClassId;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Notificação implementada quando SMTP/push estiver disponível
+                    logger.LogInformation(
+                        "Waitlist: student {StudentId} notified for class {ClassId}. Window expires at {ExpiresAt}",
+                        notifiedStudentId, classId, nextInWaitlist.ExpiresAt);
+                }
+                catch { /* ignora falha de notificação */ }
+            });
+        }
 
         await bookingRepository.SaveAsync(ct);
         await userRepository.SaveAsync(ct);
