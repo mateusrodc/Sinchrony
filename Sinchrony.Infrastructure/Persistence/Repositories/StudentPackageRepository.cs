@@ -24,6 +24,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
     public async Task<IEnumerable<StudentPackage>> ListByStudentAsync(Guid studentId, CancellationToken ct = default)
         => await db.StudentPackages
             .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Include(sp => sp.Allocations)
             .Where(sp => sp.StudentId == studentId)
             .OrderByDescending(sp => sp.PurchasedAt)
             .ToListAsync(ct);
