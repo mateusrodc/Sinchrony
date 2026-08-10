@@ -16,6 +16,9 @@ public class StudentPackage
     public Package? Package { get; private set; }
     public ICollection<DependentPackageAllocation> Allocations { get; private set; } = [];
 
+    public string Source { get; private set; } = "purchase"; // "purchase" | "manual"
+    public int CreditsGranted { get; private set; }
+
     protected StudentPackage() { }
 
     public static StudentPackage Create(Guid studentId, Guid packageId, int validityDays)
@@ -29,6 +32,11 @@ public class StudentPackage
             EndDate = start.AddDays(validityDays),
             Status = StudentPackageStatus.active
         };
+    }
+    public void SetSource(string source, int creditsGranted)
+    {
+        Source = source;
+        CreditsGranted = creditsGranted;
     }
 
     public static StudentPackage CreateQueued(Guid studentId, Guid packageId, int validityDays)

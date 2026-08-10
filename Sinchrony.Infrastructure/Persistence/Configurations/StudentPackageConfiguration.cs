@@ -15,6 +15,9 @@ namespace Sinchrony.Infrastructure.Persistence.Configurations
             builder.HasKey(sp => sp.Id);
             builder.Property(sp => sp.Status).HasConversion<string>().HasMaxLength(20);
 
+            builder.Property(sp => sp.Source).HasMaxLength(20).HasDefaultValue("purchase");
+            builder.Property(sp => sp.CreditsGranted).HasDefaultValue(0);
+
             builder.HasOne(sp => sp.Student).WithMany()
                 .HasForeignKey(sp => sp.StudentId).OnDelete(DeleteBehavior.Restrict);
 

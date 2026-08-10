@@ -130,7 +130,7 @@ public class PurchasePackageCommandHandler(
             // Cartão: aprovação síncrona — ativa imediatamente
             purchase.Confirm();
             studentPackage = await purchaseService.ProcessAndReturnAsync(
-                request.UserId, package, ct);
+                request.UserId, package, "purchase", ct);
         }
         else
         {

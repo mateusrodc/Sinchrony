@@ -33,4 +33,10 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
 
     public async Task SaveAsync(CancellationToken ct = default)
         => await db.SaveChangesAsync(ct);
+
+    public async Task<StudentPackage?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    => await db.StudentPackages
+        .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+        .Include(sp => sp.Allocations)
+        .FirstOrDefaultAsync(sp => sp.Id == id, ct);
 }

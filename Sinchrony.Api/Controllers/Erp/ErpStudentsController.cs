@@ -262,7 +262,7 @@ public class ErpStudentsController(
         await purchaseRepository.AddAsync(purchase, ct);
         await purchaseRepository.SaveAsync(ct);
 
-        await purchasePackageService.ProcessAsync(studentId, package, ct);
+        await purchasePackageService.ProcessAsync(studentId, package, "manual", ct);
 
         // Recarrega student para pegar Credits já creditados pelo ProcessAsync
         student = await userRepository.GetByIdAsync(studentId, ct)!;
@@ -299,6 +299,91 @@ public class ErpStudentsController(
             paymentMethod = req.paymentMethod
         });
     }
+    [HttpDelete("{studentId}/packages/{studentPackageId}")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> RemovePackage(
+    Guid studentId,
+    Guid studentPackageId,
+    [FromBody] RemovePackageRequest req,
+    CancellationToken ct)
+    {
+        // Validação de reason
+        if (string.IsNullOrWhiteSpace(req.reason) || req.reason.Trim().Length < 3)
+            throw DomainException.Validation("REASON_REQUIRED",
+                "O motivo da remoção é obrigatório (mínimo 3 caracteres).");
+
+        // Busca StudentPackage
+        var sp = await studentPackageRepository.GetByIdAsync(studentPackageId, ct);
+        if (sp is null || sp.StudentId != studentId)
+            throw DomainException.NotFound("StudentPackage not found.");
+
+        // Valida origem manual
+        if (sp.Source != "manual")
+            throw DomainException.Validation("NOT_MANUAL_GRANT",
+                "Apenas pacotes concedidos manualmente pela ERP podem ser removidos.");
+
+        // Valida status
+        if (sp.Status == StudentPackageStatus.cancelled)
+            throw DomainException.Conflict("PACKAGE_ALREADY_CANCELLED",
+                "Este pacote já está cancelado.");
+
+        // Multiunidade
+        var package = await packageRepository.GetByIdAsync(sp.PackageId, ct);
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
+        {
+            if (package?.UnitId.HasValue == true && package.UnitId != unitContext.UnitId)
+                throw DomainException.Forbidden("Você não tem permissão para remover pacotes de outra unidade.");
+        }
+
+        // Carrega aluno
+        var student = await userRepository.GetByIdAsync(studentId, ct)
+            ?? throw DomainException.NotFound("Student not found.");
+
+        // Checagem de uso — não permite estorno se créditos já foram usados
+        if (student.Credits < sp.CreditsGranted)
+            throw DomainException.Conflict("CREDITS_ALREADY_USED",
+                $"O aluno já utilizou créditos deste pacote. Saldo atual ({student.Credits}) é menor que os créditos concedidos ({sp.CreditsGranted}).");
+
+        // Estorna créditos
+        student.DeductCredits(sp.CreditsGranted);
+
+        // CreditTransaction negativa
+        var creditTx = CreditTransaction.Create(
+            studentId,
+            -sp.CreditsGranted,
+            student.Credits,
+            $"Remoção de concessão manual: {package?.Name ?? sp.PackageId.ToString()} — {req.reason}",
+            "manual_reversal",
+            studentPackageId);
+        await creditTransactionRepository.AddAsync(creditTx, ct);
+        await creditTransactionRepository.SaveAsync(ct);
+
+        // Cancela o pacote
+        sp.Cancel();
+
+        // Zera allocations se existirem
+        foreach (var alloc in sp.Allocations)
+            alloc.Debit(alloc.CreditsRemaining);
+
+        await studentPackageRepository.SaveAsync(ct);
+        await userRepository.SaveAsync(ct);
+
+        // Auditoria
+        await auditService.LogAsync(
+            "package.grant_removed_by_admin", "StudentPackage",
+            sp.Id, AdminId,
+            $"Aluno: {student.Name}, Pacote: {package?.Name}, Créditos estornados: {sp.CreditsGranted}, Motivo: {req.reason}",
+            ct: ct);
+
+        return Ok(new
+        {
+            id = sp.Id,
+            packageId = sp.PackageId,
+            packageName = package?.Name,
+            status = "cancelled",
+            creditsReverted = sp.CreditsGranted
+        });
+    }
 
     public record AssignPackageRequest(
         Guid packageId,
@@ -306,6 +391,8 @@ public class ErpStudentsController(
         decimal? amount,
         string reason);
 }
+
+public record RemovePackageRequest(string reason);
 
 public record CreateStudentRequest(
     string name, string email, string? phone,

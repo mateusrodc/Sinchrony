@@ -9,4 +9,5 @@ public interface IStudentPackageRepository
     Task<IEnumerable<StudentPackage>> ListByStudentAsync(Guid studentId, CancellationToken ct = default);
     Task AddAsync(StudentPackage studentPackage, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
+    Task<StudentPackage?> GetByIdAsync(Guid id, CancellationToken ct = default);
 }

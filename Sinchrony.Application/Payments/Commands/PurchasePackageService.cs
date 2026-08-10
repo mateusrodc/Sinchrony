@@ -12,27 +12,32 @@ public class PurchasePackageService(
     ICreditTransactionRepository creditTransactionRepository)
 {
     public async Task ProcessAsync(
-        Guid studentId, Package package, CancellationToken ct)
+    Guid studentId, Package package,
+    string source = "purchase",
+    CancellationToken ct = default)
     {
         var user = await userRepository.GetByIdAsync(studentId, ct);
-        await ProcessAndCreditAsync(studentId, package, user, null, ct);
+        await ProcessAndCreditAsync(studentId, package, user, null, source, ct);
     }
 
     public async Task<StudentPackage> ProcessAndReturnAsync(
-        Guid studentId, Package package, CancellationToken ct)
+    Guid studentId, Package package,
+    string source = "purchase",
+    CancellationToken ct = default)
     {
         var user = await userRepository.GetByIdAsync(studentId, ct);
-        await ProcessAndCreditAsync(studentId, package, user, null, ct);
+        await ProcessAndCreditAsync(studentId, package, user, null, source, ct);
         return await studentPackageRepository.GetActiveByStudentAsync(studentId, ct)
             ?? throw new InvalidOperationException("StudentPackage not created.");
     }
 
     private async Task ProcessAndCreditAsync(
     Guid studentId, Package package, User? user,
-    string? transactionRef, CancellationToken ct)
+    string? transactionRef, string source, CancellationToken ct)
     {
         var active = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct);
         StudentPackage? sp = null;
+        var credits = package.CreditsPerMember ?? package.Credits;
 
         if (active is not null)
         {
@@ -44,18 +49,16 @@ public class PurchasePackageService(
 
                 case "queue":
                     var queued = StudentPackage.CreateQueued(studentId, package.Id, package.ValidityDays);
+                    queued.SetSource(source, 0); // queued não credita ainda
                     await studentPackageRepository.AddAsync(queued, ct);
-                    // Queued não credita créditos ainda
                     break;
 
                 case "sum_credits":
                     var titularAlloc = await allocationRepository
                         .GetByStudentPackageAndDependentAsync(active.Id, null, ct);
-                    var sumCredits = package.CreditsPerMember ?? package.Credits;
-                    titularAlloc?.Credit(sumCredits);
-                    // Só credita no User.Credits — sem CreditTransaction aqui
+                    titularAlloc?.Credit(credits);
                     if (user is not null)
-                        user.AddCredits(sumCredits);
+                        user.AddCredits(credits);
                     break;
 
                 case "sum_validity":
@@ -65,26 +68,23 @@ public class PurchasePackageService(
                 case "activate_immediately":
                     active.Cancel();
                     sp = StudentPackage.Create(studentId, package.Id, package.ValidityDays);
+                    sp.SetSource(source, credits);
                     await studentPackageRepository.AddAsync(sp, ct);
                     await CreateAllocationsAsync(sp, package, studentId, ct);
                     if (user is not null)
-                    {
-                        var credits = package.CreditsPerMember ?? package.Credits;
                         user.AddCredits(credits);
-                    }
                     break;
             }
         }
         else
         {
             sp = StudentPackage.Create(studentId, package.Id, package.ValidityDays);
+            sp.SetSource(source, credits);
             await studentPackageRepository.AddAsync(sp, ct);
             await CreateAllocationsAsync(sp, package, studentId, ct);
 
-            // Credita no User.Credits — CreditTransaction fica a cargo do caller
             if (user is not null)
             {
-                var credits = package.CreditsPerMember ?? package.Credits;
                 user.AddCredits(credits);
                 await userRepository.SaveAsync(ct);
             }
