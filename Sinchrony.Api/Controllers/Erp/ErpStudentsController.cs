@@ -284,7 +284,8 @@ public class ErpStudentsController(
             $"Aluno: {student.Name}, Pacote: {package.Name}, Método: {req.paymentMethod}, Motivo: {req.reason}",
             ct: ct);
 
-        var sp = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct);
+        var sp = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct)
+                 ?? await studentPackageRepository.GetQueuedByStudentAsync(studentId, ct);
 
         return StatusCode(201, new
         {
@@ -319,10 +320,3 @@ public record UpdateStudentRequest(
     string? cep, string? logradouro, string? numero,
     string? complemento, string? bairro, string? cidade, string? estado,
     Guid? unitId = null);
-
-public record AssignPackageRequest(
-    Guid packageId,
-    string? status = "active",
-    DateOnly? startDate = null,
-    DateOnly? endDate = null,
-    int? creditsOverride = null);

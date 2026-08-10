@@ -49,15 +49,7 @@ public class StudentPackage
     {
         Status = StudentPackageStatus.cancelled;
     }
-    public void SetStartDate(DateTime date)
-    {
-        StartDate = date;
-    }
 
-    public void SetEndDate(DateTime date)
-    {
-        EndDate = date;
-    }
     public void Activate()
     {
         Status = StudentPackageStatus.active;
@@ -68,17 +60,4 @@ public class StudentPackage
     {
         EndDate = EndDate.AddDays(days);
     }
-    public static StudentPackage CreateManual(
-    Guid studentId, Guid packageId,
-    DateTime startDate, DateTime endDate,
-    StudentPackageStatus status = StudentPackageStatus.active)
-    => new()
-    {
-        StudentId = studentId,
-        PackageId = packageId,
-        StartDate = startDate,
-        EndDate = endDate,
-        Status = status,
-        PurchasedAt = DateTime.UtcNow
-    };
 }

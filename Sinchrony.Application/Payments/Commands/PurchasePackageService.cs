@@ -1,4 +1,5 @@
 ﻿using Sinchrony.Domain.Entities;
+using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 
 namespace Sinchrony.Application.Payments.Commands;
@@ -27,11 +28,10 @@ public class PurchasePackageService(
     }
 
     private async Task ProcessAndCreditAsync(
-        Guid studentId, Package package, User? user,
-        string? transactionRef, CancellationToken ct)
+    Guid studentId, Package package, User? user,
+    string? transactionRef, CancellationToken ct)
     {
         var active = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct);
-
         StudentPackage? sp = null;
 
         if (active is not null)
@@ -39,12 +39,13 @@ public class PurchasePackageService(
             switch (package.PurchaseStrategy)
             {
                 case "block":
-                    throw new InvalidOperationException("Active package exists.");
+                    throw DomainException.Conflict("ACTIVE_PACKAGE_EXISTS",
+                        "Você já possui um pacote ativo.");
 
                 case "queue":
                     var queued = StudentPackage.CreateQueued(studentId, package.Id, package.ValidityDays);
                     await studentPackageRepository.AddAsync(queued, ct);
-                    // Não credita créditos — pacote está na fila
+                    // Queued não credita créditos ainda
                     break;
 
                 case "sum_credits":
@@ -52,12 +53,9 @@ public class PurchasePackageService(
                         .GetByStudentPackageAndDependentAsync(active.Id, null, ct);
                     var sumCredits = package.CreditsPerMember ?? package.Credits;
                     titularAlloc?.Credit(sumCredits);
-                    // Credita no User.Credits também
+                    // Só credita no User.Credits — sem CreditTransaction aqui
                     if (user is not null)
-                    {
                         user.AddCredits(sumCredits);
-                        await CreditTransactionAsync(user, sumCredits, transactionRef, ct);
-                    }
                     break;
 
                 case "sum_validity":
@@ -69,12 +67,10 @@ public class PurchasePackageService(
                     sp = StudentPackage.Create(studentId, package.Id, package.ValidityDays);
                     await studentPackageRepository.AddAsync(sp, ct);
                     await CreateAllocationsAsync(sp, package, studentId, ct);
-                    // Credita no User.Credits
                     if (user is not null)
                     {
                         var credits = package.CreditsPerMember ?? package.Credits;
                         user.AddCredits(credits);
-                        await CreditTransactionAsync(user, credits, transactionRef, ct);
                     }
                     break;
             }
@@ -85,12 +81,11 @@ public class PurchasePackageService(
             await studentPackageRepository.AddAsync(sp, ct);
             await CreateAllocationsAsync(sp, package, studentId, ct);
 
-            // Credita no User.Credits — FIX CRÍTICO
+            // Credita no User.Credits — CreditTransaction fica a cargo do caller
             if (user is not null)
             {
                 var credits = package.CreditsPerMember ?? package.Credits;
                 user.AddCredits(credits);
-                await CreditTransactionAsync(user, credits, transactionRef, ct);
                 await userRepository.SaveAsync(ct);
             }
         }
