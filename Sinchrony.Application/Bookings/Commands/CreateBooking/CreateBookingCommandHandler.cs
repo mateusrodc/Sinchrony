@@ -32,6 +32,9 @@ public class CreateBookingCommandHandler(
             if (caller.Status == StudentStatus.blocked)
                 throw DomainException.Forbidden("Account is blocked.");
 
+            if (caller.Status == StudentStatus.inactive)
+                throw DomainException.Forbidden("Account is inactive.");
+
             if (caller.Credits <= 0)
                 throw DomainException.Validation("INSUFFICIENT_CREDITS", "Insufficient credits.");
 

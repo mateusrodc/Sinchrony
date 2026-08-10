@@ -56,6 +56,9 @@ public class GoogleLoginCommandHandler(
         if (user.Status == StudentStatus.blocked)
             throw DomainException.Forbidden("Account is blocked.");
 
+        if (user.Status == StudentStatus.inactive)
+            throw DomainException.Forbidden("Account is inactive.");
+
         var accessToken = tokenService.GenerateAccessToken(user);
         var refreshStr = tokenService.GenerateRefreshToken();
         var refreshToken = Sinchrony.Domain.Entities.RefreshToken.Create(user.Id, refreshStr);
