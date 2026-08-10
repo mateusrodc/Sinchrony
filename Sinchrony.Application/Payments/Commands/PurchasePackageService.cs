@@ -8,35 +8,33 @@ public class PurchasePackageService(
     IStudentPackageRepository studentPackageRepository,
     IDependentPackageAllocationRepository allocationRepository,
     IDependentRepository dependentRepository,
-    IUserRepository userRepository,
-    ICreditTransactionRepository creditTransactionRepository)
+    IUserRepository userRepository)
 {
     public async Task ProcessAsync(
-    Guid studentId, Package package,
-    string source = "purchase",
-    CancellationToken ct = default)
+        Guid studentId, Package package,
+        string source = "purchase",
+        CancellationToken ct = default)
     {
         var user = await userRepository.GetByIdAsync(studentId, ct);
-        await ProcessAndCreditAsync(studentId, package, user, null, source, ct);
+        await ProcessAndCreditAsync(studentId, package, user, source, ct);
     }
 
     public async Task<StudentPackage> ProcessAndReturnAsync(
-    Guid studentId, Package package,
-    string source = "purchase",
-    CancellationToken ct = default)
+        Guid studentId, Package package,
+        string source = "purchase",
+        CancellationToken ct = default)
     {
         var user = await userRepository.GetByIdAsync(studentId, ct);
-        await ProcessAndCreditAsync(studentId, package, user, null, source, ct);
+        await ProcessAndCreditAsync(studentId, package, user, source, ct);
         return await studentPackageRepository.GetActiveByStudentAsync(studentId, ct)
             ?? throw new InvalidOperationException("StudentPackage not created.");
     }
 
     private async Task ProcessAndCreditAsync(
-    Guid studentId, Package package, User? user,
-    string? transactionRef, string source, CancellationToken ct)
+        Guid studentId, Package package, User? user,
+        string source, CancellationToken ct)
     {
         var active = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct);
-        StudentPackage? sp = null;
         var credits = package.CreditsPerMember ?? package.Credits;
 
         if (active is not null)
@@ -67,10 +65,10 @@ public class PurchasePackageService(
 
                 case "activate_immediately":
                     active.Cancel();
-                    sp = StudentPackage.Create(studentId, package.Id, package.ValidityDays);
-                    sp.SetSource(source, credits);
-                    await studentPackageRepository.AddAsync(sp, ct);
-                    await CreateAllocationsAsync(sp, package, studentId, ct);
+                    var newSp = StudentPackage.Create(studentId, package.Id, package.ValidityDays);
+                    newSp.SetSource(source, credits);
+                    await studentPackageRepository.AddAsync(newSp, ct);
+                    await CreateAllocationsAsync(newSp, package, studentId, ct);
                     if (user is not null)
                         user.AddCredits(credits);
                     break;
@@ -78,7 +76,7 @@ public class PurchasePackageService(
         }
         else
         {
-            sp = StudentPackage.Create(studentId, package.Id, package.ValidityDays);
+            var sp = StudentPackage.Create(studentId, package.Id, package.ValidityDays);
             sp.SetSource(source, credits);
             await studentPackageRepository.AddAsync(sp, ct);
             await CreateAllocationsAsync(sp, package, studentId, ct);
@@ -91,17 +89,6 @@ public class PurchasePackageService(
         }
 
         await studentPackageRepository.SaveAsync(ct);
-    }
-
-    private async Task CreditTransactionAsync(
-        User user, int credits, string? transactionRef, CancellationToken ct)
-    {
-        var tx = CreditTransaction.Create(
-            user.Id, credits, user.Credits,
-            $"Package activated: {transactionRef ?? "manual"}",
-            "package", null);
-        await creditTransactionRepository.AddAsync(tx, ct);
-        await creditTransactionRepository.SaveAsync(ct);
     }
 
     private async Task CreateAllocationsAsync(

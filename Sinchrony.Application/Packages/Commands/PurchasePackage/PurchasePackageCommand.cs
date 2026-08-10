@@ -120,8 +120,7 @@ public class PurchasePackageCommandHandler(
             studentPackageRepository,
             allocationRepository,
             dependentRepository,
-            userRepository,
-            creditTransactionRepository);
+            userRepository);
 
         StudentPackage? studentPackage = null;
 
