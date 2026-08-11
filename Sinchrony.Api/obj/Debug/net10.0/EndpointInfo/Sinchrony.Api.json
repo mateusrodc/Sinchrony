@@ -3894,6 +3894,29 @@
         }
       }
     },
+    "/classes/{classId}/waitlist/claim": {
+      "post": {
+        "tags": [
+          "Waitlist"
+        ],
+        "parameters": [
+          {
+            "name": "classId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/webhooks/asaas": {
       "post": {
         "tags": [
@@ -5247,6 +5270,15 @@
           },
           "allowWaitlist": {
             "type": "boolean",
+            "nullable": true
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "toleranceMode": {
+            "type": "string",
             "nullable": true
           },
           "autoConfirmBookings": {

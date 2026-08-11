@@ -1931,6 +1931,22 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Sinchrony.Api.Controllers.App.WaitlistController",
+    "Method": "Claim",
+    "RelativePath": "classes/{classId}/waitlist/claim",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "classId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Sinchrony.Api.Controllers.App.ClassesController",
     "Method": "Get",
     "RelativePath": "classes/{id}",

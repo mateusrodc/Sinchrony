@@ -47,13 +47,15 @@ public class EmailService(
         try
         {
             var message = new MimeMessage();
-            message.From.Add(MailboxAddress.Parse(
-                string.IsNullOrEmpty(settings.SmtpFrom)
-                    ? settings.SmtpUser
-                    : settings.SmtpFrom));
+            message.From.Add(new MailboxAddress("4Sinchrony Experience", settings.SmtpFrom));
             message.To.Add(MailboxAddress.Parse(to));
             message.Subject = subject;
-            message.Body = new TextPart("html") { Text = body };
+            message.MessageId = $"<{Guid.NewGuid()}@4sinchrony.com.br>";
+            message.Headers.Add("X-Mailer", "4Sinchrony Mailer 1.0");
+            message.Headers.Add("X-Priority", "3");
+
+            var builder = new BodyBuilder { HtmlBody = body };
+            message.Body = builder.ToMessageBody();
 
             using var client = new SmtpClient();
             client.Timeout = 8000;
