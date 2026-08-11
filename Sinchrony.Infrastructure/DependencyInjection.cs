@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -53,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitContext, UnitContext>();
         services.AddScoped<ITeacherUnitRepository, TeacherUnitRepository>();
         services.AddScoped<IWaitlistRepository, WaitlistRepository>();
+        services.AddHostedService<ToleranceEnforcementService>();
 
         services.AddHttpClient<IStorageService, SupabaseStorageService>(client =>
         {

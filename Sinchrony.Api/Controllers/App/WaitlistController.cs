@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Application.Bookings.Commands.CreateBooking;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -17,14 +19,37 @@ public class WaitlistController(
     IWaitlistRepository waitlistRepository,
     IBookingRepository bookingRepository,
     IStudentPackageRepository studentPackageRepository,
-    ISettingsRepository settingsRepository) : ControllerBase
+    ISettingsRepository settingsRepository,
+    IMediator mediator) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? User.FindFirstValue("sub")!);
 
+    // Não existe job agendado no projeto pra vencer a janela de 5 min sozinho (ver
+    // DEMANDA_LISTA_ESPERA_TOLERANCIA_NOSHOW_PACOTES_BACKEND.md, item 2, mesma lacuna de
+    // infraestrutura). Como paliativo, toda vez que alguém interage com a lista de espera
+    // dessa aula (entra, consulta ou tenta confirmar), primeiro reconcilia uma notificação
+    // vencida sem resposta e promove o próximo — cobre o caso comum (app faz polling/refresh),
+    // mas não é um cron de verdade. Sem side effect se não houver nada vencido.
+    private async Task ExpireAndPromoteAsync(Guid classId, CancellationToken ct)
+    {
+        var current = await waitlistRepository.GetCurrentNotifiedAsync(classId, ct);
+        if (current is null || current.ExpiresAt is null || current.ExpiresAt >= DateTime.UtcNow)
+            return;
+
+        current.MarkExpired();
+
+        var next = await waitlistRepository.GetNextWaitingAsync(classId, ct);
+        next?.Notify();
+
+        await waitlistRepository.SaveAsync(ct);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Join(Guid classId, CancellationToken ct)
     {
+        await ExpireAndPromoteAsync(classId, ct);
+
         var @class = await classRepository.GetByIdAsync(classId, ct)
             ?? throw DomainException.NotFound("Class not found.");
 
@@ -88,9 +113,42 @@ public class WaitlistController(
         return Ok(new { success = true });
     }
 
+    [HttpPost("claim")]
+    public async Task<IActionResult> Claim(Guid classId, CancellationToken ct)
+    {
+        await ExpireAndPromoteAsync(classId, ct);
+
+        var entry = await waitlistRepository.GetByClassAndStudentAsync(classId, UserId, ct)
+            ?? throw DomainException.NotFound("Você não está na lista de espera desta aula.");
+
+        if (entry.Status != "notified")
+            throw DomainException.Conflict("NOT_NOTIFIED",
+                "Você ainda não foi chamado para esta vaga.");
+
+        if (entry.ExpiresAt is null || entry.ExpiresAt < DateTime.UtcNow)
+        {
+            entry.MarkExpired();
+            await waitlistRepository.SaveAsync(ct);
+            throw DomainException.Conflict("WAITLIST_CLAIM_EXPIRED",
+                "O prazo de 5 minutos para confirmar a vaga expirou.");
+        }
+
+        // Reaproveita a criação de reserva normal (débito de crédito, checagem de capacidade,
+        // conflito de horário etc.) em vez de duplicar essa lógica aqui.
+        var booking = await mediator.Send(
+            new CreateBookingCommand(UserId, UserId, classId, null), ct);
+
+        entry.MarkConverted();
+        await waitlistRepository.SaveAsync(ct);
+
+        return StatusCode(201, booking);
+    }
+
     [HttpGet]
     public async Task<IActionResult> List(Guid classId, CancellationToken ct)
     {
+        await ExpireAndPromoteAsync(classId, ct);
+
         var entries = await waitlistRepository.ListByClassAsync(classId, ct);
         return Ok(new
         {

@@ -27,6 +27,12 @@ public class WaitlistRepository(ApplicationDbContext db) : IWaitlistRepository
             .OrderBy(w => w.Position)
             .FirstOrDefaultAsync(ct);
 
+    public async Task<WaitlistEntry?> GetCurrentNotifiedAsync(
+        Guid classId, CancellationToken ct = default)
+        => await db.WaitlistEntries
+            .Where(w => w.ClassId == classId && w.Status == "notified")
+            .FirstOrDefaultAsync(ct);
+
     public async Task<int> CountByClassAsync(Guid classId, CancellationToken ct = default)
         => await db.WaitlistEntries
             .CountAsync(w => w.ClassId == classId && w.Status == "waiting", ct);

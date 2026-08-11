@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
+using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Swashbuckle.AspNetCore.Filters;
 
@@ -40,6 +41,14 @@ public class ErpSettingsController(ISettingsRepository settingsRepository) : Con
         if (req.cancellationDeadlineHours.HasValue) settings.CancellationDeadlineHours = req.cancellationDeadlineHours.Value;
         if (req.maxBookingsPerStudent.HasValue) settings.MaxBookingsPerStudent = req.maxBookingsPerStudent.Value;
         if (req.allowWaitlist.HasValue) settings.AllowWaitlist = req.allowWaitlist.Value;
+        if (req.toleranceMinutes.HasValue) settings.ToleranceMinutes = req.toleranceMinutes.Value;
+        if (req.toleranceMode is not null)
+        {
+            if (req.toleranceMode != "manual" && req.toleranceMode != "automatic")
+                throw DomainException.Validation("INVALID_TOLERANCE_MODE",
+                    "toleranceMode deve ser \"manual\" ou \"automatic\".");
+            settings.ToleranceMode = req.toleranceMode;
+        }
         if (req.autoConfirmBookings.HasValue) settings.AutoConfirmBookings = req.autoConfirmBookings.Value;
         if (req.sendBookingConfirmationEmail.HasValue) settings.SendBookingConfirmationEmail = req.sendBookingConfirmationEmail.Value;
         if (req.sendReminderEmail.HasValue) settings.SendReminderEmail = req.sendReminderEmail.Value;
@@ -66,6 +75,8 @@ public class ErpSettingsController(ISettingsRepository settingsRepository) : Con
         cancellationDeadlineHours = s.CancellationDeadlineHours,
         maxBookingsPerStudent = s.MaxBookingsPerStudent,
         allowWaitlist = s.AllowWaitlist,
+        toleranceMinutes = s.ToleranceMinutes,
+        toleranceMode = s.ToleranceMode,
         autoConfirmBookings = s.AutoConfirmBookings,
         sendBookingConfirmationEmail = s.SendBookingConfirmationEmail,
         sendReminderEmail = s.SendReminderEmail,
@@ -84,6 +95,7 @@ public record UpdateSettingsRequest(
     string? studioPhone, string? studioAddress,
     int? bookingWindowDays, int? cancellationDeadlineHours,
     int? maxBookingsPerStudent, bool? allowWaitlist,
+    int? toleranceMinutes, string? toleranceMode,
     bool? autoConfirmBookings, bool? sendBookingConfirmationEmail,
     bool? sendReminderEmail, int? reminderHoursBefore,
     // SMTP

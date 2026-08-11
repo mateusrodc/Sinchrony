@@ -19,6 +19,7 @@ public class CancelBookingCommandHandler(
     ISettingsRepository settingsRepository,
     IAuditService auditService,
     IWaitlistRepository waitlistRepository,
+    IEmailService emailService,
     ILogger<CancelBookingCommandHandler> logger) : IRequestHandler<CancelBookingCommand>
 {
     public async Task Handle(CancelBookingCommand request, CancellationToken ct)
@@ -88,20 +89,49 @@ public class CancelBookingCommandHandler(
             nextInWaitlist.Notify(); // marca como notified + seta ExpiresAt = Now + 5min
             await waitlistRepository.SaveAsync(ct);
 
-            // Email/push em background (SMTP pode estar bloqueado no Render gratuito)
+            // Extrai valores antes do Task.Run — depois que o handler retorna, o DbContext do
+            // request pode ser descartado, então nada aqui pode depender dele. SMTP não está mais
+            // bloqueado (migrado da Render pra VPS), então manda o e-mail de verdade.
+            var studentEmail = nextInWaitlist.Student?.Email;
+            var studentName = nextInWaitlist.Student?.Name ?? "aluno(a)";
+            var className = booking.Class?.Name ?? "sua aula";
+            var expiresAt = nextInWaitlist.ExpiresAt ?? DateTime.UtcNow.AddMinutes(5); // Notify() acabou de setar, nunca null aqui
             var notifiedStudentId = nextInWaitlist.StudentId;
             var classId = booking.ClassId;
-            _ = Task.Run(async () =>
+
+            if (!string.IsNullOrWhiteSpace(studentEmail))
             {
-                try
+                var body = $"""
+                    <h2>Vaga disponível — {className}</h2>
+                    <p>Olá, {studentName}!</p>
+                    <p>Uma vaga abriu em <strong>{className}</strong> e você é o(a) próximo(a) da lista de espera.</p>
+                    <p>Você tem até <strong>{expiresAt:HH:mm}</strong> (5 minutos) para confirmar pelo aplicativo, antes que a vaga seja oferecida ao próximo da fila.</p>
+                    <br>
+                    <small>4Sinchrony Experience</small>
+                    """;
+
+                _ = Task.Run(async () =>
                 {
-                    // Notificação implementada quando SMTP/push estiver disponível
-                    logger.LogInformation(
-                        "Waitlist: student {StudentId} notified for class {ClassId}. Window expires at {ExpiresAt}",
-                        notifiedStudentId, classId, nextInWaitlist.ExpiresAt);
-                }
-                catch { /* ignora falha de notificação */ }
-            });
+                    try
+                    {
+                        await emailService.SendWithSettingsAsync(
+                            studentEmail, $"Vaga disponível — {className}", body, settings,
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex,
+                            "Waitlist: falha ao notificar aluno {StudentId} pra aula {ClassId}",
+                            notifiedStudentId, classId);
+                    }
+                });
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Waitlist: aluno {StudentId} notificado pra aula {ClassId} sem e-mail cadastrado, notificação não enviada.",
+                    notifiedStudentId, classId);
+            }
         }
 
         await bookingRepository.SaveAsync(ct);
