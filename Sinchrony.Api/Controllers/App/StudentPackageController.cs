@@ -65,6 +65,7 @@ public class StudentPackageController(
         return Ok(new { data = packages.Select(MapStudentPackage) });
     }
     [HttpPost("{id}/extend")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Extend(
         Guid id,
         [FromBody] ExtendPackageRequest req,
@@ -106,6 +107,7 @@ public class StudentPackageController(
         });
     }
     [HttpPost("{id}/cancel-refund")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> CancelRefund(
         Guid id,
         [FromBody] CancelRefundRequest req,

@@ -36,6 +36,7 @@ public class AttendanceRecord
         {
             "attended" => BookingStatus.attended,
             "no_show" => BookingStatus.no_show,
+            "cancelled" => BookingStatus.cancelled,
             _ => BookingStatus.confirmed
         };
 
