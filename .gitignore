@@ -1,0 +1,21 @@
+## .NET build artifacts
+bin/
+obj/
+*.user
+*.Backup.tmp
+
+## Visual Studio cache/options (local, not to be shared)
+.vs/
+
+## Rider / VS Code
+.idea/
+*.suo
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Test results / coverage
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml

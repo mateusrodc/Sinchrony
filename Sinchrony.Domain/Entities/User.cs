@@ -154,6 +154,34 @@ public class User
     }
 
     public void Deactivate() { Status = StudentStatus.inactive; Active = false; UpdatedAt = DateTime.UtcNow; }
+
+    /// <summary>
+    /// Autoexclusão de conta (LGPD / Apple Guideline 5.1.1(v)). Anonimiza os dados pessoais
+    /// em vez de apagar a linha, pois reservas, check-ins e pagamentos já realizados precisam
+    /// ser retidos por obrigação legal/fiscal (conforme Política de Privacidade). O e-mail é
+    /// trocado por um placeholder único para liberar o e-mail original para novo cadastro e
+    /// impedir login futuro com as credenciais antigas.
+    /// </summary>
+    public void AnonymizeForDeletion(string anonymizedPasswordHash)
+    {
+        Name = "Usuário Excluído";
+        Email = $"deleted+{Id}@4sinchrony.local";
+        Phone = null;
+        Cpf = null;
+        Avatar = null;
+        Cep = null;
+        Logradouro = null;
+        Numero = null;
+        Complemento = null;
+        Bairro = null;
+        Cidade = null;
+        Estado = null;
+        GoogleId = null;
+        PasswordHash = anonymizedPasswordHash;
+        Status = StudentStatus.inactive;
+        Active = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
     public void ClearDependent()
     {
         IsDependent = false;

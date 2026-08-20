@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Auth;
 using Sinchrony.Application.Auth.Commands.ChangePassword;
+using Sinchrony.Application.Auth.Commands.DeleteAccount;
 using Sinchrony.Application.Auth.Commands.GoogleLogin;
 using Sinchrony.Application.Auth.Commands.Login;
 using Sinchrony.Application.Auth.Commands.Logout;
@@ -86,6 +87,19 @@ public class AuthController(IMediator mediator) : ControllerBase
         await mediator.Send(new ChangePasswordCommand(UserId, req.currentPassword, req.newPassword), ct);
         return Ok(new { success = true });
     }
+
+    /// <summary>
+    /// Autoexclusão de conta (Apple Guideline 5.1.1(v)). Anonimiza os dados pessoais do
+    /// usuário autenticado e revoga todos os refresh tokens ativos.
+    /// </summary>
+    [Authorize]
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountRequest req, CancellationToken ct)
+    {
+        await mediator.Send(new DeleteAccountCommand(UserId, req.currentPassword), ct);
+        return Ok(new { success = true });
+    }
+
     [HttpPost("google")]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest req, CancellationToken ct)
     {
@@ -140,3 +154,4 @@ public record RefreshRequest(string refresh_token);
 public record ForgotPasswordRequest(string email);
 public record ResetPasswordRequest(string token, string newPassword);
 public record ChangePasswordRequest(string currentPassword, string newPassword);
+public record DeleteAccountRequest(string? currentPassword);
