@@ -19,6 +19,7 @@ public class PayWithCardCommandHandler(
     IPurchaseRepository purchaseRepository,
     ICouponRepository couponRepository,
     ICreditTransactionRepository creditTransactionRepository,
+    ICardRepository cardRepository,
     IAsaasService asaasService,
     IAuditService auditService) : IRequestHandler<PayWithCardCommand, CardPaymentResponseDto>
 {
@@ -26,6 +27,13 @@ public class PayWithCardCommandHandler(
     {
         var user = await userRepository.GetByIdAsync(request.UserId, ct)
             ?? throw DomainException.NotFound("User not found.");
+
+        // O token do cartão é exibido pro app (pra montar esse payload), mas isso não
+        // significa que qualquer token vale — sem essa checagem, um usuário poderia mandar
+        // o token de OUTRO cliente e cobrar o cartão dele em nome da própria compra.
+        var ownsCard = await cardRepository.ExistsByTokenAsync(request.UserId, request.CardToken, ct);
+        if (!ownsCard)
+            throw DomainException.Forbidden("Este cartão não pertence a você.");
 
         Coupon? coupon = null;
         if (!string.IsNullOrEmpty(request.CouponCode))
@@ -43,11 +51,22 @@ public class PayWithCardCommandHandler(
             packages.Add(pkg);
         }
 
+        // Nunca confiar no "amount" que o cliente manda: recalcula a partir do preço real
+        // dos pacotes + desconto do cupom, e é esse valor (não o do request) que é cobrado
+        // e persistido. Sem isso, bastava mandar um "amount" baixo pra pagar centavos e
+        // receber os créditos do pacote inteiro.
+        var subtotal = packages.Sum(p => p.Price);
+        var expectedAmount = coupon?.ApplyDiscount(subtotal) ?? subtotal;
+
+        if (Math.Abs(expectedAmount - request.Amount) > 0.01m)
+            throw DomainException.Validation("AMOUNT_MISMATCH",
+                "O valor informado não corresponde ao preço dos pacotes selecionados.");
+
         var customerId = await asaasService.GetOrCreateCustomerAsync(
             user.Name, user.Email, user.Cpf, ct);
 
         var result = await asaasService.ChargeCardAsync(
-            customerId, request.CardToken, request.Amount,
+            customerId, request.CardToken, expectedAmount,
             "4Sinchrony - Pacote de aulas", ct);
 
         // Cartão: aprovação síncrona — credita imediatamente
@@ -63,7 +82,7 @@ public class PayWithCardCommandHandler(
         foreach (var pkg in packages)
         {
             var purchase = Purchase.Create(
-                user.Id, pkg.Id, request.Amount, "card",
+                user.Id, pkg.Id, expectedAmount, "card",
                 result.TransactionId, coupon?.Id);
             await purchaseRepository.AddAsync(purchase, ct);
         }

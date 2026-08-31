@@ -43,6 +43,18 @@ public class PayWithPixCommandHandler(
             packages.Add(pkg);
         }
 
+        // Nunca confiar no "amount" que o cliente manda: recalcula a partir do preço real
+        // dos pacotes + desconto do cupom, e é esse valor (não o do request) que é cobrado
+        // e persistido. Sem isso, bastava mandar um "amount" baixo pra gerar uma cobrança
+        // Pix de centavos e, quando confirmada pelo webhook, liberar os créditos do pacote
+        // inteiro.
+        var subtotal = packages.Sum(p => p.Price);
+        var expectedAmount = coupon?.ApplyDiscount(subtotal) ?? subtotal;
+
+        if (Math.Abs(expectedAmount - request.Amount) > 0.01m)
+            throw DomainException.Validation("AMOUNT_MISMATCH",
+                "O valor informado não corresponde ao preço dos pacotes selecionados.");
+
         // Usa CPF do request se informado, senão usa o do cadastro
         var cpf = request.Cpf ?? user.Cpf;
 
@@ -50,13 +62,13 @@ public class PayWithPixCommandHandler(
             user.Name, user.Email, cpf, ct);
 
         var result = await asaasService.CreatePixChargeAsync(
-            customerId, request.Amount, "4Sinchrony - Pacote de aulas", ct);
+            customerId, expectedAmount, "4Sinchrony - Pacote de aulas", ct);
 
         // PIX: compra fica PENDING até confirmação via webhook
         foreach (var pkg in packages)
         {
             var purchase = Purchase.CreatePending(
-                user.Id, pkg.Id, request.Amount, "pix",
+                user.Id, pkg.Id, expectedAmount, "pix",
                 result.TransactionId, coupon?.Id);
             await purchaseRepository.AddAsync(purchase, ct);
         }

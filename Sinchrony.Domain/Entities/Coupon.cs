@@ -16,4 +16,18 @@ public class Coupon
         => new() { Code = code.ToUpper(), Discount = discount, DiscountType = discountType, ExpiresAt = expiresAt };
 
     public bool IsValid() => Active && (ExpiresAt == null || ExpiresAt > DateTime.UtcNow);
+
+    /// <summary>
+    /// Aplica o desconto do cupom sobre um valor. Fonte de verdade única para o cálculo —
+    /// usada no servidor para conferir/recalcular o valor da cobrança (nunca confiar no
+    /// total que o cliente manda no request de pagamento).
+    /// </summary>
+    public decimal ApplyDiscount(decimal amount)
+    {
+        var discounted = DiscountType == "percentage"
+            ? amount - Math.Round(amount * Discount / 100m, 2)
+            : amount - Discount;
+
+        return discounted < 0 ? 0 : Math.Round(discounted, 2);
+    }
 }
