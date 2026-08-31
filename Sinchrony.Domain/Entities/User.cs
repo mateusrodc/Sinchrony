@@ -80,7 +80,10 @@ public class User
             Role = role,
             Credits = 0,
             ReferralCode = GenerateReferralCode(name),
-            Cpf = cpf,
+            // Sanitiza aqui (mesma regra de UpdateCpf) para não deixar passar pontuação:
+            // a coluna é varchar(11), e um CPF formatado ("123.456.789-01", 14 chars)
+            // estoura o limite e derruba o INSERT.
+            Cpf = string.IsNullOrEmpty(cpf) ? null : cpf.Replace(".", "").Replace("-", "").Trim(),
         };
     }
 

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Sinchrony.Domain.Exceptions;
 
@@ -37,6 +38,26 @@ public class ExceptionMiddleware(RequestDelegate next)
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
             {
                 error = new { code = "VALIDATION_ERROR", message = "Validation failed.", details = errors }
+            }));
+        }
+        catch (DbUpdateException ex)
+        {
+            // Cobre corrida entre a checagem de duplicidade (email/CPF/etc.) feita no handler
+            // e o INSERT/UPDATE real: dois requests concorrentes podem passar os dois pela
+            // checagem e só um vencer o índice único no banco. Sem isso, o violador cai no
+            // catch genérico abaixo e vira 500 em vez de um 409 compreensível pro cliente.
+            Log.Warning(ex, "DbUpdateException (provável conflito de concorrência) | Path: {Path}",
+                context.Request.Path);
+
+            context.Response.StatusCode = 409;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                error = new
+                {
+                    code = "CONFLICT",
+                    message = "Este registro já existe ou entrou em conflito com outra alteração recente. Tente novamente."
+                }
             }));
         }
         catch (Exception ex)
