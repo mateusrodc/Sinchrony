@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using Sinchrony.Domain.Entities;
+using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 
 namespace Sinchrony.Application.Classes.Commands.BulkUpdateAttendance;
 
@@ -13,7 +15,8 @@ public record BulkAttendanceResultDto(bool Success, int Updated, int Created);
 public class BulkUpdateAttendanceCommandHandler(
     IAttendanceRepository attendanceRepository,
     IBookingRepository bookingRepository,
-    IClassRepository classRepository) : IRequestHandler<BulkUpdateAttendanceCommand, BulkAttendanceResultDto>
+    IClassRepository classRepository,
+    INoShowPenaltyService noShowPenaltyService) : IRequestHandler<BulkUpdateAttendanceCommand, BulkAttendanceResultDto>
 {
     public async Task<BulkAttendanceResultDto> Handle(
         BulkUpdateAttendanceCommand request, CancellationToken ct)
@@ -23,6 +26,7 @@ public class BulkUpdateAttendanceCommandHandler(
 
         var updated = 0;
         var created = 0;
+        var newlyNoShow = new List<Guid>();
 
         foreach (var update in request.Updates)
         {
@@ -44,10 +48,20 @@ public class BulkUpdateAttendanceCommandHandler(
                 updated++;
             }
 
+            // Captura antes de UpdateStatus pra só devolver crédito na transição pra no_show,
+            // nunca de novo se o registro já estava marcado como falta.
+            var wasNoShow = attendance.Status == BookingStatus.no_show;
             attendance.UpdateStatus(update.Status, request.ConfirmedById);
+
+            if (update.Status == "no_show" && !wasNoShow)
+                newlyNoShow.Add(update.StudentId);
         }
 
         await attendanceRepository.SaveAsync(ct);
+
+        foreach (var studentId in newlyNoShow)
+            await noShowPenaltyService.ApplyAsync(studentId, ct);
+
         return new BulkAttendanceResultDto(true, updated, created);
     }
 }

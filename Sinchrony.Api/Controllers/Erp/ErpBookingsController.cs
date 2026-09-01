@@ -4,6 +4,7 @@ using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Application.Common;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -12,7 +13,10 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/bookings")]
 [Produces("application/json")]
-public class ErpBookingsController(IBookingRepository bookingRepository) : ControllerBase
+public class ErpBookingsController(
+    IBookingRepository bookingRepository,
+    IWaitlistPromotionService waitlistPromotionService,
+    INoShowPenaltyService noShowPenaltyService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(object), 200)]
@@ -77,6 +81,11 @@ public class ErpBookingsController(IBookingRepository bookingRepository) : Contr
 
         booking.Cancel();
         await bookingRepository.SaveAsync(ct);
+
+        // Libera a vaga pro próximo da lista de espera, se houver — antes só o cancelamento
+        // feito pelo próprio aluno no App disparava isso (Cláusula 8.2/8.3 do Termo).
+        await waitlistPromotionService.PromoteNextAsync(booking.ClassId, booking.Class?.Name ?? "sua aula", ct);
+
         return Ok(new { id = booking.Id, status = booking.Status.ToString() });
     }
 
@@ -91,6 +100,13 @@ public class ErpBookingsController(IBookingRepository bookingRepository) : Contr
 
         booking.MarkNoShow();
         await bookingRepository.SaveAsync(ct);
+
+        // Devolve o crédito se o pacote do aluno tiver NoShowCreditPenalty = false.
+        await noShowPenaltyService.ApplyAsync(booking.StudentId, ct);
+
+        // Idem: falta marcada manualmente pela equipe também libera a vaga pra fila.
+        await waitlistPromotionService.PromoteNextAsync(booking.ClassId, booking.Class?.Name ?? "sua aula", ct);
+
         return Ok(new { id = booking.Id, status = booking.Status.ToString() });
     }
 }

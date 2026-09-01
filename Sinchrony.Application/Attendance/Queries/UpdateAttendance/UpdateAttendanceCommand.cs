@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using Sinchrony.Domain.Entities;
+using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 
 namespace Sinchrony.Application.Classes.Commands.UpdateAttendance;
 
@@ -12,7 +14,8 @@ public record UpdateAttendanceCommand(
 public class UpdateAttendanceCommandHandler(
     IAttendanceRepository attendanceRepository,
     IBookingRepository bookingRepository,
-    IClassRepository classRepository) : IRequestHandler<UpdateAttendanceCommand>
+    IClassRepository classRepository,
+    INoShowPenaltyService noShowPenaltyService) : IRequestHandler<UpdateAttendanceCommand>
 {
     public async Task Handle(UpdateAttendanceCommand request, CancellationToken ct)
     {
@@ -31,6 +34,9 @@ public class UpdateAttendanceCommandHandler(
             await attendanceRepository.AddAsync(attendance, ct);
         }
 
+        // Captura antes de UpdateStatus pra só devolver crédito na transição pra no_show,
+        // nunca de novo se o registro já estava marcado como falta.
+        var wasNoShow = attendance.Status == BookingStatus.no_show;
         attendance.UpdateStatus(request.Status, request.ConfirmedById);
 
         // Sincroniza Booking.CheckedIn com o status do attendance
@@ -41,5 +47,8 @@ public class UpdateAttendanceCommandHandler(
 
         await attendanceRepository.SaveAsync(ct);
         await bookingRepository.SaveAsync(ct);
+
+        if (request.Status == "no_show" && !wasNoShow)
+            await noShowPenaltyService.ApplyAsync(request.StudentId, ct);
     }
 }

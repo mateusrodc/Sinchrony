@@ -77,7 +77,14 @@ public class CreateBookingCommandHandler(
             if (settings is not null)
             {
                 var bookingWindowDays = PackageRuleResolver.GetBookingWindowDays(studentPackage, settings);
-                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+                // Acesso antecipado (DEMANDA_REGRAS_PACOTE_SEM_EFEITO_BACKEND.md, item 1): planos
+                // com EarlyAccessHours configurado enxergam a janela abrir mais cedo — desloca o
+                // "hoje" de referência pra frente antes de truncar pra data. Sem configuração
+                // (o caso de todo pacote hoje), EarlyAccessHours é 0 e o resultado é idêntico ao
+                // comportamento atual, byte a byte.
+                var earlyAccessHours = PackageRuleResolver.GetEarlyAccessHours(studentPackage) ?? 0;
+                var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(earlyAccessHours));
                 if (@class.Date > today.AddDays(bookingWindowDays))
                     throw DomainException.Validation("BOOKING_WINDOW_EXCEEDED",
                         $"Reservas só podem ser feitas com até {bookingWindowDays} dias de antecedência.");

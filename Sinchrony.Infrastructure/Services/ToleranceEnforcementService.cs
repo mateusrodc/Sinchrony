@@ -43,7 +43,8 @@ public class ToleranceEnforcementService(
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var waitlistRepository = scope.ServiceProvider.GetRequiredService<IWaitlistRepository>();
+        var waitlistPromotionService = scope.ServiceProvider.GetRequiredService<IWaitlistPromotionService>();
+        var noShowPenaltyService = scope.ServiceProvider.GetRequiredService<INoShowPenaltyService>();
         var auditService = scope.ServiceProvider.GetRequiredService<IAuditService>();
 
         var settings = await db.Settings.FirstOrDefaultAsync(ct);
@@ -81,18 +82,23 @@ public class ToleranceEnforcementService(
                 .FirstOrDefaultAsync(a => a.BookingId == booking.Id, ct);
             attendance?.MarkNoShow();
 
+            // Devolve o crédito se o pacote do aluno tiver NoShowCreditPenalty = false. Seguro
+            // chamar sem checar status anterior aqui: o filtro de "candidates" acima já garante
+            // que só entram reservas que estavam "confirmed", nunca reprocessa a mesma falta.
+            await noShowPenaltyService.ApplyAsync(booking.StudentId, ct);
+
             await auditService.LogAsync(
                 "booking.auto_no_show", "Booking", booking.Id, null,
                 $"Marcado automaticamente por tolerância vencida (Settings.ToleranceMinutes={settings.ToleranceMinutes}).",
                 ct: ct);
 
-            // Libera a vaga pra próxima pessoa da lista de espera, mesmo fluxo do cancelamento manual.
-            var nextInWaitlist = await waitlistRepository.GetNextWaitingAsync(booking.ClassId, ct);
-            nextInWaitlist?.Notify();
+            // Libera a vaga pra próxima pessoa da lista de espera — mesmo serviço usado nos
+            // outros 3 caminhos que liberam vaga, agora manda e-mail de verdade também aqui.
+            await waitlistPromotionService.PromoteNextAsync(
+                booking.ClassId, booking.Class?.Name ?? "sua aula", ct);
         }
 
         await db.SaveChangesAsync(ct);
-        await waitlistRepository.SaveAsync(ct);
 
         logger.LogInformation(
             "ToleranceEnforcementService: {Count} reserva(s) marcada(s) como no_show automaticamente.",

@@ -49,6 +49,8 @@ public static class DependencyInjection
         services.AddScoped<IDependentPackageAllocationRepository, DependentPackageAllocationRepository>();
         services.AddScoped<PurchasePackageService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IWaitlistPromotionService, WaitlistPromotionService>();
+        services.AddScoped<INoShowPenaltyService, NoShowPenaltyService>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IUnitRepository, UnitRepository>();
         services.AddScoped<IUnitContext, UnitContext>();
