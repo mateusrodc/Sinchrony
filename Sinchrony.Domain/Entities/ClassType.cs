@@ -6,16 +6,21 @@ public class ClassType
     public string Name { get; private set; } = string.Empty;
     public bool Active { get; private set; } = true;
     public bool UsesBikes { get; private set; }
+    public bool UsesJump { get; private set; }
+    public bool UsesPilatesMat { get; private set; }
 
     public ICollection<Class> Classes { get; private set; } = [];
 
     protected ClassType() { }
 
     public static ClassType Create(string name) => new() { Name = name };
-    public void Update(string name, bool active, bool usesBikes)
+    public void Update(string name, bool active, bool usesBikes,
+        bool usesJump = false, bool usesPilatesMat = false)
     {
         Name = name;
         Active = active;
         UsesBikes = usesBikes;
+        UsesJump = usesJump;
+        UsesPilatesMat = usesPilatesMat;
     }
 }

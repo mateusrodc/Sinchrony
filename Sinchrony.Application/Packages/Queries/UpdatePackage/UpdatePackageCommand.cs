@@ -28,7 +28,11 @@ public record UpdatePackageCommand(
     bool NoShowCreditPenalty,
     int? MaxNoShowsBeforeBlock,
     int NoShowBlockWindowDays,
-    List<Guid> BenefitIds) : IRequest<PackageDto>;
+    List<Guid> BenefitIds,
+    bool AllowsPix = true,
+    bool AllowsCard = true,
+    bool AllowsInstallments = true,
+    int? MaxInstallments = null) : IRequest<PackageDto>;
 
 public class UpdatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -51,7 +55,9 @@ public class UpdatePackageCommandHandler(
             request.EarlyAccessHours, request.AllowWaitlist, request.WaitlistPriority,
             request.ReschedulingAllowed, request.ReschedulingDeadlineHours,
             request.NoShowCreditPenalty, request.MaxNoShowsBeforeBlock,
-            request.NoShowBlockWindowDays);
+            request.NoShowBlockWindowDays,
+            request.AllowsPix, request.AllowsCard,
+            request.AllowsInstallments, request.MaxInstallments);
 
         await packageRepository.UpdateBenefitsAsync(request.Id, request.BenefitIds, ct);
         await packageRepository.SaveAsync(ct);

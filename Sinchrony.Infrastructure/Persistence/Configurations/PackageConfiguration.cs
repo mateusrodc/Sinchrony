@@ -18,6 +18,10 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
         builder.Property(p => p.NoShowCreditPenalty).HasDefaultValue(true);
         builder.Property(p => p.NoShowBlockWindowDays).HasDefaultValue(30);
 
+        builder.Property(p => p.AllowsPix).HasDefaultValue(true);
+        builder.Property(p => p.AllowsCard).HasDefaultValue(true);
+        builder.Property(p => p.AllowsInstallments).HasDefaultValue(true);
+
         builder.Property(p => p.UnitId).IsRequired(false);
         builder.HasOne(p => p.Unit).WithMany()
             .HasForeignKey(p => p.UnitId)

@@ -60,7 +60,9 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
             req.reschedulingAllowed, req.reschedulingDeadlineHours,
             req.noShowCreditPenalty ?? true, req.maxNoShowsBeforeBlock,
             req.noShowBlockWindowDays ?? 30,
-            req.benefitIds), ct);
+            req.benefitIds,
+            req.allowsPix, req.allowsCard,
+            req.allowsInstallments, req.maxInstallments), ct);
 
 
         var unitId = req.unitId ?? unitContext.UnitId;
@@ -90,7 +92,9 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
             req.reschedulingAllowed, req.reschedulingDeadlineHours,
             req.noShowCreditPenalty ?? true, req.maxNoShowsBeforeBlock,
             req.noShowBlockWindowDays ?? 30,
-            req.benefitIds ?? []), ct);
+            req.benefitIds ?? [],
+            req.allowsPix ?? true, req.allowsCard ?? true,
+            req.allowsInstallments ?? true, req.maxInstallments), ct);
 
         if (req.unitId.HasValue)
         {
@@ -133,7 +137,11 @@ public record CreatePackageRequest(
     int? maxNoShowsBeforeBlock = null,
     int? noShowBlockWindowDays = null,
     List<Guid>? benefitIds = null,
-    Guid? unitId = null);
+    Guid? unitId = null,
+    bool? allowsPix = null,
+    bool? allowsCard = null,
+    bool? allowsInstallments = null,
+    int? maxInstallments = null);
 
 public record UpdatePackageRequest(
     string name, string? description, int credits, decimal price,
@@ -157,4 +165,8 @@ public record UpdatePackageRequest(
     int? maxNoShowsBeforeBlock,
     int? noShowBlockWindowDays,
     List<Guid>? benefitIds,
-    Guid? unitId = null);
+    Guid? unitId = null,
+    bool? allowsPix = null,
+    bool? allowsCard = null,
+    bool? allowsInstallments = null,
+    int? maxInstallments = null);

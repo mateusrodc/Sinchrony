@@ -19,7 +19,9 @@ public class ErpClassTypesController(IClassTypeRepository classTypeRepository) :
         id = ct.Id,
         name = ct.Name,
         active = ct.Active,
-        usesBikes = ct.UsesBikes
+        usesBikes = ct.UsesBikes,
+        usesJump = ct.UsesJump,
+        usesPilatesMat = ct.UsesPilatesMat
     };
 
     [HttpGet]
@@ -45,7 +47,8 @@ public class ErpClassTypesController(IClassTypeRepository classTypeRepository) :
     public async Task<IActionResult> Create([FromBody] ClassTypeRequest req, CancellationToken ct)
     {
         var classType = ClassType.Create(req.name);
-        classType.Update(req.name, req.active ?? true, req.usesBikes ?? false);
+        classType.Update(req.name, req.active ?? true, req.usesBikes ?? false,
+            req.usesJump ?? false, req.usesPilatesMat ?? false);
         await classTypeRepository.AddAsync(classType, ct);
         await classTypeRepository.SaveAsync(ct);
         return StatusCode(201, MapClassType(classType));
@@ -56,10 +59,12 @@ public class ErpClassTypesController(IClassTypeRepository classTypeRepository) :
     {
         var classType = await classTypeRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("ClassType not found.");
-        classType.Update(req.name ?? classType.Name, req.active ?? classType.Active, req.usesBikes ?? classType.UsesBikes);
+        classType.Update(req.name ?? classType.Name, req.active ?? classType.Active, req.usesBikes ?? classType.UsesBikes,
+            req.usesJump ?? classType.UsesJump, req.usesPilatesMat ?? classType.UsesPilatesMat);
         await classTypeRepository.SaveAsync(ct);
         return Ok(MapClassType(classType));
     }
 }
 
-public record ClassTypeRequest(string? name, bool? active, bool? usesBikes);
+public record ClassTypeRequest(string? name, bool? active, bool? usesBikes,
+    bool? usesJump = null, bool? usesPilatesMat = null);

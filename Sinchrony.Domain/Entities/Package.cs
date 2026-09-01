@@ -35,6 +35,12 @@ public class Package
     public int? MaxNoShowsBeforeBlock { get; private set; }
     public int NoShowBlockWindowDays { get; private set; } = 30;
 
+    // Formas de pagamento aceitas por este pacote (ex.: plano recorrente só aceita cartão)
+    public bool AllowsPix { get; private set; } = true;
+    public bool AllowsCard { get; private set; } = true;
+    public bool AllowsInstallments { get; private set; } = true;
+    public int? MaxInstallments { get; private set; }
+
     public Guid? PackageTypeId { get; private set; }
     public PackageType? PackageType { get; private set; }
     public ICollection<PackageBenefit> PackageBenefits { get; private set; } = [];
@@ -94,7 +100,9 @@ public class Package
     int? cancellationDeadlineHours, int? bookingWindowDays,
     int? earlyAccessHours, bool? allowWaitlist, int? waitlistPriority,
     bool? reschedulingAllowed, int? reschedulingDeadlineHours,
-    bool noShowCreditPenalty, int? maxNoShowsBeforeBlock, int noShowBlockWindowDays)
+    bool noShowCreditPenalty, int? maxNoShowsBeforeBlock, int noShowBlockWindowDays,
+    bool allowsPix = true, bool allowsCard = true,
+    bool allowsInstallments = true, int? maxInstallments = null)
     {
         Name = name;
         Description = description;
@@ -121,6 +129,10 @@ public class Package
         NoShowCreditPenalty = noShowCreditPenalty;
         MaxNoShowsBeforeBlock = maxNoShowsBeforeBlock;
         NoShowBlockWindowDays = noShowBlockWindowDays;
+        AllowsPix = allowsPix;
+        AllowsCard = allowsCard;
+        AllowsInstallments = allowsInstallments;
+        MaxInstallments = maxInstallments;
         UpdatedAt = DateTime.UtcNow;
         Price = price;
         PricePerCredit = credits > 0 ? Math.Round(price / credits, 2) : 0;

@@ -64,6 +64,17 @@ public class PurchasePackageCommandHandler(
             throw DomainException.Validation("PACKAGE_TYPE_REQUIRED",
                 "Este pacote não possui um tipo associado. Configure o tipo do pacote antes de disponibilizá-lo para compra.");
 
+        // Restrição de forma de pagamento por pacote (ex.: plano recorrente só aceita
+        // cartão). O App já deveria filtrar isso na tela de checkout, mas sem essa checagem
+        // aqui nada impede um POST direto usando um método não permitido pra esse pacote.
+        if (request.PaymentMethod == "pix" && !package.AllowsPix)
+            throw DomainException.Validation("PAYMENT_METHOD_NOT_ALLOWED",
+                "Este pacote não aceita pagamento via PIX.");
+
+        if (request.PaymentMethod == "card" && !package.AllowsCard)
+            throw DomainException.Validation("PAYMENT_METHOD_NOT_ALLOWED",
+                "Este pacote não aceita pagamento via cartão.");
+
         Coupon? coupon = null;
         if (!string.IsNullOrEmpty(request.CouponCode))
         {

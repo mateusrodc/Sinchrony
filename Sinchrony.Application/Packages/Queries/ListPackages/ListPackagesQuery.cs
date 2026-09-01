@@ -20,7 +20,8 @@ public record PackageDto(
     bool NoShowCreditPenalty, int? MaxNoShowsBeforeBlock, int NoShowBlockWindowDays,
     List<BenefitDto> Benefits,
     Guid? UnitId,
-    string? UnitName);
+    string? UnitName,
+    bool AllowsPix, bool AllowsCard, bool AllowsInstallments, int? MaxInstallments);
 
 public record ListPackagesQuery(bool? ActiveOnly) : IRequest<IEnumerable<PackageDto>>;
 
@@ -50,5 +51,6 @@ public class ListPackagesQueryHandler(IPackageRepository packageRepository)
                 pb.Benefit?.Description,
                 pb.Benefit?.Icon)).ToList(),
             p.UnitId,
-            p.Unit?.Name);
+            p.Unit?.Name,
+            p.AllowsPix, p.AllowsCard, p.AllowsInstallments, p.MaxInstallments);
 }

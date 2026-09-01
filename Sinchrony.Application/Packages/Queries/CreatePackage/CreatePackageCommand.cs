@@ -27,7 +27,11 @@ public record CreatePackageCommand(
     bool? NoShowCreditPenalty = null,
     int? MaxNoShowsBeforeBlock = null,
     int? NoShowBlockWindowDays = null,
-    List<Guid>? BenefitIds = null) : IRequest<PackageDto>;
+    List<Guid>? BenefitIds = null,
+    bool? AllowsPix = null,
+    bool? AllowsCard = null,
+    bool? AllowsInstallments = null,
+    int? MaxInstallments = null) : IRequest<PackageDto>;
 
 public class CreatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -55,7 +59,9 @@ public class CreatePackageCommandHandler(
             request.EarlyAccessHours, request.AllowWaitlist, request.WaitlistPriority,
             request.ReschedulingAllowed, request.ReschedulingDeadlineHours,
             request.NoShowCreditPenalty ?? true, request.MaxNoShowsBeforeBlock,
-            request.NoShowBlockWindowDays ?? 30);
+            request.NoShowBlockWindowDays ?? 30,
+            request.AllowsPix ?? true, request.AllowsCard ?? true,
+            request.AllowsInstallments ?? true, request.MaxInstallments);
 
         await packageRepository.AddAsync(package, ct);
 
