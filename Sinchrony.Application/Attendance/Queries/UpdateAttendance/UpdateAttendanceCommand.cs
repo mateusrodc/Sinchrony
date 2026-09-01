@@ -15,11 +15,12 @@ public class UpdateAttendanceCommandHandler(
     IAttendanceRepository attendanceRepository,
     IBookingRepository bookingRepository,
     IClassRepository classRepository,
-    INoShowPenaltyService noShowPenaltyService) : IRequestHandler<UpdateAttendanceCommand>
+    INoShowPenaltyService noShowPenaltyService,
+    IWaitlistPromotionService waitlistPromotionService) : IRequestHandler<UpdateAttendanceCommand>
 {
     public async Task Handle(UpdateAttendanceCommand request, CancellationToken ct)
     {
-        _ = await classRepository.GetByIdAsync(request.ClassId, ct)
+        var @class = await classRepository.GetByIdAsync(request.ClassId, ct)
             ?? throw DomainException.NotFound("Class not found.");
 
         var booking = await bookingRepository.GetByClassAndStudentAsync(
@@ -49,6 +50,9 @@ public class UpdateAttendanceCommandHandler(
         await bookingRepository.SaveAsync(ct);
 
         if (request.Status == "no_show" && !wasNoShow)
+        {
             await noShowPenaltyService.ApplyAsync(request.StudentId, ct);
+            await waitlistPromotionService.PromoteNextAsync(request.ClassId, @class.Name, ct);
+        }
     }
 }

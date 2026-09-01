@@ -16,12 +16,13 @@ public class BulkUpdateAttendanceCommandHandler(
     IAttendanceRepository attendanceRepository,
     IBookingRepository bookingRepository,
     IClassRepository classRepository,
-    INoShowPenaltyService noShowPenaltyService) : IRequestHandler<BulkUpdateAttendanceCommand, BulkAttendanceResultDto>
+    INoShowPenaltyService noShowPenaltyService,
+    IWaitlistPromotionService waitlistPromotionService) : IRequestHandler<BulkUpdateAttendanceCommand, BulkAttendanceResultDto>
 {
     public async Task<BulkAttendanceResultDto> Handle(
         BulkUpdateAttendanceCommand request, CancellationToken ct)
     {
-        _ = await classRepository.GetByIdAsync(request.ClassId, ct)
+        var @class = await classRepository.GetByIdAsync(request.ClassId, ct)
             ?? throw DomainException.NotFound("Class not found.");
 
         var updated = 0;
@@ -60,7 +61,11 @@ public class BulkUpdateAttendanceCommandHandler(
         await attendanceRepository.SaveAsync(ct);
 
         foreach (var studentId in newlyNoShow)
+        {
             await noShowPenaltyService.ApplyAsync(studentId, ct);
+            // Bulk update é sempre pra uma aula só — mesma request.ClassId pra todo mundo.
+            await waitlistPromotionService.PromoteNextAsync(request.ClassId, @class.Name, ct);
+        }
 
         return new BulkAttendanceResultDto(true, updated, created);
     }
