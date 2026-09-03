@@ -32,6 +32,8 @@ public class ErpTeachersController(
         phone = u.Phone,
         active = u.Active,
         avatar = u.Avatar,
+        role = u.Role.ToString(),
+        cargo = u.Cargo,
         unitIds = u.TeacherUnits.Select(tu => tu.UnitId).ToList(),
         units = u.TeacherUnits.Select(tu => new { id = tu.UnitId, name = tu.Unit?.Name }).ToList(),
         specialties = string.IsNullOrEmpty(u.Specialties)
@@ -46,13 +48,32 @@ public class ErpTeachersController(
         estado = u.Estado
     };
 
+    // "role" só aceita teacher/admin — nunca student. Usado tanto na criação quanto na edição
+    // (DEMANDA_CADASTRO_PROFESSOR_ACEITAR_PERFIL_BACKEND.md). Default "teacher" quando ausente,
+    // pra não quebrar quem já chama o POST de hoje sem esse campo.
+    private static Role ParseStaffRole(string? role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+            return Role.teacher;
+
+        if (!Enum.TryParse<Role>(role, ignoreCase: true, out var parsed) || parsed == Role.student)
+            throw DomainException.Validation("INVALID_ROLE",
+                "Papel inválido. Use \"teacher\" ou \"admin\".");
+
+        return parsed;
+    }
+
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] Guid? unitId,
         [FromQuery] bool? active,
-        CancellationToken ct)
+        [FromQuery] bool includeAdmins = false,
+        CancellationToken ct = default)
     {
-        var teachers = await userRepository.ListTeachersAsync(null, ct);
+        // includeAdmins=false (padrão) preserva o seletor de professor da tela de aula — só
+        // Role.teacher, comportamento idêntico ao de sempre. A tela "Cadastro de Usuários" passa
+        // includeAdmins=true pra ver professores + administradores/secretárias juntos.
+        var teachers = await userRepository.ListTeachersAsync(null, includeAdmins, ct);
 
         // Filtro por unidade
         var filterUnitId = unitId ?? (!unitContext.IsGlobalAdmin ? unitContext.UnitId : null);
@@ -70,7 +91,7 @@ public class ErpTeachersController(
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
-        if (teacher is null || teacher.Role != Role.teacher)
+        if (teacher is null || teacher.Role == Role.student)
             throw DomainException.NotFound("Teacher not found.");
         return Ok(MapTeacher(teacher));
     }
@@ -91,11 +112,14 @@ public class ErpTeachersController(
                 throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
         }
 
+        var role = ParseStaffRole(req.role);
+
         var hash = passwordService.HashPassword(req.password);
-        var teacher = Domain.Entities.User.Create(req.name, req.email, req.phone, hash, Role.teacher,
+        var teacher = Domain.Entities.User.Create(req.name, req.email, req.phone, hash, role,
             string.IsNullOrEmpty(req.cpf) ? null : CpfValidator.Sanitize(req.cpf));
 
         teacher.UpdateSpecialties(req.specialties);
+        teacher.UpdateCargo(req.cargo);
         teacher.UpdateAddress(req.cep, req.logradouro, req.numero,
             req.complemento, req.bairro, req.cidade, req.estado);
 
@@ -123,7 +147,7 @@ public class ErpTeachersController(
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTeacherRequest req, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
-        if (teacher is null || teacher.Role != Role.teacher)
+        if (teacher is null || teacher.Role == Role.student)
             throw DomainException.NotFound("Teacher not found.");
 
         if (!string.IsNullOrEmpty(req.cpf))
@@ -136,8 +160,12 @@ public class ErpTeachersController(
             teacher.UpdateCpf(req.cpf);
         }
 
+        if (!string.IsNullOrEmpty(req.role))
+            teacher.SetRole(ParseStaffRole(req.role));
+
         teacher.UpdateProfile(req.name, req.email, req.phone, teacher.Avatar);
         teacher.UpdateSpecialties(req.specialties);
+        teacher.UpdateCargo(req.cargo);
         teacher.UpdateAddress(req.cep, req.logradouro, req.numero,
             req.complemento, req.bairro, req.cidade, req.estado);
 
@@ -160,7 +188,7 @@ public class ErpTeachersController(
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
-        if (teacher is null || teacher.Role != Role.teacher)
+        if (teacher is null || teacher.Role == Role.student)
             throw DomainException.NotFound("Teacher not found.");
 
         teacher.Deactivate();
@@ -172,7 +200,7 @@ public class ErpTeachersController(
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
-        if (teacher is null || teacher.Role != Role.teacher)
+        if (teacher is null || teacher.Role == Role.student)
             throw DomainException.NotFound("Teacher not found.");
 
         teacher.Reactivate();
@@ -183,7 +211,7 @@ public class ErpTeachersController(
     public async Task<IActionResult> SendPassword(Guid id, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
-        if (teacher is null || teacher.Role != Role.teacher)
+        if (teacher is null || teacher.Role == Role.student)
             throw DomainException.NotFound("Teacher not found.");
 
         // Gera senha temporária
@@ -232,7 +260,12 @@ public record CreateTeacherRequest(
     List<Guid>? unitIds = null,
     string? cep = null, string? logradouro = null, string? numero = null,
     string? complemento = null, string? bairro = null, string? cidade = null,
-    string? estado = null);
+    string? estado = null,
+    // "teacher" ou "admin" — nunca "student". Ausente = "teacher" (compat com quem já chama
+    // sem esse campo).
+    string? role = null,
+    // Rótulo cosmético opcional (ex.: "Secretária", "Gerente"), sem efeito em permissão.
+    string? cargo = null);
 
 public record UpdateTeacherRequest(
     string name, string email, string? phone,
@@ -242,4 +275,6 @@ public record UpdateTeacherRequest(
     List<Guid>? unitIds = null,
     string? cep = null, string? logradouro = null, string? numero = null,
     string? complemento = null, string? bairro = null, string? cidade = null,
-    string? estado = null);
+    string? estado = null,
+    string? role = null,
+    string? cargo = null);

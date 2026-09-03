@@ -20,6 +20,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Credits).HasDefaultValue(0);
 
         builder.Property(u => u.Specialties).HasMaxLength(500);
+        builder.Property(u => u.Cargo).HasMaxLength(50);
 
         builder.Property(u => u.Cep).HasMaxLength(8);
         builder.Property(u => u.Logradouro).HasMaxLength(200);

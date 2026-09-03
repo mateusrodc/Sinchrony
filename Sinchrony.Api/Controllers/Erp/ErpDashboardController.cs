@@ -38,7 +38,7 @@ public class ErpDashboardController(
         if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
         {
             students = await userRepository.ListStudentsAsync(null, ct);
-            teachers = await userRepository.ListTeachersAsync(null, ct);
+            teachers = await userRepository.ListTeachersAsync(null, ct: ct);
         }
         else
         {

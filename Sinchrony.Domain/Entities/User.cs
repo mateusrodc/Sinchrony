@@ -21,6 +21,7 @@ public class User
     public string? Cpf { get; private set; }
     public string? GoogleId { get; private set; }
     public string? Specialties { get; private set; }
+    public string? Cargo { get; private set; }
 
     public string? Cep { get; private set; }
     public string? Logradouro { get; private set; }
@@ -215,6 +216,27 @@ public class User
     {
         TermsAcceptedAt = acceptedAt;
         TermsVersion = version;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Troca o papel do usuário (ex.: "Cadastro de Usuários" no ERP criando/editando Professor,
+    /// Administrador ou Secretária). Quem chama já validou que o valor é teacher ou admin — nunca
+    /// student por esse caminho (DEMANDA_CADASTRO_PROFESSOR_ACEITAR_PERFIL_BACKEND.md).
+    /// </summary>
+    public void SetRole(Role role)
+    {
+        Role = role;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Rótulo cosmético de exibição (ex.: "Secretária", "Gerente") — sem nenhum efeito em
+    /// permissão, que continua vindo exclusivamente de Role.
+    /// </summary>
+    public void UpdateCargo(string? cargo)
+    {
+        Cargo = string.IsNullOrWhiteSpace(cargo) ? null : cargo.Trim();
         UpdatedAt = DateTime.UtcNow;
     }
 }

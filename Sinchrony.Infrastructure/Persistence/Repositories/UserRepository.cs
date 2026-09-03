@@ -32,10 +32,11 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
         return await query.OrderBy(u => u.Name).ToListAsync(ct);
     }
 
-    public async Task<IEnumerable<User>> ListTeachersAsync(string? active, CancellationToken ct = default)
+    public async Task<IEnumerable<User>> ListTeachersAsync(
+        string? active, bool includeAdmins = false, CancellationToken ct = default)
     => await db.Users
         .Include(u => u.TeacherUnits).ThenInclude(tu => tu.Unit)
-        .Where(u => u.Role == Role.teacher &&
+        .Where(u => (u.Role == Role.teacher || (includeAdmins && u.Role == Role.admin)) &&
             (string.IsNullOrEmpty(active) || u.Active.ToString().ToLower() == active.ToLower()))
         .OrderBy(u => u.Name)
         .ToListAsync(ct);
