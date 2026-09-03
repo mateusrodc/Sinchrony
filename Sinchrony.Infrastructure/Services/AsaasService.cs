@@ -16,7 +16,7 @@ public class AsaasService(
 
     private string BaseUrl => _sandbox
         ? "https://sandbox.asaas.com/api/v3"
-        : "https://api.asaas.com/api/v3";
+        : "https://api.asaas.com/v3";
 
     public async Task<string> GetOrCreateCustomerAsync(
         string name, string email, string? cpf = null, CancellationToken ct = default)
