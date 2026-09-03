@@ -40,7 +40,11 @@ public class AttendanceRecord
             _ => BookingStatus.confirmed
         };
 
-        if (Status == BookingStatus.attended)
+        // Registra quem realizou a ação também pra no_show, não só attended — sem isso, marcar
+        // falta (pelo professor no App ou pela equipe no ERP) nunca preenchia "confirmado por",
+        // mesmo quando o confirmedById certo já era passado pra cá (DEMANDA_AUDITORIA_QUEM_MARCOU_
+        // FALTA_BACKEND.md).
+        if (Status == BookingStatus.attended || Status == BookingStatus.no_show)
         {
             ConfirmedById = confirmedById;
             ConfirmedAt = DateTime.UtcNow;

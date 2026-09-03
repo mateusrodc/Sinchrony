@@ -6,6 +6,7 @@ using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -16,8 +17,12 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpBookingsController(
     IBookingRepository bookingRepository,
     IWaitlistPromotionService waitlistPromotionService,
-    INoShowPenaltyService noShowPenaltyService) : ControllerBase
+    INoShowPenaltyService noShowPenaltyService,
+    IAttendanceRepository attendanceRepository) : ControllerBase
 {
+    private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     [HttpGet]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpBookingListResponseExample))]
@@ -99,6 +104,14 @@ public class ErpBookingsController(
             throw DomainException.Validation("INVALID_STATUS", "Only confirmed bookings can be marked as no-show.");
 
         booking.MarkNoShow();
+
+        // Sincroniza o AttendanceRecord e registra quem marcou a falta (auditoria) — antes só
+        // o Booking era tocado, deixando o registro de presença desalinhado e sem rastro de
+        // quem fez a ação.
+        var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
+        attendance?.UpdateStatus("no_show", UserId);
+        await attendanceRepository.SaveAsync(ct);
+
         await bookingRepository.SaveAsync(ct);
 
         // Devolve o crédito se o pacote do aluno tiver NoShowCreditPenalty = false.
