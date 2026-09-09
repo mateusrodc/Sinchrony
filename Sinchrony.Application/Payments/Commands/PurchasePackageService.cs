@@ -35,7 +35,7 @@ public class PurchasePackageService(
         string source, CancellationToken ct)
     {
         var active = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct);
-        var credits = package.CreditsPerMember ?? package.Credits;
+        var credits = package.GetCreditsToGrant();
 
         if (active is not null)
         {
@@ -98,8 +98,9 @@ public class PurchasePackageService(
             .Where(d => d.Active).ToList();
 
         var totalPersons = 1 + dependents.Count;
-        var creditsPerPerson = package.CreditsPerMember
-            ?? package.Credits / totalPersons;
+        var creditsPerPerson = package.MaxDependents > 0
+            ? (package.CreditsPerMember ?? package.Credits / totalPersons)
+            : package.Credits;
 
         var titularAlloc = DependentPackageAllocation.Create(sp.Id, null, creditsPerPerson);
         await allocationRepository.AddAsync(titularAlloc, ct);

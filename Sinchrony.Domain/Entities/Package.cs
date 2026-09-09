@@ -114,7 +114,9 @@ public class Package
         PackageTypeId = packageTypeId;
         PurchaseStrategy = purchaseStrategy;
         MaxDependents = maxDependents;
-        CreditsPerMember = creditsPerMember;
+        // Defesa extra: CreditsPerMember não tem sentido sem dependentes — nunca deixa esse
+        // valor "fantasma" persistido, mesmo que algum chamador esqueça de validar antes.
+        CreditsPerMember = maxDependents > 0 ? creditsPerMember : null;
         MaxFutureBookings = maxFutureBookings;
         MaxBookingsPerDay = maxBookingsPerDay;
         MaxBookingsPerWeek = maxBookingsPerWeek;
@@ -139,4 +141,12 @@ public class Package
     }
 
     public void Toggle() { Active = !Active; UpdatedAt = DateTime.UtcNow; }
+
+    // Créditos a conceder por pessoa no momento da compra/concessão. CreditsPerMember só
+    // é um valor válido para pacotes com dependentes (família); para pacote individual
+    // (MaxDependents == 0) o total do pacote é sempre `Credits`, mesmo que CreditsPerMember
+    // tenha ficado preenchido (ex.: pacote convertido de família para avulso). Ver bug do
+    // "pacote de 1 crédito virou 32 créditos".
+    public int GetCreditsToGrant()
+        => MaxDependents > 0 ? (CreditsPerMember ?? Credits) : Credits;
 }

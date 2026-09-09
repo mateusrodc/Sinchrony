@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Sinchrony.Application.Packages.Queries.ListPackages;
 using Sinchrony.Domain.Entities;
+using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 
 namespace Sinchrony.Application.Packages.Commands.CreatePackage;
@@ -39,6 +40,14 @@ public class CreatePackageCommandHandler(
 {
     public async Task<PackageDto> Handle(CreatePackageCommand request, CancellationToken ct)
     {
+        // CreditsPerMember só faz sentido para pacotes com dependentes (família). Em pacote
+        // individual o valor concedido é sempre `Credits` — permitir CreditsPerMember aqui
+        // deixaria um valor "fantasma" no banco que passaria a ser usado silenciosamente na
+        // concessão de créditos assim que MaxDependents fosse alterado no futuro.
+        if (request.MaxDependents <= 0 && request.CreditsPerMember.HasValue)
+            throw DomainException.Validation("CREDITS_PER_MEMBER_NOT_ALLOWED",
+                "CreditsPerMember só pode ser definido em pacotes com dependentes (MaxDependents > 0).");
+
         var package = Package.Create(
             request.Name, request.Description, request.Credits,
             request.Price, request.ValidityDays, request.Popular,

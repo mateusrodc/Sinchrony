@@ -267,7 +267,7 @@ public class ErpStudentsController(
         // Recarrega student para pegar Credits já creditados pelo ProcessAsync
         student = await userRepository.GetByIdAsync(studentId, ct)!;
 
-        var creditedAmount = package.CreditsPerMember ?? package.Credits;
+        var creditedAmount = package.GetCreditsToGrant();
         var creditTx = CreditTransaction.Create(
             studentId,
             creditedAmount,
