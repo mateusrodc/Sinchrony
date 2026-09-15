@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Application.Common;
 using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Entities;
@@ -27,7 +28,8 @@ public class ErpStudentsController(
     IPurchaseRepository purchaseRepository,
     ICreditTransactionRepository creditTransactionRepository,
     PurchasePackageService purchasePackageService,
-    IAuditService auditService) : ControllerBase
+    IAuditService auditService,
+    IUnitOfWork unitOfWork) : ControllerBase
 {
     private static object MapStudent(User u, string? derivedPlan = null) => new
     {
@@ -145,6 +147,11 @@ public class ErpStudentsController(
 
         await userRepository.AddAsync(student, ct);
         await userRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(
+            "student.created", "User", student.Id, AdminId,
+            $"Name: {student.Name}, Email: {student.Email}", ct: ct);
+
         return StatusCode(201, MapStudent(student));
     }
 
@@ -194,6 +201,11 @@ public class ErpStudentsController(
             student.SetUnit(req.unitId.Value);
 
         await userRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(
+            "student.updated", "User", student.Id, AdminId,
+            $"Name: {student.Name}, Email: {student.Email}", ct: ct);
+
         return Ok(MapStudent(student));
     }
     [HttpPatch("{id}/deactivate")]
@@ -204,6 +216,9 @@ public class ErpStudentsController(
 
         student.Deactivate();
         await userRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("student.deactivated", "User", id, AdminId, ct: ct);
+
         return Ok(new { success = true, status = "inactive" });
     }
 
@@ -215,6 +230,9 @@ public class ErpStudentsController(
 
         student.Reactivate();
         await userRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("student.reactivated", "User", id, AdminId, ct: ct);
+
         return Ok(new { success = true, status = "active" });
     }
     private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -384,6 +402,95 @@ public class ErpStudentsController(
             creditsReverted = sp.CreditsGranted
         });
     }
+
+    // Fase 1 — DEMANDA_CONTROLE_ADMIN_PERMISSOES_BACKEND.md. Motivado por um incidente real:
+    // AssignPackage/RemovePackage são modelados em torno de pacotes, e RemovePackage se recusa
+    // a estornar quando o aluno já usou parte do crédito (CREDITS_ALREADY_USED) — não existia
+    // nenhuma via administrativa pra corrigir um saldo de crédito diretamente, só SQL direto
+    // no banco de produção. Este endpoint existe pra aposentar essa via.
+    [HttpPost("{id}/credits/adjust")]
+    [Authorize(Roles = "admin")]
+    [RequirePermission("credit", "edit")]
+    public async Task<IActionResult> AdjustCredits(
+        Guid id,
+        [FromBody] AdjustCreditsRequest req,
+        CancellationToken ct)
+    {
+        var student = await userRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Student not found.");
+
+        if (student.Role != Role.student)
+            throw DomainException.Validation("NOT_A_STUDENT",
+                "Só é possível ajustar créditos de uma conta de aluno.");
+
+        // Mesmo isolamento multi-unidade já aplicado em Get/Update deste controller — sem
+        // isso, um admin de uma unidade poderia ajustar crédito de aluno de outra unidade.
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
+            && student.UnitId != unitContext.UnitId)
+            return Forbid();
+
+        await unitOfWork.BeginTransactionAsync(ct);
+        try
+        {
+            // AdjustCredits (domínio) já valida reason vazio e saldo negativo antes de mutar
+            // o estado — ver ck_users_credits em UserConfiguration.
+            student.AdjustCredits(req.delta, req.reason);
+            await userRepository.SaveAsync(ct);
+
+            // Type "manual_adjustment", distinto de "manual" (concessão de pacote) — pro
+            // extrato (GET .../credit-transactions) conseguir diferenciar as duas operações.
+            var creditTx = CreditTransaction.Create(
+                student.Id, req.delta, student.Credits,
+                $"Ajuste manual: {req.reason}", "manual_adjustment", null);
+            await creditTransactionRepository.AddAsync(creditTx, ct);
+            await creditTransactionRepository.SaveAsync(ct);
+
+            await auditService.LogAsync(
+                "credit.manually_adjusted", "User",
+                student.Id, AdminId,
+                $"Delta: {req.delta}, Reason: {req.reason}, NewBalance: {student.Credits}",
+                ct: ct);
+
+            await unitOfWork.CommitAsync(ct);
+        }
+        catch
+        {
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
+
+        return Ok(new { credits = student.Credits });
+    }
+
+    // Pré-requisito pro ERP mostrar o extrato antes de ajustar. ICreditTransactionRepository.
+    // ListByUserAsync já existia no repositório, mas nenhum controller o expunha até agora.
+    [HttpGet("{id}/credit-transactions")]
+    [Authorize(Roles = "admin,teacher")]
+    public async Task<IActionResult> ListCreditTransactions(Guid id, CancellationToken ct)
+    {
+        var student = await userRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Student not found.");
+
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
+            && student.UnitId != unitContext.UnitId)
+            return Forbid();
+
+        var transactions = await creditTransactionRepository.ListByUserAsync(id, ct);
+        return Ok(new
+        {
+            data = transactions.Select(t => new
+            {
+                id = t.Id,
+                amount = t.Amount,
+                balanceAfter = t.BalanceAfter,
+                reason = t.Reason,
+                type = t.Type,
+                createdAt = t.CreatedAt
+            })
+        });
+    }
+
+    public record AdjustCreditsRequest(int delta, string reason);
 
     public record AssignPackageRequest(
         Guid packageId,

@@ -9,6 +9,7 @@ using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Infrastructure.Persistence.Repositories;
 using Sinchrony.Infrastructure.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -18,8 +19,12 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpBikesController(
     IBikeRepository bikeRepository,
     IStudioRepository studioRepository,
-    IUnitContext unitContext) : ControllerBase
+    IUnitContext unitContext,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     [HttpGet("api/studios/{studioId}/bikes")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(BikeListResponseExample))]
@@ -75,8 +80,16 @@ public class ErpBikesController(
     {
         var bike = await bikeRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Bike not found.");
+
+        // Prioridade máxima do retrofit de auditoria (Fase 2): este é o único delete físico
+        // já em produção hoje, e até agora não deixava nenhum rastro de quem apagou o quê.
+        var details = $"StudioId: {bike.StudioId}, Number: {bike.Number}, Status: {bike.Status}";
+
         await bikeRepository.RemoveAsync(bike, ct);
         await bikeRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("bike.deleted", "Bike", id, AdminId, details, ct: ct);
+
         return Ok(new { success = true });
     }
 

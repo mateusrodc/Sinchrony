@@ -33,6 +33,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<TeacherUnit> TeacherUnits => Set<TeacherUnit>();
     public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -56,6 +56,8 @@ public static class DependencyInjection
         services.AddScoped<IUnitContext, UnitContext>();
         services.AddScoped<ITeacherUnitRepository, TeacherUnitRepository>();
         services.AddScoped<IWaitlistRepository, WaitlistRepository>();
+        services.AddScoped<IPermissionRepository, PermissionRepository>();
+        services.AddScoped<IPermissionService, PermissionService>();
         services.AddHostedService<ToleranceEnforcementService>();
 
         services.AddHttpClient<IStorageService, SupabaseStorageService>(client =>

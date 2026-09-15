@@ -11,6 +11,7 @@ using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -18,8 +19,15 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/packages")]
 [Produces("application/json")]
-public class ErpPackagesController(IMediator mediator, IPackageRepository packageRepository, IUnitContext unitContext) : ControllerBase
+public class ErpPackagesController(
+    IMediator mediator,
+    IPackageRepository packageRepository,
+    IUnitContext unitContext,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     [HttpGet]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpPackageListResponseExample))]
@@ -66,6 +74,9 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
 
 
         var unitId = req.unitId ?? unitContext.UnitId;
+
+        await auditService.LogAsync("package.created", "Package", result.Id, AdminId, $"Name: {result.Name}", ct: ct);
+
         if (unitId.HasValue)
         {
             var package = await packageRepository.GetByIdAsync(result.Id, ct);
@@ -96,6 +107,9 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
             req.allowsPix ?? true, req.allowsCard ?? true,
             req.allowsInstallments ?? true, req.maxInstallments), ct);
 
+        // Afeta preço/regras de compras futuras — sem rastro até este retrofit.
+        await auditService.LogAsync("package.updated", "Package", id, AdminId, $"Name: {result.Name}", ct: ct);
+
         if (req.unitId.HasValue)
         {
             var package = await packageRepository.GetByIdAsync(id, ct);
@@ -111,6 +125,9 @@ public class ErpPackagesController(IMediator mediator, IPackageRepository packag
     public async Task<IActionResult> Toggle(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new TogglePackageCommand(id), ct);
+
+        await auditService.LogAsync("package.toggled", "Package", id, AdminId, $"Active: {result.Active}", ct: ct);
+
         return Ok(result);
     }
 }

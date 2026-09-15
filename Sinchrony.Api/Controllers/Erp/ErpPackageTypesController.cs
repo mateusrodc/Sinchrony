@@ -4,7 +4,9 @@ using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -12,8 +14,13 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/package-types")]
 [Produces("application/json")]
-public class ErpPackageTypesController(IPackageTypeRepository packageTypeRepository) : ControllerBase
+public class ErpPackageTypesController(
+    IPackageTypeRepository packageTypeRepository,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     private static object MapPackageType(PackageType pt) => new
     {
         id = pt.Id,
@@ -67,6 +74,9 @@ public class ErpPackageTypesController(IPackageTypeRepository packageTypeReposit
             req.defaultNoShowCreditPenalty, req.defaultMaxNoShowsBeforeBlock);
         await packageTypeRepository.AddAsync(pt, ct);
         await packageTypeRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("package_type.created", "PackageType", pt.Id, AdminId, $"Name: {pt.Name}", ct: ct);
+
         return StatusCode(201, MapPackageType(pt));
     }
 
@@ -91,6 +101,9 @@ public class ErpPackageTypesController(IPackageTypeRepository packageTypeReposit
             req.defaultNoShowCreditPenalty ?? pt.DefaultNoShowCreditPenalty,
             req.defaultMaxNoShowsBeforeBlock ?? pt.DefaultMaxNoShowsBeforeBlock);
         await packageTypeRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("package_type.updated", "PackageType", pt.Id, AdminId, $"Name: {pt.Name}", ct: ct);
+
         return Ok(MapPackageType(pt));
     }
 }

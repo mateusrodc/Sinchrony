@@ -8,6 +8,7 @@ using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Domain.Services;
 using Sinchrony.Infrastructure.Persistence.Repositories;
 using Sinchrony.Infrastructure.Services;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -21,8 +22,12 @@ public class ErpTeachersController(
     IPasswordService passwordService,
     ISettingsRepository settingsRepository,
     IEmailService emailService,
-    IUnitContext unitContext) : ControllerBase
+    IUnitContext unitContext,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     private static object MapTeacher(User u) => new
     {
         id = u.Id,
@@ -140,6 +145,11 @@ public class ErpTeachersController(
         }
 
         var created = await userRepository.GetByIdAsync(teacher.Id, ct);
+
+        await auditService.LogAsync(
+            "teacher.created", "User", teacher.Id, AdminId,
+            $"Name: {teacher.Name}, Email: {teacher.Email}, Role: {teacher.Role}", ct: ct);
+
         return StatusCode(201, MapTeacher(created!));
     }
 
@@ -160,8 +170,16 @@ public class ErpTeachersController(
             teacher.UpdateCpf(req.cpf);
         }
 
+        // Mudança de role fica registrada separadamente do resto do update — é a ação mais
+        // sensível deste endpoint (ex.: promover alguém a admin) e antes não deixava rastro.
+        var previousRole = teacher.Role;
         if (!string.IsNullOrEmpty(req.role))
             teacher.SetRole(ParseStaffRole(req.role));
+
+        if (teacher.Role != previousRole)
+            await auditService.LogAsync(
+                "teacher.role_changed", "User", teacher.Id, AdminId,
+                $"From: {previousRole} To: {teacher.Role}", ct: ct);
 
         teacher.UpdateProfile(req.name, req.email, req.phone, teacher.Avatar);
         teacher.UpdateSpecialties(req.specialties);
@@ -182,7 +200,12 @@ public class ErpTeachersController(
         }
 
         var updated = await userRepository.GetByIdAsync(id, ct);
-        return Ok(MapTeacher(updated!));
+
+        await auditService.LogAsync(
+            "teacher.updated", "User", id, AdminId,
+            $"Name: {updated!.Name}, Email: {updated.Email}", ct: ct);
+
+        return Ok(MapTeacher(updated));
     }
     [HttpPatch("{id}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
@@ -193,6 +216,9 @@ public class ErpTeachersController(
 
         teacher.Deactivate();
         await userRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("teacher.deactivated", "User", id, AdminId, ct: ct);
+
         return Ok(new { success = true, active = false });
     }
 
@@ -205,6 +231,9 @@ public class ErpTeachersController(
 
         teacher.Reactivate();
         await userRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("teacher.activated", "User", id, AdminId, ct: ct);
+
         return Ok(new { success = true, active = true });
     }
     [HttpPost("{id}/send-password")]
@@ -219,6 +248,10 @@ public class ErpTeachersController(
         var hash = passwordService.HashPassword(tempPassword);
         teacher.ChangePassword(hash);
         await userRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(
+            "teacher.password_reset_by_admin", "User", id, AdminId,
+            $"Email: {teacher.Email}", ct: ct);
 
         // Tenta enviar por email em background (pode falhar no Render gratuito)
         var teacherEmail = teacher.Email;

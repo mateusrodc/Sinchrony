@@ -1,4 +1,5 @@
 ﻿using Sinchrony.Domain.Enums;
+using Sinchrony.Domain.Exceptions;
 
 namespace Sinchrony.Domain.Entities;
 
@@ -128,6 +129,26 @@ public class User
     {
         if (amount > Credits) throw new InvalidOperationException("Insufficient credits.");
         Credits -= amount;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    // Ferramenta de correção administrativa (ver DEMANDA_CONTROLE_ADMIN_PERMISSOES_BACKEND.md,
+    // Fase 1) — diferente de AddCredits/DeductCredits: aceita delta positivo ou negativo, sem
+    // a trava de "créditos já usados" que RemovePackage aplica. Existe uma constraint de banco
+    // (ck_users_credits, "Credits" >= 0) que nunca deixa o saldo passar de zero — a checagem
+    // abaixo replica essa regra em código pra devolver um erro de domínio claro em vez de deixar
+    // a constraint estourar como exceção de banco não tratada.
+    public void AdjustCredits(int delta, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            throw DomainException.Validation("REASON_REQUIRED", "O motivo do ajuste é obrigatório.");
+
+        var newBalance = Credits + delta;
+        if (newBalance < 0)
+            throw DomainException.Validation("CREDITS_WOULD_BE_NEGATIVE",
+                $"Esse ajuste deixaria o saldo negativo ({newBalance}). Saldo atual: {Credits}.");
+
+        Credits = newBalance;
         UpdatedAt = DateTime.UtcNow;
     }
     public void UpdatePlan(string? plan)

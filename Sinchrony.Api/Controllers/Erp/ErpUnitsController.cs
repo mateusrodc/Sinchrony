@@ -6,6 +6,7 @@ using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -19,8 +20,12 @@ public class ErpUnitsController(
     IUserRepository userRepository,
     IClassRepository classRepository,
     IBookingRepository bookingRepository,
-    IPurchaseRepository purchaseRepository) : ControllerBase
+    IPurchaseRepository purchaseRepository,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     private static object MapUnit(Unit u) => new
     {
         id = u.Id,
@@ -123,6 +128,11 @@ public class ErpUnitsController(
             req.complemento, req.bairro, req.cidade, req.estado);
         await unitRepository.AddAsync(unit, ct);
         await unitRepository.SaveAsync(ct);
+
+        // Topo da hierarquia multi-unidade — erro aqui tem o maior raio de impacto do
+        // sistema, por isso auditado mesmo sendo "só" um create/update mecânico.
+        await auditService.LogAsync("unit.created", "Unit", unit.Id, AdminId, $"Name: {unit.Name}", ct: ct);
+
         return StatusCode(201, MapUnit(unit));
     }
 
@@ -136,6 +146,9 @@ public class ErpUnitsController(
         unit.UpdateAddress(req.cep, req.logradouro, req.numero,
             req.complemento, req.bairro, req.cidade, req.estado);
         await unitRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("unit.updated", "Unit", unit.Id, AdminId, $"Name: {unit.Name}", ct: ct);
+
         return Ok(MapUnit(unit));
     }
 }

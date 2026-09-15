@@ -18,7 +18,8 @@ public class ErpBookingsController(
     IBookingRepository bookingRepository,
     IWaitlistPromotionService waitlistPromotionService,
     INoShowPenaltyService noShowPenaltyService,
-    IAttendanceRepository attendanceRepository) : ControllerBase
+    IAttendanceRepository attendanceRepository,
+    IAuditService auditService) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? User.FindFirstValue("sub")!);
@@ -91,6 +92,13 @@ public class ErpBookingsController(
         // feito pelo próprio aluno no App disparava isso (Cláusula 8.2/8.3 do Termo).
         await waitlistPromotionService.PromoteNextAsync(booking.ClassId, booking.Class?.Name ?? "sua aula", ct);
 
+        // Fase 2 do retrofit de auditoria: cancelamento pela equipe mexe em reembolso de
+        // crédito (via NoShowPenaltyService/fluxo de reserva) e não deixava rastro nenhum.
+        await auditService.LogAsync(
+            "booking.cancelled_by_admin", "Booking",
+            booking.Id, UserId,
+            $"ClassId: {booking.ClassId}, StudentId: {booking.StudentId}", ct: ct);
+
         return Ok(new { id = booking.Id, status = booking.Status.ToString() });
     }
 
@@ -119,6 +127,11 @@ public class ErpBookingsController(
 
         // Idem: falta marcada manualmente pela equipe também libera a vaga pra fila.
         await waitlistPromotionService.PromoteNextAsync(booking.ClassId, booking.Class?.Name ?? "sua aula", ct);
+
+        await auditService.LogAsync(
+            "booking.no_show_marked_by_admin", "Booking",
+            booking.Id, UserId,
+            $"ClassId: {booking.ClassId}, StudentId: {booking.StudentId}", ct: ct);
 
         return Ok(new { id = booking.Id, status = booking.Status.ToString() });
     }

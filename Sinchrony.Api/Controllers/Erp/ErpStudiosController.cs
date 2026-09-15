@@ -6,6 +6,7 @@ using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -15,8 +16,12 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Produces("application/json")]
 public class ErpStudiosController(
     IStudioRepository studioRepository,
-    IUnitContext unitContext) : ControllerBase
+    IUnitContext unitContext,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     private static object MapStudio(Studio s) => new
     {
         id = s.Id,
@@ -74,6 +79,9 @@ public class ErpStudiosController(
 
         await studioRepository.AddAsync(studio, ct);
         await studioRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("studio.created", "Studio", studio.Id, AdminId, $"Name: {studio.Name}", ct: ct);
+
         return StatusCode(201, MapStudio(studio));
     }
 
@@ -94,6 +102,9 @@ public class ErpStudiosController(
             studio.SetUnit(req.unitId.Value);
 
         await studioRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("studio.updated", "Studio", studio.Id, AdminId, $"Name: {studio.Name}", ct: ct);
+
         return Ok(MapStudio(studio));
     }
 
@@ -108,6 +119,9 @@ public class ErpStudiosController(
             studio.OpeningTime, studio.ClosingTime, active: true);
 
         await studioRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("studio.activated", "Studio", id, AdminId, ct: ct);
+
         return Ok(new { success = true });
     }
 
@@ -122,6 +136,9 @@ public class ErpStudiosController(
             studio.OpeningTime, studio.ClosingTime, active: false);
 
         await studioRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("studio.deactivated", "Studio", id, AdminId, ct: ct);
+
         return Ok(new { success = true });
     }
 }

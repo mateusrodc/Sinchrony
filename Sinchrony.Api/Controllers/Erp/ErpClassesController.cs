@@ -9,6 +9,7 @@ using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
 using System.Net.NetworkInformation;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -16,8 +17,14 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/classes")]
 [Produces("application/json")]
-public class ErpClassesController(IClassRepository classRepository, IUnitContext unitContext) : ControllerBase
+public class ErpClassesController(
+    IClassRepository classRepository,
+    IUnitContext unitContext,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     [HttpGet]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpClassListResponseExample))]
@@ -61,6 +68,9 @@ public class ErpClassesController(IClassRepository classRepository, IUnitContext
         await classRepository.SaveAsync(ct);
 
         var created = await classRepository.GetByIdAsync(@class.Id, ct);
+
+        await auditService.LogAsync("class.created", "Class", @class.Id, AdminId, $"Name: {@class.Name}", ct: ct);
+
         return StatusCode(201, ListClassesQueryHandler.MapToDto(created!));
     }
 
@@ -73,11 +83,22 @@ public class ErpClassesController(IClassRepository classRepository, IUnitContext
 
         var date = DateOnly.Parse(req.date);
         var status = Enum.Parse<ClassStatus>(req.status, ignoreCase: true);
+        var previousStatus = @class.Status;
 
         @class.Update(req.name, req.classTypeId, req.teacherId, req.studioId,
             date, req.startTime, req.endTime, req.duration, req.totalSpots, status);
 
         await classRepository.SaveAsync(ct);
+
+        // Não existe endpoint dedicado de cancelamento de aula — é feito via este PUT com
+        // status "cancelled". Registrado separadamente por ser a mudança mais impactante
+        // (mexe em quem já reservou), o resto do update fica num log só mais genérico.
+        await auditService.LogAsync(
+            previousStatus != status ? "class.status_changed" : "class.updated",
+            "Class", @class.Id, AdminId,
+            previousStatus != status ? $"From: {previousStatus} To: {status}" : $"Name: {@class.Name}",
+            ct: ct);
+
         return Ok(ListClassesQueryHandler.MapToDto(@class));
     }
 

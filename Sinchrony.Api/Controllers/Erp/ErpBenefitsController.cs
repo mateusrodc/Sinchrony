@@ -4,7 +4,9 @@ using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -12,8 +14,13 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/benefits")]
 [Produces("application/json")]
-public class ErpBenefitsController(IBenefitRepository benefitRepository) : ControllerBase
+public class ErpBenefitsController(
+    IBenefitRepository benefitRepository,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     private static object MapBenefit(Benefit b) => new
     {
         id = b.Id,
@@ -48,6 +55,9 @@ public class ErpBenefitsController(IBenefitRepository benefitRepository) : Contr
         var benefit = Benefit.Create(req.name, req.description, req.icon);
         await benefitRepository.AddAsync(benefit, ct);
         await benefitRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("benefit.created", "Benefit", benefit.Id, AdminId, $"Name: {benefit.Name}", ct: ct);
+
         return StatusCode(201, MapBenefit(benefit));
     }
 
@@ -58,6 +68,9 @@ public class ErpBenefitsController(IBenefitRepository benefitRepository) : Contr
             ?? throw DomainException.NotFound("Benefit not found.");
         benefit.Update(req.name, req.description, req.icon, req.active ?? true);
         await benefitRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("benefit.updated", "Benefit", benefit.Id, AdminId, $"Name: {benefit.Name}", ct: ct);
+
         return Ok(MapBenefit(benefit));
     }
 }

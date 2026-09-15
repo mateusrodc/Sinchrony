@@ -4,7 +4,9 @@ using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -12,8 +14,13 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/class-types")]
 [Produces("application/json")]
-public class ErpClassTypesController(IClassTypeRepository classTypeRepository) : ControllerBase
+public class ErpClassTypesController(
+    IClassTypeRepository classTypeRepository,
+    IAuditService auditService) : ControllerBase
 {
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
+
     private static object MapClassType(ClassType ct) => new
     {
         id = ct.Id,
@@ -51,6 +58,9 @@ public class ErpClassTypesController(IClassTypeRepository classTypeRepository) :
             req.usesJump ?? false, req.usesPilatesMat ?? false);
         await classTypeRepository.AddAsync(classType, ct);
         await classTypeRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("class_type.created", "ClassType", classType.Id, AdminId, $"Name: {classType.Name}", ct: ct);
+
         return StatusCode(201, MapClassType(classType));
     }
 
@@ -62,6 +72,9 @@ public class ErpClassTypesController(IClassTypeRepository classTypeRepository) :
         classType.Update(req.name ?? classType.Name, req.active ?? classType.Active, req.usesBikes ?? classType.UsesBikes,
             req.usesJump ?? classType.UsesJump, req.usesPilatesMat ?? classType.UsesPilatesMat);
         await classTypeRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("class_type.updated", "ClassType", classType.Id, AdminId, $"Name: {classType.Name}", ct: ct);
+
         return Ok(MapClassType(classType));
     }
 }
