@@ -23,5 +23,8 @@ public class AttendanceRecordConfiguration : IEntityTypeConfiguration<Attendance
 
         builder.HasOne(a => a.Booking).WithMany()
             .HasForeignKey(a => a.BookingId).OnDelete(DeleteBehavior.Restrict);
+
+        // Relatório de Ocupação sempre filtra ClassId + Status juntos.
+        builder.HasIndex(a => new { a.ClassId, a.Status });
     }
 }
