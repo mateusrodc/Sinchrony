@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -16,20 +17,43 @@ public class ErpReportsController(
     IClassRepository classRepository,
     IBookingRepository bookingRepository,
     IPurchaseRepository purchaseRepository,
-    IAttendanceRepository attendanceRepository) : ControllerBase
+    IAttendanceRepository attendanceRepository,
+    IStudioRepository studioRepository,
+    IUnitContext unitContext) : ControllerBase
 {
+    // Mesmo padrão do ErpDashboardController: admin restrito a unidade só enxerga dados dos
+    // studios daquela unidade. null = sem restrição (admin global).
+    private async Task<HashSet<Guid>?> GetUnitStudioIdsAsync(CancellationToken ct)
+    {
+        if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
+            return null;
+
+        var studios = await studioRepository.ListAsync(ct);
+        return studios.Where(s => s.UnitId == unitContext.UnitId.Value).Select(s => s.Id).ToHashSet();
+    }
+
     [HttpGet("summary")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ReportSummaryResponseExample))]
     public async Task<IActionResult> Summary([FromQuery] string? period, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var students = (await userRepository.ListStudentsAsync(null, ct)).ToList();
+        var unitStudioIds = await GetUnitStudioIdsAsync(ct);
+
+        var students = unitStudioIds is null
+            ? (await userRepository.ListStudentsAsync(null, ct)).ToList()
+            : (await userRepository.ListStudentsByUnitAsync(unitContext.UnitId!.Value, ct)).ToList();
+
         var classes = (await classRepository.ListAsync(null, null, null, ct)).ToList();
+        if (unitStudioIds is not null)
+            classes = classes.Where(c => unitStudioIds.Contains(c.StudioId)).ToList();
+
         var monthClasses = classes
             .Where(c => c.Date.Month == now.Month && c.Date.Year == now.Year)
             .ToList();
         var bookings = (await bookingRepository.ListErpAsync(null, null, null, ct)).ToList();
+        if (unitStudioIds is not null)
+            bookings = bookings.Where(b => b.Class != null && unitStudioIds.Contains(b.Class.StudioId)).ToList();
         var revenue = await purchaseRepository.TotalRevenueThisMonthAsync(ct);
 
         // Reservas confirmadas do mês
@@ -41,6 +65,8 @@ public class ErpReportsController(
 
         // Checkins confirmados via attendance
         var allAttendance = (await attendanceRepository.ListAllAsync(ct)).ToList();
+        if (unitStudioIds is not null)
+            allAttendance = allAttendance.Where(a => a.Class != null && unitStudioIds.Contains(a.Class.StudioId)).ToList();
         var monthAttended = allAttendance.Count(a =>
             a.Class != null &&
             a.Class.Date.Month == now.Month &&
@@ -76,12 +102,17 @@ public class ErpReportsController(
     [SwaggerResponseExample(200, typeof(OccupancyReportResponseExample))]
     public async Task<IActionResult> Occupancy([FromQuery] int days = 30, CancellationToken ct = default)
     {
+        var unitStudioIds = await GetUnitStudioIdsAsync(ct);
         var from = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-days));
         var classes = (await classRepository.ListAsync(null, null, null, ct))
             .Where(c => c.Date >= from)
             .ToList();
+        if (unitStudioIds is not null)
+            classes = classes.Where(c => unitStudioIds.Contains(c.StudioId)).ToList();
 
         var allAttendance = (await attendanceRepository.ListAllAsync(ct)).ToList();
+        if (unitStudioIds is not null)
+            allAttendance = allAttendance.Where(a => a.Class != null && unitStudioIds.Contains(a.Class.StudioId)).ToList();
 
         var data = classes.Select(c =>
         {
@@ -115,7 +146,10 @@ public class ErpReportsController(
     [SwaggerResponseExample(200, typeof(FrequencyReportResponseExample))]
     public async Task<IActionResult> Frequency(CancellationToken ct)
     {
+        var unitStudioIds = await GetUnitStudioIdsAsync(ct);
         var allAttendance = (await attendanceRepository.ListAllAsync(ct)).ToList();
+        if (unitStudioIds is not null)
+            allAttendance = allAttendance.Where(a => a.Class != null && unitStudioIds.Contains(a.Class.StudioId)).ToList();
         var days = new[] { "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb" };
 
         // Frequência por dia da semana baseada em attendance confirmado
