@@ -20,4 +20,11 @@ public class PermissionService(IPermissionRepository repository, IMemoryCache ca
             return await repository.HasPermissionAsync(userId, resource, action, ct);
         })!;
     }
+
+    public async Task InvalidateUserCacheAsync(Guid userId, CancellationToken ct = default)
+    {
+        var catalog = await repository.ListCatalogAsync(ct);
+        foreach (var permission in catalog)
+            cache.Remove($"permission:{userId}:{permission.Resource}:{permission.Action}");
+    }
 }
