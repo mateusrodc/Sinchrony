@@ -22,6 +22,13 @@ public class OccupancyReportResponseExample : IExamplesProvider<object>
                 occupancyPercent = 90.0,
                 checkinPercent = 83.3
             }
+        },
+        pagination = new
+        {
+            page = 1,
+            pageSize = 20,
+            total = 42,
+            totalPages = 3
         }
     };
 }

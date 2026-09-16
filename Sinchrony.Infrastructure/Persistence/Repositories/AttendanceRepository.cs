@@ -45,4 +45,22 @@ public class AttendanceRepository(ApplicationDbContext db) : IAttendanceReposito
     Guid bookingId, CancellationToken ct = default)
     => await db.AttendanceRecords
         .FirstOrDefaultAsync(a => a.BookingId == bookingId, ct);
+
+    public async Task<IEnumerable<AttendanceRecord>> ListForReportsAsync(
+        DateOnly? from, DateOnly? to, IEnumerable<Guid>? studioIds, CancellationToken ct = default)
+    {
+        var query = db.AttendanceRecords
+            .Include(r => r.Student)
+            .Include(r => r.ConfirmedBy)
+            .Include(r => r.Booking)
+            .Include(r => r.Class)
+                .ThenInclude(c => c!.ClassType)
+            .AsQueryable();
+
+        if (from.HasValue) query = query.Where(r => r.Class != null && r.Class.Date >= from.Value);
+        if (to.HasValue) query = query.Where(r => r.Class != null && r.Class.Date <= to.Value);
+        if (studioIds is not null) query = query.Where(r => r.Class != null && studioIds.Contains(r.Class.StudioId));
+
+        return await query.OrderByDescending(r => r.CreatedAt).ToListAsync(ct);
+    }
 }

@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -15,7 +16,6 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpReportsController(
     IUserRepository userRepository,
     IClassRepository classRepository,
-    IBookingRepository bookingRepository,
     IPurchaseRepository purchaseRepository,
     IAttendanceRepository attendanceRepository,
     IStudioRepository studioRepository,
@@ -35,53 +35,49 @@ public class ErpReportsController(
     [HttpGet("summary")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ReportSummaryResponseExample))]
-    public async Task<IActionResult> Summary([FromQuery] string? period, CancellationToken ct)
+    public async Task<IActionResult> Summary(
+        [FromQuery] string? period,
+        [FromQuery] Guid? teacherId,
+        [FromQuery] Guid? classTypeId,
+        [FromQuery] Guid? studioId,
+        CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
         var unitStudioIds = await GetUnitStudioIdsAsync(ct);
+        var firstOfMonth = new DateOnly(now.Year, now.Month, 1);
+        var lastOfMonth = firstOfMonth.AddMonths(1).AddDays(-1);
 
         var students = unitStudioIds is null
             ? (await userRepository.ListStudentsAsync(null, ct)).ToList()
             : (await userRepository.ListStudentsByUnitAsync(unitContext.UnitId!.Value, ct)).ToList();
 
-        var classes = (await classRepository.ListAsync(null, null, null, ct)).ToList();
-        if (unitStudioIds is not null)
-            classes = classes.Where(c => unitStudioIds.Contains(c.StudioId)).ToList();
+        var monthClasses = (await classRepository.ListForReportsAsync(
+            firstOfMonth, lastOfMonth, studioId, teacherId, classTypeId, unitStudioIds, ct)).ToList();
 
-        var monthClasses = classes
-            .Where(c => c.Date.Month == now.Month && c.Date.Year == now.Year)
-            .ToList();
-        var bookings = (await bookingRepository.ListErpAsync(null, null, null, ct)).ToList();
-        if (unitStudioIds is not null)
-            bookings = bookings.Where(b => b.Class != null && unitStudioIds.Contains(b.Class.StudioId)).ToList();
+        // Reservas confirmadas do mês — já vêm carregadas via Class.Bookings (Include), sem query extra
+        var monthBookingsCount = monthClasses
+            .SelectMany(c => c.Bookings)
+            .Count(b => b.Status == BookingStatus.confirmed);
+
         var revenue = await purchaseRepository.TotalRevenueThisMonthAsync(ct);
 
-        // Reservas confirmadas do mês
-        var monthBookings = bookings.Where(b =>
-            b.Class != null &&
-            b.Class.Date.Month == now.Month &&
-            b.Class.Date.Year == now.Year &&
-            b.Status == BookingStatus.confirmed).ToList();
-
-        // Checkins confirmados via attendance
-        var allAttendance = (await attendanceRepository.ListAllAsync(ct)).ToList();
-        if (unitStudioIds is not null)
-            allAttendance = allAttendance.Where(a => a.Class != null && unitStudioIds.Contains(a.Class.StudioId)).ToList();
-        var monthAttended = allAttendance.Count(a =>
-            a.Class != null &&
-            a.Class.Date.Month == now.Month &&
-            a.Class.Date.Year == now.Year &&
+        // Attendance restrito por período + unidade no banco; o cruzamento com monthClassIds
+        // (já filtrado por teacherId/classTypeId/studioId acima) propaga esses filtros também.
+        var monthAttendance = await attendanceRepository.ListForReportsAsync(firstOfMonth, lastOfMonth, unitStudioIds, ct);
+        var monthClassIds = monthClasses.Select(c => c.Id).ToHashSet();
+        var monthAttended = monthAttendance.Count(a =>
+            monthClassIds.Contains(a.ClassId) &&
             a.Status == BookingStatus.attended &&
             a.Booking != null &&
             a.Booking.Status == BookingStatus.confirmed);
 
         var totalSpots = monthClasses.Sum(c => c.TotalSpots);
         var occupancy = totalSpots > 0
-            ? Math.Round((double)monthBookings.Count * 100 / totalSpots, 1)
+            ? Math.Round((double)monthBookingsCount * 100 / totalSpots, 1)
             : 0;
 
-        var checkinRate = monthBookings.Count > 0
-            ? Math.Min(100, Math.Round((double)monthAttended * 100 / monthBookings.Count, 1))
+        var checkinRate = monthBookingsCount > 0
+            ? Math.Min(100, Math.Round((double)monthAttended * 100 / monthBookingsCount, 1))
             : 0;
 
         return Ok(new
@@ -89,7 +85,7 @@ public class ErpReportsController(
             totalStudents = students.Count,
             activeStudents = students.Count(s => s.Status == StudentStatus.active),
             totalClasses = monthClasses.Count,
-            totalBookings = monthBookings.Count,
+            totalBookings = monthBookingsCount,
             occupancyRate = occupancy,
             checkinRate,
             revenue,
@@ -100,24 +96,31 @@ public class ErpReportsController(
     [HttpGet("occupancy")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(OccupancyReportResponseExample))]
-    public async Task<IActionResult> Occupancy([FromQuery] int days = 30, CancellationToken ct = default)
+    public async Task<IActionResult> Occupancy(
+        [FromQuery] int days = 30,
+        [FromQuery] Guid? teacherId = null,
+        [FromQuery] Guid? classTypeId = null,
+        [FromQuery] Guid? studioId = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
     {
         var unitStudioIds = await GetUnitStudioIdsAsync(ct);
         var from = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-days));
-        var classes = (await classRepository.ListAsync(null, null, null, ct))
-            .Where(c => c.Date >= from)
+
+        var (classes, total) = await classRepository.ListForReportsPagedAsync(
+            from, null, studioId, teacherId, classTypeId, unitStudioIds, page, pageSize, ct);
+        var classList = classes.ToList();
+        var classIds = classList.Select(c => c.Id).ToHashSet();
+
+        var attendance = (await attendanceRepository.ListForReportsAsync(from, null, unitStudioIds, ct))
+            .Where(a => classIds.Contains(a.ClassId))
             .ToList();
-        if (unitStudioIds is not null)
-            classes = classes.Where(c => unitStudioIds.Contains(c.StudioId)).ToList();
 
-        var allAttendance = (await attendanceRepository.ListAllAsync(ct)).ToList();
-        if (unitStudioIds is not null)
-            allAttendance = allAttendance.Where(a => a.Class != null && unitStudioIds.Contains(a.Class.StudioId)).ToList();
-
-        var data = classes.Select(c =>
+        var data = classList.Select(c =>
         {
             var booked = c.Bookings.Count(b => b.Status == BookingStatus.confirmed);
-            var attended = allAttendance.Count(a =>
+            var attended = attendance.Count(a =>
                 a.ClassId == c.Id && a.Status == BookingStatus.attended);
 
             return new
@@ -136,21 +139,23 @@ public class ErpReportsController(
                     ? Math.Round((double)attended * 100 / booked, 1)
                     : 0
             };
-        }).OrderByDescending(x => x.date);
+        });
 
-        return Ok(new { data, days, from = from.ToString("yyyy-MM-dd") });
+        var paged = PagedResult.Create(data, page, pageSize, total);
+        return Ok(new { paged.Data, paged.Pagination, days, from = from.ToString("yyyy-MM-dd") });
     }
 
     [HttpGet("frequency")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(FrequencyReportResponseExample))]
-    public async Task<IActionResult> Frequency(CancellationToken ct)
+    public async Task<IActionResult> Frequency([FromQuery] int? days, CancellationToken ct)
     {
         var unitStudioIds = await GetUnitStudioIdsAsync(ct);
-        var allAttendance = (await attendanceRepository.ListAllAsync(ct)).ToList();
-        if (unitStudioIds is not null)
-            allAttendance = allAttendance.Where(a => a.Class != null && unitStudioIds.Contains(a.Class.StudioId)).ToList();
-        var days = new[] { "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb" };
+        // days ausente preserva o comportamento de hoje: sem filtro de período nenhum.
+        var from = days.HasValue ? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-days.Value)) : (DateOnly?)null;
+
+        var allAttendance = (await attendanceRepository.ListForReportsAsync(from, null, unitStudioIds, ct)).ToList();
+        var dayNames = new[] { "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb" };
 
         // Frequência por dia da semana baseada em attendance confirmado
         var frequency = Enumerable.Range(0, 7).Select(i =>
@@ -160,7 +165,7 @@ public class ErpReportsController(
                 (int)a.Class.Date.DayOfWeek == i &&
                 a.Status == BookingStatus.attended);
 
-            return new { day = days[i], dayIndex = i, count };
+            return new { day = dayNames[i], dayIndex = i, count };
         }).OrderBy(x => x.dayIndex);
 
         // Frequência por tipo de aula
@@ -184,7 +189,8 @@ public class ErpReportsController(
         {
             byDayOfWeek = frequency,
             byClassType,
-            topStudents
+            topStudents,
+            days
         });
     }
 }

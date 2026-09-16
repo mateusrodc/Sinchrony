@@ -15,4 +15,15 @@ public interface IClassRepository
     Task<(IEnumerable<Class> Items, int Total)> ListPagedAsync(
     DateOnly? date, string? type, Guid? studioId,
     int page, int pageSize, CancellationToken ct = default);
+
+    // Usado pelos relatórios ERP (Summary/Occupancy) — filtro por período (from/to) em vez de
+    // data única, e teacherId/classTypeId/studioId explícitos (filtro de negócio) combinados com
+    // restrictToStudioIds (restrição de unidade do admin logado, sempre aplicada em conjunto).
+    Task<IEnumerable<Class>> ListForReportsAsync(
+        DateOnly? from, DateOnly? to, Guid? studioId, Guid? teacherId, Guid? classTypeId,
+        IEnumerable<Guid>? restrictToStudioIds, CancellationToken ct = default);
+
+    Task<(IEnumerable<Class> Items, int Total)> ListForReportsPagedAsync(
+        DateOnly? from, DateOnly? to, Guid? studioId, Guid? teacherId, Guid? classTypeId,
+        IEnumerable<Guid>? restrictToStudioIds, int page, int pageSize, CancellationToken ct = default);
 }

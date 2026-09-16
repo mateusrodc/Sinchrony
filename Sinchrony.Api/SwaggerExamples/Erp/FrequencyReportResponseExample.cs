@@ -26,6 +26,7 @@ public class FrequencyReportResponseExample : IExamplesProvider<object>
         {
             new { studentId = "a5c10101-5aa0-47a0-ab3d-6189ecec2a99", name = "Carlos Silva", count = 18 },
             new { studentId = "b6c20202-6bb1-58b1-bc6e-3ce85f9e31b0", name = "Ana Souza", count = 14 }
-        }
+        },
+        days = (int?)null
     };
 }

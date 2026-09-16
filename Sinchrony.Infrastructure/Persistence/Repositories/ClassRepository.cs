@@ -101,4 +101,49 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
 
         return (items, total);
     }
+
+    private IQueryable<Class> BuildReportsQuery(
+        DateOnly? from, DateOnly? to, Guid? studioId, Guid? teacherId, Guid? classTypeId,
+        IEnumerable<Guid>? restrictToStudioIds)
+    {
+        var query = db.Classes
+            .Include(c => c.ClassType)
+            .Include(c => c.Teacher)
+            .Include(c => c.Studio)
+            .Include(c => c.Bookings.Where(b => b.Status != BookingStatus.cancelled))
+            .AsQueryable();
+
+        if (from.HasValue) query = query.Where(c => c.Date >= from.Value);
+        if (to.HasValue) query = query.Where(c => c.Date <= to.Value);
+        if (studioId.HasValue) query = query.Where(c => c.StudioId == studioId.Value);
+        if (teacherId.HasValue) query = query.Where(c => c.TeacherId == teacherId.Value);
+        if (classTypeId.HasValue) query = query.Where(c => c.ClassTypeId == classTypeId.Value);
+        if (restrictToStudioIds is not null) query = query.Where(c => restrictToStudioIds.Contains(c.StudioId));
+
+        return query;
+    }
+
+    public async Task<IEnumerable<Class>> ListForReportsAsync(
+        DateOnly? from, DateOnly? to, Guid? studioId, Guid? teacherId, Guid? classTypeId,
+        IEnumerable<Guid>? restrictToStudioIds, CancellationToken ct = default)
+    {
+        var query = BuildReportsQuery(from, to, studioId, teacherId, classTypeId, restrictToStudioIds);
+        return await query.OrderBy(c => c.Date).ThenBy(c => c.StartTime).ToListAsync(ct);
+    }
+
+    public async Task<(IEnumerable<Class> Items, int Total)> ListForReportsPagedAsync(
+        DateOnly? from, DateOnly? to, Guid? studioId, Guid? teacherId, Guid? classTypeId,
+        IEnumerable<Guid>? restrictToStudioIds, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = BuildReportsQuery(from, to, studioId, teacherId, classTypeId, restrictToStudioIds);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(c => c.Date).ThenBy(c => c.StartTime)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
 }
