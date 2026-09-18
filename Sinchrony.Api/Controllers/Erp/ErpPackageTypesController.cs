@@ -106,6 +106,28 @@ public class ErpPackageTypesController(
 
         return Ok(MapPackageType(pt));
     }
+
+    [HttpPatch("{id}/activate")]
+    public Task<IActionResult> Activate(Guid id, CancellationToken ct) => SetActive(id, true, ct);
+
+    [HttpPatch("{id}/deactivate")]
+    public Task<IActionResult> Deactivate(Guid id, CancellationToken ct) => SetActive(id, false, ct);
+
+    // Não bloqueia a desativação se houver pacotes vinculados: o flag não é consumido pelo backend,
+    // então a decisão de exibição fica com o frontend.
+    private async Task<IActionResult> SetActive(Guid id, bool active, CancellationToken ct)
+    {
+        var pt = await packageTypeRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("PackageType not found.");
+
+        if (active) pt.Activate(); else pt.Deactivate();
+        await packageTypeRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(active ? "package_type.activated" : "package_type.deactivated",
+            "PackageType", pt.Id, AdminId, $"Name: {pt.Name}", ct: ct);
+
+        return Ok(new { data = new { id = pt.Id, name = pt.Name, active = pt.Active } });
+    }
 }
 
 public record PackageTypeRequest(

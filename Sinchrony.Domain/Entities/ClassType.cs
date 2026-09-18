@@ -14,6 +14,9 @@ public class ClassType
     protected ClassType() { }
 
     public static ClassType Create(string name) => new() { Name = name };
+    public void Activate() => Active = true;
+    public void Deactivate() => Active = false;
+
     public void Update(string name, bool active, bool usesBikes,
         bool usesJump = false, bool usesPilatesMat = false)
     {

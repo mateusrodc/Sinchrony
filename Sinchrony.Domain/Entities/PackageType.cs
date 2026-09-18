@@ -30,6 +30,9 @@ public class PackageType
     public static PackageType Create(string name, bool isFamily = false, int? rank = null)
         => new() { Name = name, IsFamily = isFamily, Rank = rank };
 
+    public void Activate() { Active = true; UpdatedAt = DateTime.UtcNow; }
+    public void Deactivate() { Active = false; UpdatedAt = DateTime.UtcNow; }
+
     public void Update(
         string name, bool active, bool isFamily, int? rank,
         int? defaultMaxFutureBookings, int? defaultMaxBookingsPerDay,

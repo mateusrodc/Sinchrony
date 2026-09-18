@@ -28,6 +28,9 @@ public class Unit
         string? phone = null, string? email = null)
         => new() { Name = name, Address = address, Phone = phone, Email = email };
 
+    public void Activate() { Active = true; UpdatedAt = DateTime.UtcNow; }
+    public void Deactivate() { Active = false; UpdatedAt = DateTime.UtcNow; }
+
     public void Update(string name, string? address, string? phone, string? email, bool active)
     {
         Name = name;

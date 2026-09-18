@@ -151,6 +151,30 @@ public class ErpUnitsController(
 
         return Ok(MapUnit(unit));
     }
+
+    // Só admin global: a unidade está no topo da hierarquia multi-unidade e um admin de unidade
+    // não deve poder desativar a própria unidade.
+    [HttpPatch("{id}/activate")]
+    public Task<IActionResult> Activate(Guid id, CancellationToken ct) => SetActive(id, true, ct);
+
+    [HttpPatch("{id}/deactivate")]
+    public Task<IActionResult> Deactivate(Guid id, CancellationToken ct) => SetActive(id, false, ct);
+
+    private async Task<IActionResult> SetActive(Guid id, bool active, CancellationToken ct)
+    {
+        if (!unitContext.IsGlobalAdmin) return Forbid();
+
+        var unit = await unitRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Unit not found.");
+
+        if (active) unit.Activate(); else unit.Deactivate();
+        await unitRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(active ? "unit.activated" : "unit.deactivated",
+            "Unit", unit.Id, AdminId, $"Name: {unit.Name}", ct: ct);
+
+        return Ok(new { data = new { id = unit.Id, name = unit.Name, active = unit.Active } });
+    }
 }
 
 public record UnitRequest(

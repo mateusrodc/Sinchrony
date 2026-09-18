@@ -77,6 +77,26 @@ public class ErpClassTypesController(
 
         return Ok(MapClassType(classType));
     }
+
+    [HttpPatch("{id}/activate")]
+    public Task<IActionResult> Activate(Guid id, CancellationToken ct) => SetActive(id, true, ct);
+
+    [HttpPatch("{id}/deactivate")]
+    public Task<IActionResult> Deactivate(Guid id, CancellationToken ct) => SetActive(id, false, ct);
+
+    private async Task<IActionResult> SetActive(Guid id, bool active, CancellationToken ct)
+    {
+        var classType = await classTypeRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("ClassType not found.");
+
+        if (active) classType.Activate(); else classType.Deactivate();
+        await classTypeRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(active ? "class_type.activated" : "class_type.deactivated",
+            "ClassType", classType.Id, AdminId, $"Name: {classType.Name}", ct: ct);
+
+        return Ok(new { data = new { id = classType.Id, name = classType.Name, active = classType.Active } });
+    }
 }
 
 public record ClassTypeRequest(string? name, bool? active, bool? usesBikes,
