@@ -14,6 +14,9 @@ public class PurchaseConfiguration : IEntityTypeConfiguration<Purchase>
         builder.Property(p => p.PaymentMethod).IsRequired().HasMaxLength(10);
         builder.Property(p => p.Status).IsRequired().HasMaxLength(20);
 
+        // Listagem do ERP filtra por período e ordena por data decrescente
+        builder.HasIndex(p => p.CreatedAt);
+
         builder.HasOne(p => p.User).WithMany(u => u.Purchases)
             .HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);
 
