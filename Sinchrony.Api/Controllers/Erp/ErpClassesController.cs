@@ -85,6 +85,10 @@ public class ErpClassesController(
         var status = Enum.Parse<ClassStatus>(req.status, ignoreCase: true);
         var previousStatus = @class.Status;
 
+        // O cancelamento por aqui segue a mesma regra do /deactivate: só sem reservas ativas.
+        if (status == ClassStatus.cancelled && previousStatus != ClassStatus.cancelled)
+            @class.EnsureNoActiveBookings();
+
         @class.Update(req.name, req.classTypeId, req.teacherId, req.studioId,
             date, req.startTime, req.endTime, req.duration, req.totalSpots, status);
 
@@ -101,6 +105,50 @@ public class ErpClassesController(
 
         return Ok(ListClassesQueryHandler.MapToDto(@class));
     }
+
+    // "Desativar" aula = status cancelled (o backend só aceita reserva/fila em aula scheduled).
+    // Só é permitido sem reservas ativas; com reservas o admin cancela as reservas antes.
+    [Authorize(Roles = "admin")]
+    [HttpPatch("{id}/deactivate")]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
+    {
+        var @class = await classRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Class not found.");
+
+        if (!CanManage(@class)) return Forbid();
+
+        @class.Deactivate();
+        await classRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("class.status_changed", "Class", @class.Id, AdminId,
+            $"From: {ClassStatus.scheduled} To: {ClassStatus.cancelled}", ct: ct);
+
+        return Ok(new { data = new { id = @class.Id, name = @class.Name, active = false, status = @class.Status.ToString() } });
+    }
+
+    [Authorize(Roles = "admin")]
+    [HttpPatch("{id}/activate")]
+    public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
+    {
+        var @class = await classRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Class not found.");
+
+        if (!CanManage(@class)) return Forbid();
+
+        // Datas de aula são horário local (UTC-3); usar UTC puro bloquearia aulas de hoje à noite.
+        @class.Reactivate(DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3)));
+        await classRepository.SaveAsync(ct);
+
+        await auditService.LogAsync("class.status_changed", "Class", @class.Id, AdminId,
+            $"From: {ClassStatus.cancelled} To: {ClassStatus.scheduled}", ct: ct);
+
+        return Ok(new { data = new { id = @class.Id, name = @class.Name, active = true, status = @class.Status.ToString() } });
+    }
+
+    // Falha fechado: admin que não é global precisa ter unidade e a aula precisa ser do studio dela.
+    private bool CanManage(Class @class)
+        => unitContext.IsGlobalAdmin
+           || (unitContext.UnitId.HasValue && @class.Studio?.UnitId == unitContext.UnitId);
 
     private static object MapErpClass(Domain.Entities.Class c)
     {

@@ -1,4 +1,5 @@
 ﻿using Sinchrony.Domain.Enums;
+using Sinchrony.Domain.Exceptions;
 
 namespace Sinchrony.Domain.Entities;
 
@@ -53,4 +54,37 @@ public class Class
     public void Start() { Status = ClassStatus.in_progress; UpdatedAt = DateTime.UtcNow; }
     public void Complete() { Status = ClassStatus.completed; UpdatedAt = DateTime.UtcNow; }
     public void Cancel() { Status = ClassStatus.cancelled; UpdatedAt = DateTime.UtcNow; }
+
+    // Reservas ativas = tudo que não foi cancelado (confirmed, attended, no_show, waitlisted).
+    // Depende de Bookings estar carregado — ClassRepository.GetByIdAsync já traz só as não canceladas.
+    public int ActiveBookingsCount => Bookings.Count(b => b.Status != BookingStatus.cancelled);
+
+    // Cancelar aula com reservas exigiria devolver crédito e avisar aluno/fila; esse fluxo não existe,
+    // então só é permitido cancelar aula sem reservas ativas.
+    public void EnsureNoActiveBookings()
+    {
+        var active = ActiveBookingsCount;
+        if (active > 0)
+            throw DomainException.Conflict("CLASS_HAS_BOOKINGS",
+                $"A aula possui {active} reserva(s) ativa(s). Cancele as reservas antes de desativar.");
+    }
+
+    // "Desativar" aula = status cancelled (reserva/fila só são aceitas em aula scheduled).
+    public void Deactivate()
+    {
+        if (Status != ClassStatus.scheduled)
+            throw DomainException.Conflict("CLASS_NOT_SCHEDULED", "Só é possível desativar uma aula agendada.");
+        EnsureNoActiveBookings();
+        Cancel();
+    }
+
+    public void Reactivate(DateOnly today)
+    {
+        if (Status != ClassStatus.cancelled)
+            throw DomainException.Conflict("CLASS_NOT_CANCELLED", "Só é possível reativar uma aula desativada.");
+        if (Date < today)
+            throw DomainException.Conflict("CLASS_IN_PAST", "Não é possível reativar uma aula com data passada.");
+        Status = ClassStatus.scheduled;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
