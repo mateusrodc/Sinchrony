@@ -12,7 +12,9 @@ public record ClassStudentDto(
     string? Phone,
     int? BikeNumber, string Status);
 
-public class GetClassStudentsQueryHandler(IBookingRepository bookingRepository, IClassRepository classRepository)
+public class GetClassStudentsQueryHandler(
+    IBookingRepository bookingRepository, IClassRepository classRepository,
+    IAttendanceRepository attendanceRepository)
     : IRequestHandler<GetClassStudentsQuery, IEnumerable<ClassStudentDto>>
 {
     public async Task<IEnumerable<ClassStudentDto>> Handle(GetClassStudentsQuery request, CancellationToken ct)
@@ -21,6 +23,14 @@ public class GetClassStudentsQueryHandler(IBookingRepository bookingRepository, 
             ?? throw DomainException.NotFound("Class not found.");
 
         var bookings = await bookingRepository.ListErpAsync(request.ClassId, null, null, ct);
+
+        // UpdateAttendanceCommand/ConfirmAllAttendanceCommand escrevem a presença em
+        // AttendanceRecord.Status, não em Booking.Status — ler só b.Status fazia a tela sempre
+        // voltar pra "pending" ao reabrir o app, mesmo com a presença já confirmada
+        // (DEMANDA_CLASSES_STUDENTS_ATTENDANCE_DESSINCRONIZADO_BACKEND.md). Mesmo padrão de
+        // leitura cruzada já usado em ListAttendanceQueryHandler.
+        var attendanceByBooking = (await attendanceRepository.ListByClassAsync(request.ClassId, ct))
+            .ToDictionary(a => a.BookingId);
 
         return bookings
             .Where(b => b.Status != Domain.Enums.BookingStatus.cancelled)
@@ -31,6 +41,6 @@ public class GetClassStudentsQueryHandler(IBookingRepository bookingRepository, 
                 b.Student.Avatar,
                 b.Student.Phone,
                 b.BikeNumber,
-                b.Status.ToString()));
+                attendanceByBooking.TryGetValue(b.Id, out var att) ? att.Status.ToString() : b.Status.ToString()));
     }
 }
