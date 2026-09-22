@@ -280,21 +280,25 @@ public class ErpStudentsController(
         await purchaseRepository.AddAsync(purchase, ct);
         await purchaseRepository.SaveAsync(ct);
 
-        await purchasePackageService.ProcessAsync(studentId, package, "manual", ct);
+        var grant = await purchasePackageService.ProcessAsync(studentId, package, "manual", ct);
 
         // Recarrega student para pegar Credits já creditados pelo ProcessAsync
         student = await userRepository.GetByIdAsync(studentId, ct)!;
 
-        var creditedAmount = package.GetCreditsToGrant();
-        var creditTx = CreditTransaction.Create(
-            studentId,
-            creditedAmount,
-            student!.Credits,
-            $"Concessão manual ({req.paymentMethod}): {package.Name} — {req.reason}",
-            "manual",
-            purchase.Id);
-        await creditTransactionRepository.AddAsync(creditTx, ct);
-        await creditTransactionRepository.SaveAsync(ct);
+        // Só registra no extrato o que realmente entrou no saldo. Pacote que foi pra fila (ou só
+        // estendeu validade) não credita nada agora — antes o extrato mostrava +N com saldo inalterado.
+        if (grant.CreditsAdded > 0)
+        {
+            var creditTx = CreditTransaction.Create(
+                studentId,
+                grant.CreditsAdded,
+                student!.Credits,
+                $"Concessão manual ({req.paymentMethod}): {package.Name} — {req.reason}",
+                "manual",
+                purchase.Id);
+            await creditTransactionRepository.AddAsync(creditTx, ct);
+            await creditTransactionRepository.SaveAsync(ct);
+        }
 
         await auditService.LogAsync(
             "package.granted_by_admin", "Purchase",
@@ -302,8 +306,8 @@ public class ErpStudentsController(
             $"Aluno: {student.Name}, Pacote: {package.Name}, Método: {req.paymentMethod}, Motivo: {req.reason}",
             ct: ct);
 
-        var sp = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct)
-                 ?? await studentPackageRepository.GetQueuedByStudentAsync(studentId, ct);
+        // Pacote tratado por esta concessão — pode ser um pacote em fila, diferente do ativo.
+        var sp = grant.StudentPackage;
 
         return StatusCode(201, new
         {
@@ -429,13 +433,31 @@ public class ErpStudentsController(
             && student.UnitId != unitContext.UnitId)
             return Forbid();
 
+        if (req.extendDays is <= 0)
+            throw DomainException.Validation("INVALID_DAYS",
+                "O número de dias de extensão deve ser maior que zero.");
+
         await unitOfWork.BeginTransactionAsync(ct);
         try
         {
+            // Os créditos expiram junto com o pacote ativo. Quando o ajuste é um crédito "de hoje"
+            // (ex.: reposição), extendDays empurra a validade desse pacote pra que o saldo
+            // ajustado não expire junto com uma vigência antiga.
+            StudentPackage? extendedPackage = null;
+            if (req.extendDays.HasValue)
+            {
+                extendedPackage = await studentPackageRepository.GetActiveByStudentAsync(id, ct)
+                    ?? throw DomainException.Validation("NO_ACTIVE_PACKAGE",
+                        "O aluno não tem pacote ativo para estender a validade.");
+                extendedPackage.ExtendValidity(req.extendDays.Value);
+            }
+
             // AdjustCredits (domínio) já valida reason vazio e saldo negativo antes de mutar
             // o estado — ver ck_users_credits em UserConfiguration.
             student.AdjustCredits(req.delta, req.reason);
             await userRepository.SaveAsync(ct);
+            if (extendedPackage is not null)
+                await studentPackageRepository.SaveAsync(ct);
 
             // Type "manual_adjustment", distinto de "manual" (concessão de pacote) — pro
             // extrato (GET .../credit-transactions) conseguir diferenciar as duas operações.
@@ -448,18 +470,25 @@ public class ErpStudentsController(
             await auditService.LogAsync(
                 "credit.manually_adjusted", "User",
                 student.Id, AdminId,
-                $"Delta: {req.delta}, Reason: {req.reason}, NewBalance: {student.Credits}",
+                $"Delta: {req.delta}, Reason: {req.reason}, NewBalance: {student.Credits}" +
+                (extendedPackage is null
+                    ? ""
+                    : $", ExtendDays: {req.extendDays}, NewEndDate: {extendedPackage.EndDate:yyyy-MM-dd}"),
                 ct: ct);
 
             await unitOfWork.CommitAsync(ct);
+
+            return Ok(new
+            {
+                credits = student.Credits,
+                packageEndDate = extendedPackage?.EndDate
+            });
         }
         catch
         {
             await unitOfWork.RollbackAsync(ct);
             throw;
         }
-
-        return Ok(new { credits = student.Credits });
     }
 
     // Pré-requisito pro ERP mostrar o extrato antes de ajustar. ICreditTransactionRepository.
@@ -490,7 +519,7 @@ public class ErpStudentsController(
         });
     }
 
-    public record AdjustCreditsRequest(int delta, string reason);
+    public record AdjustCreditsRequest(int delta, string reason, int? extendDays = null);
 
     public record AssignPackageRequest(
         Guid packageId,

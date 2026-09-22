@@ -21,7 +21,8 @@ public record PackageDto(
     List<BenefitDto> Benefits,
     Guid? UnitId,
     string? UnitName,
-    bool AllowsPix, bool AllowsCard, bool AllowsInstallments, int? MaxInstallments);
+    bool AllowsPix, bool AllowsCard, bool AllowsInstallments, int? MaxInstallments,
+    bool IsSingleClass = false);
 
 public record ListPackagesQuery(bool? ActiveOnly) : IRequest<IEnumerable<PackageDto>>;
 
@@ -52,5 +53,6 @@ public class ListPackagesQueryHandler(IPackageRepository packageRepository)
                 pb.Benefit?.Icon)).ToList(),
             p.UnitId,
             p.Unit?.Name,
-            p.AllowsPix, p.AllowsCard, p.AllowsInstallments, p.MaxInstallments);
+            p.AllowsPix, p.AllowsCard, p.AllowsInstallments, p.MaxInstallments,
+            p.IsSingleClass);
 }

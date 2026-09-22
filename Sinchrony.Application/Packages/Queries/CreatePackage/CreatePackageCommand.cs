@@ -32,7 +32,8 @@ public record CreatePackageCommand(
     bool? AllowsPix = null,
     bool? AllowsCard = null,
     bool? AllowsInstallments = null,
-    int? MaxInstallments = null) : IRequest<PackageDto>;
+    int? MaxInstallments = null,
+    bool? IsSingleClass = null) : IRequest<PackageDto>;
 
 public class CreatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -71,6 +72,8 @@ public class CreatePackageCommandHandler(
             request.NoShowBlockWindowDays ?? 30,
             request.AllowsPix ?? true, request.AllowsCard ?? true,
             request.AllowsInstallments ?? true, request.MaxInstallments);
+
+        package.SetSingleClass(request.IsSingleClass ?? false);
 
         await packageRepository.AddAsync(package, ct);
 

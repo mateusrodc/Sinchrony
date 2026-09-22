@@ -32,7 +32,8 @@ public record UpdatePackageCommand(
     bool AllowsPix = true,
     bool AllowsCard = true,
     bool AllowsInstallments = true,
-    int? MaxInstallments = null) : IRequest<PackageDto>;
+    int? MaxInstallments = null,
+    bool? IsSingleClass = null) : IRequest<PackageDto>;
 
 public class UpdatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -66,6 +67,11 @@ public class UpdatePackageCommandHandler(
             request.NoShowBlockWindowDays,
             request.AllowsPix, request.AllowsCard,
             request.AllowsInstallments, request.MaxInstallments);
+
+        // Só altera quando o cliente envia o campo. Um front que ainda não conhece IsSingleClass
+        // não pode zerar o valor que foi definido direto no banco (ex.: Aula Avulsa).
+        if (request.IsSingleClass.HasValue)
+            package.SetSingleClass(request.IsSingleClass.Value);
 
         await packageRepository.UpdateBenefitsAsync(request.Id, request.BenefitIds, ct);
         await packageRepository.SaveAsync(ct);

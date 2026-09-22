@@ -85,7 +85,8 @@ public class PurchasePackageCommandHandler(
 
         // Verifica estratégia antes de processar pagamento
         var active = await studentPackageRepository.GetActiveByStudentAsync(request.UserId, ct);
-        if (active is not null && package.PurchaseStrategy == "block")
+        if (active is not null && package.PurchaseStrategy == "block"
+            && !package.ReplacesActive(active.Package))
             throw DomainException.Conflict("ACTIVE_PACKAGE_EXISTS",
                 "Você já possui um pacote ativo. Este pacote não permite compra com pacote ativo.");
 

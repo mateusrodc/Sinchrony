@@ -59,6 +59,8 @@ public static class DependencyInjection
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddHostedService<ToleranceEnforcementService>();
+        services.AddScoped<StudentPackageLifecycleService>();
+        services.AddHostedService<PackageExpirationService>();
 
         services.AddHttpClient<IStorageService, SupabaseStorageService>(client =>
         {

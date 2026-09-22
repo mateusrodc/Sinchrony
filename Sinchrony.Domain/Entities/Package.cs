@@ -41,6 +41,11 @@ public class Package
     public bool AllowsInstallments { get; private set; } = true;
     public int? MaxInstallments { get; private set; }
 
+    // Pacote avulso (ex.: "Aula Avulsa"): não deve bloquear nem enfileirar a compra de um plano
+    // real. Quando o aluno só tem um pacote avulso ativo e compra um plano, o plano ativa na hora
+    // (ver ReplacesActive). O tipo/Rank do pacote não serve pra isso — só ordena a lista.
+    public bool IsSingleClass { get; private set; }
+
     public Guid? PackageTypeId { get; private set; }
     public PackageType? PackageType { get; private set; }
     public ICollection<PackageBenefit> PackageBenefits { get; private set; } = [];
@@ -142,6 +147,18 @@ public class Package
 
     public void Toggle() { Active = !Active; UpdatedAt = DateTime.UtcNow; }
 
+    public void SetSingleClass(bool isSingleClass)
+    {
+        IsSingleClass = isSingleClass;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    // Este pacote (o novo) deve substituir o pacote ativo em vez de seguir a própria
+    // PurchaseStrategy? Sim quando o ativo é avulso e o novo não é: a Aula Avulsa não
+    // atrapalha a compra de um plano real. Avulso comprando avulso segue a estratégia normal.
+    public bool ReplacesActive(Package? activePackage)
+        => activePackage is { IsSingleClass: true } && !IsSingleClass;
+
     // Créditos a conceder por pessoa no momento da compra/concessão. CreditsPerMember só
     // é um valor válido para pacotes com dependentes (família); para pacote individual
     // (MaxDependents == 0) o total do pacote é sempre `Credits`, mesmo que CreditsPerMember
@@ -149,4 +166,8 @@ public class Package
     // "pacote de 1 crédito virou 32 créditos".
     public int GetCreditsToGrant()
         => MaxDependents > 0 ? (CreditsPerMember ?? Credits) : Credits;
+
+    // Créditos alocados a cada pessoa (titular e dependentes) quando o pacote é ativado.
+    public int GetCreditsPerPerson(int totalPersons)
+        => MaxDependents > 0 ? (CreditsPerMember ?? Credits / totalPersons) : Credits;
 }

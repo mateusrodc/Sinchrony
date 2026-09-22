@@ -151,6 +151,20 @@ public class User
         Credits = newBalance;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    // Vencimento do pacote: o saldo restante expira junto (regra de negócio definida em
+    // 21/09/2026). `keep` preserva créditos que já foram pagos por um pacote na fila (ex.: PIX
+    // confirmado enquanto outro pacote estava ativo). Retorna quantos créditos expiraram.
+    public int ExpireCredits(int keep = 0)
+    {
+        var expired = Math.Max(0, Credits - Math.Max(0, keep));
+        if (expired == 0) return 0;
+
+        Credits -= expired;
+        UpdatedAt = DateTime.UtcNow;
+        return expired;
+    }
+
     public void UpdatePlan(string? plan)
     {
         PlanName = plan;

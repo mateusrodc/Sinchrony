@@ -19,6 +19,37 @@ public class UserAdjustCreditsTests
     }
 
     [Fact]
+    public void ExpireCredits_ZeroesBalanceAndReturnsExpiredAmount()
+    {
+        var student = CreateStudent(5);
+
+        var expired = student.ExpireCredits();
+
+        expired.Should().Be(5);
+        student.Credits.Should().Be(0);
+    }
+
+    [Fact]
+    public void ExpireCredits_WithKeep_PreservesThatMuch()
+    {
+        var student = CreateStudent(9);
+
+        var expired = student.ExpireCredits(keep: 8);
+
+        expired.Should().Be(1);
+        student.Credits.Should().Be(8);
+    }
+
+    [Fact]
+    public void ExpireCredits_KeepGreaterThanBalance_ExpiresNothing()
+    {
+        var student = CreateStudent(3);
+
+        student.ExpireCredits(keep: 8).Should().Be(0);
+        student.Credits.Should().Be(3);
+    }
+
+    [Fact]
     public void AdjustCredits_PositiveDelta_IncreasesBalance()
     {
         var student = CreateStudent(1);

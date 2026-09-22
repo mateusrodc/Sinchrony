@@ -87,6 +87,148 @@ public class PurchasePackageServiceTests
     }
 
     [Fact]
+    public async Task ProcessAsync_QueueStrategyWithActivePackage_QueuesWithoutCreditingAndReportsZero()
+    {
+        // Regressão do extrato mostrando "+8, saldo 0": pacote na fila não credita nada agora,
+        // e o resultado precisa dizer isso pra quem grava a CreditTransaction.
+        var package = Package.Create("Essence (Mensal)", null, credits: 8, price: 300m,
+            validityDays: 30, popular: false, active: true, displayOrder: 0,
+            purchaseStrategy: "queue", maxDependents: 0);
+
+        var student = CreateStudent();
+        var active = StudentPackage.Create(student.Id, Guid.NewGuid(), 30);
+
+        _studentPackageRepo.Setup(r => r.GetActiveByStudentAsync(student.Id, default)).ReturnsAsync(active);
+        _userRepo.Setup(r => r.GetByIdAsync(student.Id, default)).ReturnsAsync(student);
+
+        var result = await CreateService().ProcessAsync(student.Id, package, "manual", default);
+
+        result.CreditsAdded.Should().Be(0);
+        result.StudentPackage!.Status.Should().Be(StudentPackageStatus.queued);
+        student.Credits.Should().Be(0);
+    }
+
+    private static Package NewPackage(string name, int credits, string strategy, bool singleClass = false)
+    {
+        var p = Package.Create(name, null, credits, price: 100m, validityDays: 30,
+            popular: false, active: true, displayOrder: 0,
+            purchaseStrategy: strategy, maxDependents: 0);
+        p.SetSingleClass(singleClass);
+        return p;
+    }
+
+    // StudentPackage.Package tem setter privado; nos testes de domínio simulamos o Include do EF.
+    private static StudentPackage ActiveWith(Guid studentId, Package package)
+    {
+        var sp = StudentPackage.Create(studentId, package.Id, 30);
+        typeof(StudentPackage).GetProperty(nameof(StudentPackage.Package))!.SetValue(sp, package);
+        return sp;
+    }
+
+    [Fact]
+    public async Task ProcessAsync_SingleClassActive_QueueStrategyPlan_ActivatesImmediatelyAndKeepsLeftoverCredits()
+    {
+        // Bug: aluna só com Aula Avulsa comprava o Essence (estratégia "queue") e ele ficava
+        // "Na fila" por até 30 dias, sem crédito. A avulsa não deve atrapalhar.
+        var avulsa = NewPackage("Aula Avulsa", 1, "sum_credits", singleClass: true);
+        var essence = NewPackage("Essence (Mensal)", 8, "queue");
+
+        var student = CreateStudent();
+        student.AddCredits(1); // crédito que sobrou da avulsa
+        var active = ActiveWith(student.Id, avulsa);
+
+        _studentPackageRepo.Setup(r => r.GetActiveByStudentAsync(student.Id, default)).ReturnsAsync(active);
+        _dependentRepo.Setup(r => r.ListByStudentAsync(student.Id, default)).ReturnsAsync(Array.Empty<Dependent>());
+        _userRepo.Setup(r => r.GetByIdAsync(student.Id, default)).ReturnsAsync(student);
+
+        var result = await CreateService().ProcessAsync(student.Id, essence, "manual", default);
+
+        active.Status.Should().Be(StudentPackageStatus.cancelled);
+        result.StudentPackage!.Status.Should().Be(StudentPackageStatus.active);
+        result.StudentPackage.PackageId.Should().Be(essence.Id);
+        result.CreditsAdded.Should().Be(8);
+        student.Credits.Should().Be(9); // 1 que sobrou + 8 do Essence
+    }
+
+    [Fact]
+    public async Task ProcessAsync_SingleClassActive_BlockStrategyPlan_AlsoActivatesImmediately()
+    {
+        var avulsa = NewPackage("Aula Avulsa", 1, "sum_credits", singleClass: true);
+        var plano = NewPackage("Plano", 8, "block");
+
+        var student = CreateStudent();
+        var active = ActiveWith(student.Id, avulsa);
+
+        _studentPackageRepo.Setup(r => r.GetActiveByStudentAsync(student.Id, default)).ReturnsAsync(active);
+        _dependentRepo.Setup(r => r.ListByStudentAsync(student.Id, default)).ReturnsAsync(Array.Empty<Dependent>());
+        _userRepo.Setup(r => r.GetByIdAsync(student.Id, default)).ReturnsAsync(student);
+
+        var result = await CreateService().ProcessAsync(student.Id, plano, "purchase", default);
+
+        result.StudentPackage!.Status.Should().Be(StudentPackageStatus.active);
+        student.Credits.Should().Be(8);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_RealPlanActive_QueueStrategyPlan_StillQueues()
+    {
+        // O comportamento de fila continua valendo pra plano real comprado com plano real ativo.
+        var essence = NewPackage("Essence (Mensal)", 8, "queue");
+
+        var student = CreateStudent();
+        var active = ActiveWith(student.Id, NewPackage("Essence (Mensal)", 8, "queue"));
+
+        _studentPackageRepo.Setup(r => r.GetActiveByStudentAsync(student.Id, default)).ReturnsAsync(active);
+        _userRepo.Setup(r => r.GetByIdAsync(student.Id, default)).ReturnsAsync(student);
+
+        var result = await CreateService().ProcessAsync(student.Id, essence, "manual", default);
+
+        active.Status.Should().Be(StudentPackageStatus.active);
+        result.StudentPackage!.Status.Should().Be(StudentPackageStatus.queued);
+        result.CreditsAdded.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_SingleClassActive_BuyingAnotherSingleClass_FollowsItsOwnStrategy()
+    {
+        var avulsa = NewPackage("Aula Avulsa", 1, "sum_credits", singleClass: true);
+
+        var student = CreateStudent();
+        student.AddCredits(1);
+        var active = ActiveWith(student.Id, avulsa);
+
+        _studentPackageRepo.Setup(r => r.GetActiveByStudentAsync(student.Id, default)).ReturnsAsync(active);
+        _allocationRepo.Setup(r => r.GetByStudentPackageAndDependentAsync(active.Id, null, default))
+            .ReturnsAsync((DependentPackageAllocation?)null);
+        _userRepo.Setup(r => r.GetByIdAsync(student.Id, default)).ReturnsAsync(student);
+
+        var result = await CreateService().ProcessAsync(student.Id, avulsa, "purchase", default);
+
+        active.Status.Should().Be(StudentPackageStatus.active);
+        result.CreditsAdded.Should().Be(1);
+        student.Credits.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_NoActivePackage_ReportsCreditsAdded()
+    {
+        var package = Package.Create("Essence (Mensal)", null, credits: 8, price: 300m,
+            validityDays: 30, popular: false, active: true, displayOrder: 0,
+            purchaseStrategy: "queue", maxDependents: 0);
+
+        var student = CreateStudent();
+
+        _studentPackageRepo.Setup(r => r.GetActiveByStudentAsync(student.Id, default)).ReturnsAsync((StudentPackage?)null);
+        _dependentRepo.Setup(r => r.ListByStudentAsync(student.Id, default)).ReturnsAsync(Array.Empty<Dependent>());
+        _userRepo.Setup(r => r.GetByIdAsync(student.Id, default)).ReturnsAsync(student);
+
+        var result = await CreateService().ProcessAsync(student.Id, package, "manual", default);
+
+        result.CreditsAdded.Should().Be(8);
+        result.StudentPackage!.Status.Should().Be(StudentPackageStatus.active);
+    }
+
+    [Fact]
     public async Task ProcessAsync_FamilyPackage_StillUsesCreditsPerMember()
     {
         // Regressão inversa: pacote de família continua usando CreditsPerMember normalmente.

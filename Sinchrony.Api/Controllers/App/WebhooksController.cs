@@ -138,8 +138,11 @@ public class WebhooksController(
                 var activePackage = await studentPackageRepository
                     .GetActiveByStudentAsync(purchase.UserId, ct);
 
-                if (activePackage is null)
+                // Aula Avulsa ativa não segura um plano real pago: substitui na hora.
+                if (activePackage is null
+                    || queuedPackage.Package?.ReplacesActive(activePackage.Package) == true)
                 {
+                    activePackage?.Cancel();
                     queuedPackage.Activate();
                     logger.LogInformation(
                         "StudentPackage {Id} activated for user {UserId}.",

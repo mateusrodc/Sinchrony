@@ -15,6 +15,7 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
         builder.Property(p => p.PricePerCredit).HasPrecision(10, 2);
 
         builder.Property(p => p.PurchaseStrategy).HasMaxLength(30).HasDefaultValue("block");
+        builder.Property(p => p.IsSingleClass).HasDefaultValue(false);
         builder.Property(p => p.NoShowCreditPenalty).HasDefaultValue(true);
         builder.Property(p => p.NoShowBlockWindowDays).HasDefaultValue(30);
 
