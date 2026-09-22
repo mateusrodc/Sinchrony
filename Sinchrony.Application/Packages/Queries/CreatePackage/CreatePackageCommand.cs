@@ -33,7 +33,8 @@ public record CreatePackageCommand(
     bool? AllowsCard = null,
     bool? AllowsInstallments = null,
     int? MaxInstallments = null,
-    bool? IsSingleClass = null) : IRequest<PackageDto>;
+    bool? IsSingleClass = null,
+    bool? IsRecurring = null) : IRequest<PackageDto>;
 
 public class CreatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -74,6 +75,7 @@ public class CreatePackageCommandHandler(
             request.AllowsInstallments ?? true, request.MaxInstallments);
 
         package.SetSingleClass(request.IsSingleClass ?? false);
+        package.SetRecurring(request.IsRecurring ?? false);
 
         await packageRepository.AddAsync(package, ct);
 

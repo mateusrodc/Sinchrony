@@ -75,6 +75,11 @@ public class PurchasePackageCommandHandler(
             throw DomainException.Validation("PAYMENT_METHOD_NOT_ALLOWED",
                 "Este pacote não aceita pagamento via cartão.");
 
+        // Assinatura recorrente: a Asaas cobra e reprocessa sozinha, o que não existe pra PIX.
+        if (package.IsRecurring && request.PaymentMethod != "card")
+            throw DomainException.Validation("RECURRING_REQUIRES_CARD",
+                "Este pacote é recorrente e só pode ser contratado com cartão de crédito.");
+
         Coupon? coupon = null;
         if (!string.IsNullOrEmpty(request.CouponCode))
         {
@@ -95,9 +100,35 @@ public class PurchasePackageCommandHandler(
         var customerId = await asaasService.GetOrCreateCustomerAsync(
             user.Name, user.Email, cpf, ct);
 
-        string transactionId;
+        // Aplica estratégia e cria StudentPackage
+        var purchaseService = new PurchasePackageService(
+            studentPackageRepository,
+            allocationRepository,
+            dependentRepository,
+            userRepository);
 
-        if (request.PaymentMethod == "pix")
+        string transactionId;
+        StudentPackage? studentPackage;
+        Purchase? purchase = null;
+
+        if (package.IsRecurring)
+        {
+            // Assinatura: a Asaas cobra e reprocessa sozinha, no ciclo dela. O primeiro
+            // pagamento (e cada renovação) chega de forma assíncrona via webhook
+            // (payment.subscription) — aqui só criamos a assinatura e deixamos o pacote
+            // na fila aguardando a primeira confirmação.
+            var subscription = await asaasService.CreateSubscriptionAsync(
+                customerId, request.CardToken!, request.Amount,
+                $"4Sinchrony - {package.Name}", ct);
+
+            transactionId = subscription.SubscriptionId;
+
+            studentPackage = StudentPackage.CreateQueued(
+                request.UserId, package.Id, package.ValidityDays);
+            studentPackage.SetAsaasSubscriptionId(subscription.SubscriptionId);
+            await studentPackageRepository.AddAsync(studentPackage, ct);
+        }
+        else if (request.PaymentMethod == "pix")
         {
             if (string.IsNullOrEmpty(cpf))
                 throw DomainException.Validation("CPF_REQUIRED", "CPF é obrigatório para pagamento via PIX.");
@@ -105,6 +136,16 @@ public class PurchasePackageCommandHandler(
             var pixResult = await asaasService.CreatePixChargeAsync(
                 customerId, request.Amount, $"4Sinchrony - {package.Name}", ct);
             transactionId = pixResult.TransactionId;
+
+            purchase = Purchase.CreatePending(
+                user.Id, package.Id, request.Amount,
+                request.PaymentMethod, transactionId, coupon?.Id);
+            await purchaseRepository.AddAsync(purchase, ct);
+
+            // PIX: pendente — StudentPackage criado após webhook
+            studentPackage = StudentPackage.CreateQueued(
+                request.UserId, package.Id, package.ValidityDays);
+            await studentPackageRepository.AddAsync(studentPackage, ct);
         }
         else if (request.PaymentMethod == "card")
         {
@@ -115,47 +156,38 @@ public class PurchasePackageCommandHandler(
                 customerId, request.CardToken, request.Amount,
                 $"4Sinchrony - {package.Name}", ct);
             transactionId = cardResult.TransactionId;
+
+            purchase = Purchase.CreatePending(
+                user.Id, package.Id, request.Amount,
+                request.PaymentMethod, transactionId, coupon?.Id);
+            await purchaseRepository.AddAsync(purchase, ct);
+
+            if (cardResult.Status is "CONFIRMED" or "RECEIVED")
+            {
+                // Cartão aprovado de forma síncrona — ativa imediatamente
+                purchase.Confirm();
+                studentPackage = await purchaseService.ProcessAndReturnAsync(
+                    request.UserId, package, "purchase", ct);
+            }
+            else
+            {
+                // PENDING: aguardando análise antifraude — só ativa quando o webhook confirmar
+                studentPackage = StudentPackage.CreateQueued(
+                    request.UserId, package.Id, package.ValidityDays);
+                await studentPackageRepository.AddAsync(studentPackage, ct);
+            }
         }
         else
         {
             throw DomainException.Validation("INVALID_PAYMENT_METHOD", "Método de pagamento inválido.");
         }
 
-        // Cria Purchase
-        var purchase = Purchase.CreatePending(
-            user.Id, package.Id, request.Amount,
-            request.PaymentMethod, transactionId, coupon?.Id);
-        await purchaseRepository.AddAsync(purchase, ct);
-
-        // Aplica estratégia e cria StudentPackage
-        var purchaseService = new PurchasePackageService(
-            studentPackageRepository,
-            allocationRepository,
-            dependentRepository,
-            userRepository);
-
-        StudentPackage? studentPackage = null;
-
-        if (request.PaymentMethod == "card")
-        {
-            // Cartão: aprovação síncrona — ativa imediatamente
-            purchase.Confirm();
-            studentPackage = await purchaseService.ProcessAndReturnAsync(
-                request.UserId, package, "purchase", ct);
-        }
-        else
-        {
-            // PIX: pendente — StudentPackage criado após webhook
-            studentPackage = StudentPackage.CreateQueued(
-                request.UserId, package.Id, package.ValidityDays);
-            await studentPackageRepository.AddAsync(studentPackage, ct);
-        }
-
-        await purchaseRepository.SaveAsync(ct);
+        if (purchase is not null)
+            await purchaseRepository.SaveAsync(ct);
         await studentPackageRepository.SaveAsync(ct);
 
         await auditService.LogAsync("package.purchased", "Purchase",
-            purchase.Id, user.Id,
+            purchase?.Id ?? studentPackage.Id, user.Id,
             $"Package: {package.Name}, Method: {request.PaymentMethod}", ct: ct);
 
         return new StudentPackageResultDto(

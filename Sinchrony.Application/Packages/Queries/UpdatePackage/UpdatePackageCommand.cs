@@ -33,7 +33,8 @@ public record UpdatePackageCommand(
     bool AllowsCard = true,
     bool AllowsInstallments = true,
     int? MaxInstallments = null,
-    bool? IsSingleClass = null) : IRequest<PackageDto>;
+    bool? IsSingleClass = null,
+    bool? IsRecurring = null) : IRequest<PackageDto>;
 
 public class UpdatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -72,6 +73,9 @@ public class UpdatePackageCommandHandler(
         // não pode zerar o valor que foi definido direto no banco (ex.: Aula Avulsa).
         if (request.IsSingleClass.HasValue)
             package.SetSingleClass(request.IsSingleClass.Value);
+
+        if (request.IsRecurring.HasValue)
+            package.SetRecurring(request.IsRecurring.Value);
 
         await packageRepository.UpdateBenefitsAsync(request.Id, request.BenefitIds, ct);
         await packageRepository.SaveAsync(ct);

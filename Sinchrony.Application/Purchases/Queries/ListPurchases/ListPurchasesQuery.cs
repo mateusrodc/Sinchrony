@@ -15,7 +15,8 @@ public record PurchaseDto(
     CouponInfoDto? Coupon,
     string PaymentMethod,
     string Status,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool IsRecurring = false);
 
 public record PurchasePackageDto(Guid Id, string Name, int Credits, decimal Price);
 public record CouponInfoDto(string Code, decimal Discount, string DiscountType);
@@ -33,7 +34,7 @@ public class ListPurchasesQueryHandler(IPurchaseRepository purchaseRepository)
             new PurchasePackageDto(p.Package!.Id, p.Package.Name, p.Package.Credits, p.Package.Price),
             p.Amount,
             p.Coupon is null ? null : new CouponInfoDto(p.Coupon.Code, p.Coupon.Discount, p.Coupon.DiscountType),
-            p.PaymentMethod, p.Status, p.CreatedAt));
+            p.PaymentMethod, p.Status, p.CreatedAt, p.Package?.IsRecurring ?? false));
 
         return PagedResult.Create(data, request.Page, request.PageSize, total);
     }

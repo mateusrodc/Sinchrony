@@ -46,6 +46,11 @@ public class Package
     // (ver ReplacesActive). O tipo/Rank do pacote não serve pra isso — só ordena a lista.
     public bool IsSingleClass { get; private set; }
 
+    // Assinatura recorrente cobrada automaticamente pela Asaas (POST /subscriptions), em vez de
+    // cobrança avulsa. Só pacotes com AllowsCard = true fazem sentido aqui — a Asaas não oferece
+    // assinatura recorrente via PIX.
+    public bool IsRecurring { get; private set; }
+
     public Guid? PackageTypeId { get; private set; }
     public PackageType? PackageType { get; private set; }
     public ICollection<PackageBenefit> PackageBenefits { get; private set; } = [];
@@ -150,6 +155,12 @@ public class Package
     public void SetSingleClass(bool isSingleClass)
     {
         IsSingleClass = isSingleClass;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetRecurring(bool isRecurring)
+    {
+        IsRecurring = isRecurring;
         UpdatedAt = DateTime.UtcNow;
     }
 

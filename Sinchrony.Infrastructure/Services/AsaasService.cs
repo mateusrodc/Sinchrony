@@ -18,6 +18,21 @@ public class AsaasService(
         ? "https://sandbox.asaas.com/api/v3"
         : "https://api.asaas.com/v3";
 
+    private static string ExtractErrorDescription(string content, string fallback)
+    {
+        try
+        {
+            var errorBody = JsonSerializer.Deserialize<JsonElement>(content);
+            return errorBody.TryGetProperty("errors", out var errors) && errors.GetArrayLength() > 0
+                ? errors[0].GetProperty("description").GetString() ?? fallback
+                : fallback;
+        }
+        catch (JsonException)
+        {
+            return fallback;
+        }
+    }
+
     public async Task<string> GetOrCreateCustomerAsync(
         string name, string email, string? cpf = null, CancellationToken ct = default)
     {
@@ -55,7 +70,9 @@ public class AsaasService(
         {
             logger.LogError("Asaas: failed to create customer. Status: {Status}, Body: {Body}",
                 createResp.StatusCode, content);
-            throw new InvalidOperationException($"Asaas customer creation failed: {content}");
+
+            var description = ExtractErrorDescription(content, "Erro ao criar cliente na Asaas.");
+            throw DomainException.Validation("ASAAS_CUSTOMER_ERROR", description);
         }
 
         var created = JsonSerializer.Deserialize<JsonElement>(content);
@@ -83,7 +100,9 @@ public class AsaasService(
         {
             logger.LogError("Asaas: failed to create PIX charge. Status: {Status}, Body: {Body}",
                 resp.StatusCode, content);
-            throw new InvalidOperationException($"Asaas PIX charge failed: {content}");
+
+            var errorDescription = ExtractErrorDescription(content, "Erro ao gerar cobrança PIX.");
+            throw DomainException.Validation("ASAAS_PIX_ERROR", errorDescription);
         }
 
         var payment = JsonSerializer.Deserialize<JsonElement>(content);
@@ -138,13 +157,70 @@ public class AsaasService(
         {
             logger.LogError("Asaas: failed to charge card. Status: {Status}, Body: {Body}",
                 resp.StatusCode, content);
-            throw new InvalidOperationException($"Asaas card charge failed: {content}");
+
+            var errorDescription = ExtractErrorDescription(content, "Erro ao processar pagamento no cartão.");
+            throw DomainException.Validation("ASAAS_CARD_CHARGE_ERROR", errorDescription);
         }
 
         var payment = JsonSerializer.Deserialize<JsonElement>(content);
+        var status = payment.GetProperty("status").GetString()!;
+        var message = status == "PENDING"
+            ? "Pagamento em análise. Você será notificado assim que for confirmado."
+            : "Pagamento no cartão aprovado!";
+
         return new CardPaymentResult(
             payment.GetProperty("id").GetString()!,
-            "Pagamento no cartão aprovado!");
+            status,
+            message);
+    }
+
+    public async Task<SubscriptionResult> CreateSubscriptionAsync(
+        string customerId, string cardToken, decimal amount, string description, CancellationToken ct = default)
+    {
+        var body = new
+        {
+            customer = customerId,
+            billingType = "CREDIT_CARD",
+            cycle = "MONTHLY",
+            value = amount,
+            nextDueDate = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+            description,
+            creditCardToken = cardToken
+        };
+
+        var resp = await httpClient.PostAsJsonAsync($"{BaseUrl}/subscriptions", body, ct);
+        var content = await resp.Content.ReadAsStringAsync(ct);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            logger.LogError("Asaas: failed to create subscription. Status: {Status}, Body: {Body}",
+                resp.StatusCode, content);
+
+            var errorDescription = ExtractErrorDescription(content, "Erro ao criar assinatura recorrente.");
+            throw DomainException.Validation("ASAAS_SUBSCRIPTION_ERROR", errorDescription);
+        }
+
+        var subscription = JsonSerializer.Deserialize<JsonElement>(content);
+        return new SubscriptionResult(
+            subscription.GetProperty("id").GetString()!,
+            subscription.GetProperty("status").GetString()!);
+    }
+
+    public async Task UpdateSubscriptionCardAsync(string subscriptionId, string cardToken, CancellationToken ct = default)
+    {
+        var body = new { creditCardToken = cardToken };
+
+        var resp = await httpClient.PutAsJsonAsync($"{BaseUrl}/subscriptions/{subscriptionId}", body, ct);
+        var content = await resp.Content.ReadAsStringAsync(ct);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            logger.LogError("Asaas: failed to update subscription card. Status: {Status}, Body: {Body}",
+                resp.StatusCode, content);
+
+            var description = ExtractErrorDescription(content, "Erro ao atualizar cartão da assinatura.");
+            throw DomainException.Validation("ASAAS_SUBSCRIPTION_CARD_UPDATE_ERROR", description);
+        }
     }
 
     public async Task<CardTokenizationResult> TokenizeCardAsync(

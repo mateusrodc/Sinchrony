@@ -24,6 +24,10 @@ public class User
     public string? Specialties { get; private set; }
     public string? Cargo { get; private set; }
 
+    // Motivo do bloqueio quando Status == blocked. Distingue bloqueio automático por falha
+    // de pagamento recorrente ("payment_failed") de bloqueio manual do admin (null).
+    public string? BlockedReason { get; private set; }
+
     public string? Cep { get; private set; }
     public string? Logradouro { get; private set; }
     public string? Numero { get; private set; }
@@ -227,8 +231,20 @@ public class User
         ResponsibleStudentId = null;
         UpdatedAt = DateTime.UtcNow;
     }
-    public void Reactivate() { Status = StudentStatus.active; Active = true; UpdatedAt = DateTime.UtcNow; }
-    public void Block() { Status = StudentStatus.blocked; UpdatedAt = DateTime.UtcNow; }
+    public void Reactivate()
+    {
+        Status = StudentStatus.active;
+        Active = true;
+        BlockedReason = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Block(string? reason = null)
+    {
+        Status = StudentStatus.blocked;
+        BlockedReason = reason;
+        UpdatedAt = DateTime.UtcNow;
+    }
 
     private static string GenerateReferralCode(string name)
     {

@@ -39,6 +39,7 @@ public class ErpStudentsController(
         cpf = u.Cpf,
         phone = u.Phone,
         status = u.Status.ToString(),
+        blockedReason = u.BlockedReason,
         plan = derivedPlan ?? u.PlanName,
         credits = u.Credits,
         avatar = u.Avatar,

@@ -19,6 +19,10 @@ public class StudentPackage
     public string Source { get; private set; } = "purchase"; // "purchase" | "manual"
     public int CreditsGranted { get; private set; }
 
+    // Id da assinatura na Asaas quando este pacote foi originado de uma cobrança recorrente
+    // (Package.IsRecurring). Null para compras avulsas (PIX/cartão único).
+    public string? AsaasSubscriptionId { get; private set; }
+
     protected StudentPackage() { }
 
     public static StudentPackage Create(Guid studentId, Guid packageId, int validityDays)
@@ -67,5 +71,20 @@ public class StudentPackage
     public void ExtendValidity(int days)
     {
         EndDate = EndDate.AddDays(days);
+    }
+
+    public void SetAsaasSubscriptionId(string subscriptionId)
+    {
+        AsaasSubscriptionId = subscriptionId;
+    }
+
+    // Renova o ciclo de uma assinatura recorrente já confirmada pela Asaas: reinicia a
+    // vigência a partir de agora, sem recriar o registro (mesmo StudentPackage acompanha
+    // todos os ciclos pagos da mesma assinatura).
+    public void RenewCycle()
+    {
+        Status = StudentPackageStatus.active;
+        StartDate = DateTime.UtcNow;
+        EndDate = StartDate.AddDays((Package?.ValidityDays) ?? 30);
     }
 }

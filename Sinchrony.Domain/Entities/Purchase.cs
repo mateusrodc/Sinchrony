@@ -35,6 +35,11 @@ public class Purchase
         Status = "confirmed";
     }
 
+    public void Fail()
+    {
+        Status = "failed";
+    }
+
     public static Purchase CreatePending(Guid userId, Guid packageId, decimal amount,
     string paymentMethod, string? transactionId = null, Guid? couponId = null)
     => new()

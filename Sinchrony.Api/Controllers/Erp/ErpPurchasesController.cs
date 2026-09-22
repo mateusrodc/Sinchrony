@@ -18,7 +18,7 @@ public class ErpPurchasesController(
     IUnitContext unitContext) : ControllerBase
 {
     private const int MaxPageSize = 100;
-    private static readonly string[] ValidStatuses = ["pending", "confirmed"];
+    private static readonly string[] ValidStatuses = ["pending", "confirmed", "failed"];
     private static readonly string[] ValidPaymentMethods = ["pix", "card"];
 
     // Tela de acompanhamento (não é módulo financeiro): quem comprou o quê, quando e o status do pagamento.
@@ -48,7 +48,7 @@ public class ErpPurchasesController(
 
         var normalizedStatus = status?.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(normalizedStatus) && !ValidStatuses.Contains(normalizedStatus))
-            throw new DomainException("INVALID_STATUS", "Status deve ser 'pending' ou 'confirmed'.");
+            throw new DomainException("INVALID_STATUS", "Status deve ser 'pending', 'confirmed' ou 'failed'.");
 
         var normalizedMethod = paymentMethod?.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(normalizedMethod) && !ValidPaymentMethods.Contains(normalizedMethod))
@@ -84,6 +84,7 @@ public class ErpPurchasesController(
             paymentMethod = p.PaymentMethod,
             status = p.Status,
             transactionId = p.TransactionId,
+            isRecurring = p.Package?.IsRecurring ?? false,
             createdAt = p.CreatedAt
         });
 

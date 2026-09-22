@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.App;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Packages.Commands.UpdateSubscriptionCard;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -16,7 +18,8 @@ namespace Sinchrony.Api.Controllers.App;
 [ApiController]
 [Produces("application/json")]
 public class StudentPackageController(
-    IStudentPackageRepository studentPackageRepository, IPackageRepository packageRepository, IAuditService auditService) : ControllerBase
+    IStudentPackageRepository studentPackageRepository, IPackageRepository packageRepository,
+    IAuditService auditService, IMediator mediator) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? User.FindFirstValue("sub")!);
@@ -53,6 +56,24 @@ public class StudentPackageController(
         var sp = await studentPackageRepository.GetActiveByStudentAsync(UserId, ct);
         if (sp is null) return NotFound(new { message = "No active package." });
         return Ok(MapStudentPackage(sp));
+    }
+
+    public record UpdateSubscriptionCardRequest(Guid cardId);
+
+    // Aluno bloqueado por falha de pagamento (ou querendo trocar o cartão preventivamente)
+    // atualiza a forma de pagamento da própria assinatura recorrente. Não desbloqueia na hora —
+    // o desbloqueio acontece sozinho quando a Asaas confirmar a próxima cobrança (webhook).
+    [HttpPatch("students/me/subscription/card")]
+    public async Task<IActionResult> UpdateSubscriptionCard(
+        [FromBody] UpdateSubscriptionCardRequest req, CancellationToken ct)
+    {
+        await mediator.Send(new UpdateSubscriptionCardCommand(UserId, req.cardId), ct);
+
+        await auditService.LogAsync(
+            "subscription.card_updated", "User", UserId, UserId,
+            $"CardId: {req.cardId}", ct: ct);
+
+        return Ok(new { message = "Cartão da assinatura atualizado. A próxima cobrança usará o novo cartão." });
     }
 
     [HttpGet("api/students/{id}/packages")]

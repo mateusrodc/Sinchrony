@@ -10,4 +10,5 @@ public interface IStudentPackageRepository
     Task AddAsync(StudentPackage studentPackage, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
     Task<StudentPackage?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<StudentPackage?> GetByAsaasSubscriptionIdAsync(string subscriptionId, CancellationToken ct = default);
 }

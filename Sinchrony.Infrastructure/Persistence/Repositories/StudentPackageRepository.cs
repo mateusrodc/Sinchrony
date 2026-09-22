@@ -40,4 +40,11 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
         .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
         .Include(sp => sp.Allocations)
         .FirstOrDefaultAsync(sp => sp.Id == id, ct);
+
+    public async Task<StudentPackage?> GetByAsaasSubscriptionIdAsync(string subscriptionId, CancellationToken ct = default)
+        => await db.StudentPackages
+            .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Where(sp => sp.AsaasSubscriptionId == subscriptionId)
+            .OrderByDescending(sp => sp.PurchasedAt)
+            .FirstOrDefaultAsync(ct);
 }

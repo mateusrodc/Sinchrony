@@ -71,7 +71,7 @@ public class ErpPackagesController(
             req.benefitIds,
             req.allowsPix, req.allowsCard,
             req.allowsInstallments, req.maxInstallments,
-            req.isSingleClass), ct);
+            req.isSingleClass, req.isRecurring), ct);
 
 
         var unitId = req.unitId ?? unitContext.UnitId;
@@ -107,7 +107,7 @@ public class ErpPackagesController(
             req.benefitIds ?? [],
             req.allowsPix ?? true, req.allowsCard ?? true,
             req.allowsInstallments ?? true, req.maxInstallments,
-            req.isSingleClass), ct);
+            req.isSingleClass, req.isRecurring), ct);
 
         // Afeta preço/regras de compras futuras — sem rastro até este retrofit.
         await auditService.LogAsync("package.updated", "Package", id, AdminId, $"Name: {result.Name}", ct: ct);
@@ -161,7 +161,8 @@ public record CreatePackageRequest(
     bool? allowsCard = null,
     bool? allowsInstallments = null,
     int? maxInstallments = null,
-    bool? isSingleClass = null);
+    bool? isSingleClass = null,
+    bool? isRecurring = null);
 
 public record UpdatePackageRequest(
     string name, string? description, int credits, decimal price,
@@ -190,4 +191,5 @@ public record UpdatePackageRequest(
     bool? allowsCard = null,
     bool? allowsInstallments = null,
     int? maxInstallments = null,
-    bool? isSingleClass = null);
+    bool? isSingleClass = null,
+    bool? isRecurring = null);
