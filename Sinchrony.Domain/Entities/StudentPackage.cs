@@ -38,6 +38,10 @@ public class StudentPackage
     // Tentativas de cobrança do ciclo atual; zera ao confirmar ou ao trocar o cartão.
     public int RenewalAttempts { get; private set; }
     public DateTime? NextRenewalAttemptAt { get; private set; }
+    // O ciclo seguinte já foi cobrado com sucesso, mas o EndDate atual ainda não chegou — job
+    // cobra até 24h antes do vencimento (Termos 6.3: os créditos do ciclo atual só podem expirar
+    // quando ele de fato terminar, não quando a cobrança confirma). Zera em ChargeRenewed().
+    public bool RenewalPaidForCycle { get; private set; }
 
     // Estado de cobrança — preenchido quando AutoRenew == true (ou, no legado, quando
     // AsaasSubscriptionId != null). Mantido pelo RecurringRenewalService (job + webhook + sync).
@@ -172,6 +176,16 @@ public class StudentPackage
         EndDate = StartDate.AddDays((Package?.ValidityDays) ?? 30);
         RenewalAttempts = 0;
         NextRenewalAttemptAt = null;
+        RenewalPaidForCycle = false;
+    }
+
+    // A cobrança do próximo ciclo confirmou antes do EndDate atual chegar (caso normal — o job
+    // cobra até 24h antes do vencimento). Só marca que já está paga; a troca de créditos/cotas
+    // (Termos 6.3) espera o EndDate de verdade — ver StudentPackageLifecycleService.TurnoverAsync.
+    public void MarkRenewalPaidForCycle()
+    {
+        RenewalPaidForCycle = true;
+        LastSyncedAt = DateTime.UtcNow;
     }
 
     // Ciclo atual pago (renovação automática ou legado de assinatura Asaas). Limpa o problema em

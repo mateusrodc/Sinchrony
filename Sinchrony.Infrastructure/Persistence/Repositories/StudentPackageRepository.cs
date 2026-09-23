@@ -92,6 +92,8 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
         var windowStart = now.AddHours(24);
         return await db.StudentPackages
             .Where(sp => sp.AutoRenew && sp.Status == StudentPackageStatus.active)
+            // Ciclo seguinte já pago, só esperando o EndDate virar (Termos 6.3) — nada a cobrar.
+            .Where(sp => !sp.RenewalPaidForCycle)
             .Where(sp =>
                 (sp.PaymentStatus != SubscriptionPaymentStatus.overdue
                     && ((sp.NextRenewalAttemptAt == null && sp.EndDate <= windowStart)

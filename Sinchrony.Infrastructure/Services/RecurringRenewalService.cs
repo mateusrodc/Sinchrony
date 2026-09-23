@@ -18,12 +18,12 @@ public class RecurringRenewalService(
     IPurchaseRepository purchaseRepository,
     ICardRepository cardRepository,
     IUserRepository userRepository,
-    ICreditTransactionRepository creditTransactionRepository,
     IAsaasService asaasService,
     ISettingsRepository settingsRepository,
     IEmailService emailService,
     IAuditService auditService,
     SubscriptionOverdueService subscriptionOverdueService,
+    StudentPackageLifecycleService studentPackageLifecycleService,
     ILogger<RecurringRenewalService> logger)
 {
     public Task<List<Guid>> ListDueAsync(CancellationToken ct) =>
@@ -168,20 +168,28 @@ public class RecurringRenewalService(
 
     private async Task ApplyRenewalSuccessAsync(StudentPackage sp, User user, Purchase purchase, CancellationToken ct)
     {
-        var credits = sp.Package?.GetCreditsToGrant() ?? 0;
-        if (credits > 0)
+        var now = DateTime.UtcNow;
+
+        // Termos 6.3: créditos do ciclo anterior não acumulam pro seguinte. A cobrança acontece
+        // até 24h antes do EndDate, então a troca de créditos/cotas só pode acontecer quando o
+        // ciclo pago de fato termina — senão o aluno perderia o resto do ciclo que já pagou.
+        bool turnedOverNow;
+        if (now >= sp.EndDate)
         {
-            user.AddCredits(credits);
-            var creditTx = CreditTransaction.Create(
-                user.Id, credits, user.Credits,
-                $"Recurring renewal confirmed: {purchase.TransactionId}",
-                "purchase", purchase.Id);
-            await creditTransactionRepository.AddAsync(creditTx, ct);
-            await creditTransactionRepository.SaveAsync(ct);
+            // Confirmado depois do vencimento (retentativa, regularização de overdue, antifraude
+            // demorado) — a virada acontece agora, não espera o job de expiração.
+            await studentPackageLifecycleService.TurnoverAsync(sp, user, now, ct);
+            turnedOverNow = true;
+        }
+        else
+        {
+            // Caso normal — só registra que o ciclo seguinte já está pago. A virada de créditos/
+            // cotas acontece no EndDate de verdade (PackageExpirationService, a cada minuto).
+            sp.MarkRenewalPaidForCycle();
+            turnedOverNow = false;
         }
 
-        sp.ChargeRenewed();
-        sp.MarkUpToDate(DateTime.UtcNow, purchase.Amount);
+        sp.MarkUpToDate(now, purchase.Amount);
 
         var wasBlockedForPayment = user.Status == StudentStatus.blocked && user.BlockedReason == "payment_failed";
         if (wasBlockedForPayment)
@@ -192,10 +200,12 @@ public class RecurringRenewalService(
 
         await auditService.LogAsync(
             "subscription.renewal_confirmed", "StudentPackage", sp.Id, user.Id,
-            $"PurchaseId: {purchase.Id}, Credits: {credits}, Reactivated: {wasBlockedForPayment}",
+            $"PurchaseId: {purchase.Id}, TurnedOverNow: {turnedOverNow}, Reactivated: {wasBlockedForPayment}",
             ct: ct);
 
-        logger.LogInformation("StudentPackage {Id}: renewal confirmed for user {UserId}.", sp.Id, user.Id);
+        logger.LogInformation(
+            "StudentPackage {Id}: renewal confirmed for user {UserId} (turned over now: {TurnedOverNow}).",
+            sp.Id, user.Id, turnedOverNow);
 
         if (wasBlockedForPayment && !string.IsNullOrWhiteSpace(user.Email))
         {

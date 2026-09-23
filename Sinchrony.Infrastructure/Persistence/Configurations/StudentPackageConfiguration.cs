@@ -24,6 +24,7 @@ namespace Sinchrony.Infrastructure.Persistence.Configurations
             builder.Property(sp => sp.LastFailureReason).HasMaxLength(500);
             builder.Property(sp => sp.AutoRenew).HasDefaultValue(false);
             builder.Property(sp => sp.RenewalAttempts).HasDefaultValue(0);
+            builder.Property(sp => sp.RenewalPaidForCycle).HasDefaultValue(false);
 
             builder.HasIndex(sp => sp.AsaasSubscriptionId);
 
