@@ -109,10 +109,24 @@ public class StudentPackageController(
         var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(UserId, ct)
             ?? throw DomainException.NotFound("Você não possui uma assinatura recorrente.");
 
-        var card = (await cardRepository.ListByUserAsync(UserId, ct)).FirstOrDefault(c => c.IsDefault);
+        var card = await ResolveRenewalCardAsync(sp, ct);
         var (payments, _) = await purchaseRepository.ListByStudentPackagePagedAsync(sp.Id, 1, 6, ct);
 
         return Ok(new { data = MapSubscription(sp, card, payments) });
+    }
+
+    // O cartão exibido tem que ser o que de fato é cobrado (RenewalCardId) — só cai pro padrão
+    // do aluno quando a assinatura ainda não tem um definido.
+    private async Task<Domain.Entities.Card?> ResolveRenewalCardAsync(
+        Domain.Entities.StudentPackage sp, CancellationToken ct)
+    {
+        if (sp.RenewalCardId.HasValue)
+        {
+            var renewalCard = await cardRepository.GetByIdAsync(sp.RenewalCardId.Value, ct);
+            if (renewalCard is not null) return renewalCard;
+        }
+
+        return (await cardRepository.ListByUserAsync(sp.StudentId, ct)).FirstOrDefault(c => c.IsDefault);
     }
 
     [HttpGet("students/me/subscription/payments")]

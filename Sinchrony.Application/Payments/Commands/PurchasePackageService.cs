@@ -60,6 +60,13 @@ public class PurchasePackageService(
                         "Você já possui um pacote ativo.");
 
                 case "queue":
+                    // O ativo recorrente renova sozinho ~24h antes de vencer e nunca chega a
+                    // expirar — sem desligar a renovação aqui, o pacote na fila nunca assumiria
+                    // (o aluno pagaria pelo novo e continuaria sendo cobrado pelo antigo).
+                    // Termina no EndDate normalmente, como qualquer cancelamento de renovação.
+                    if (active.AutoRenew)
+                        active.CancelRenewal();
+
                     var queued = StudentPackage.CreateQueued(studentId, package.Id, package.ValidityDays);
                     queued.SetSource(source, 0); // queued não credita ainda
                     await studentPackageRepository.AddAsync(queued, ct);

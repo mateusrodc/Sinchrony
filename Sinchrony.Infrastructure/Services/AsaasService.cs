@@ -188,11 +188,11 @@ public class AsaasService(
             throw DomainException.Validation("ASAAS_PAYMENT_FETCH_ERROR", description);
         }
 
+        // payment.description é só o texto que o Sinchrony mesmo mandou ao criar a cobrança
+        // ("4Sinchrony - X (renovação)") — a Asaas não devolve um motivo de recusa dedicado
+        // aqui. Usar a description como motivo seria enganoso, melhor null.
         var payment = JsonSerializer.Deserialize<JsonElement>(content);
-        var failureReason = payment.TryGetProperty("description", out var descEl)
-            ? descEl.GetString() : null;
-
-        return new PaymentStatusResult(payment.GetProperty("status").GetString()!, failureReason);
+        return new PaymentStatusResult(payment.GetProperty("status").GetString()!, null);
     }
 
     public async Task UpdateSubscriptionCardAsync(string subscriptionId, string cardToken, CancellationToken ct = default)

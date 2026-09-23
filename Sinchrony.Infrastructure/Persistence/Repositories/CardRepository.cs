@@ -20,6 +20,9 @@ public class CardRepository(ApplicationDbContext db) : ICardRepository
             .Where(c => userIds.Contains(c.UserId) && c.IsDefault)
             .ToListAsync(ct);
 
+    public async Task<IEnumerable<Card>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        => await db.Cards.Where(c => ids.Contains(c.Id)).ToListAsync(ct);
+
     public async Task<bool> ExistsByTokenAsync(Guid userId, string token, CancellationToken ct = default)
         => await db.Cards.AnyAsync(c => c.UserId == userId && c.Token == token, ct);
 

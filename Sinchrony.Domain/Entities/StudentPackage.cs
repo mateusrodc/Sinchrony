@@ -131,12 +131,17 @@ public class StudentPackage
     }
 
     // Troca do cartão usado nas renovações. Se o pacote estava em retentativa/vencido, sinaliza
-    // pro job tentar cobrar de novo já no próximo tick, em vez de esperar o prazo normal.
+    // pro job tentar cobrar de novo já no próximo tick (em vez de esperar o prazo normal) com um
+    // ciclo de tentativas limpo — o problema anterior era do cartão antigo.
     public void SetRenewalCard(Guid cardId)
     {
         RenewalCardId = cardId;
         if (PaymentStatus is SubscriptionPaymentStatus.retrying or SubscriptionPaymentStatus.overdue)
+        {
+            RenewalAttempts = 0;
+            ProblemSince = null;
             NextRenewalAttemptAt = DateTime.UtcNow;
+        }
     }
 
     // Legado (assinatura Asaas): reinicia a vigência a partir de agora. Não usar pro modelo
@@ -150,12 +155,21 @@ public class StudentPackage
 
     // Renovação cobrada com sucesso: o próximo ciclo começa exatamente onde o anterior terminou
     // (não em "agora") — um pacote de 90 dias continua valendo 90 dias por ciclo, mesmo que o
-    // job só tenha conseguido cobrar horas depois do vencimento.
+    // job só tenha conseguido cobrar horas depois do vencimento. Reativa o Status: uma renovação
+    // que ficou "pending" (antifraude) pode confirmar depois do pacote já ter expirado pela
+    // varredura normal — sem isso o aluno pagava e ficava sem pacote mesmo assim.
+    //
+    // Exceção: se o EndDate anterior já ficou muito pra trás (aluno regularizou semanas depois
+    // de overdue), encadear a partir dele geraria um EndDate novo ainda no passado — o
+    // PackageExpirationService expiraria o pacote no tick seguinte e zeraria os créditos que
+    // acabou de pagar. Nesse caso o ciclo novo começa agora mesmo, cheio.
     public void ChargeRenewed()
     {
         var previousEnd = EndDate;
-        StartDate = previousEnd;
-        EndDate = previousEnd.AddDays((Package?.ValidityDays) ?? 30);
+        var now = DateTime.UtcNow;
+        Status = StudentPackageStatus.active;
+        StartDate = previousEnd > now ? previousEnd : now;
+        EndDate = StartDate.AddDays((Package?.ValidityDays) ?? 30);
         RenewalAttempts = 0;
         NextRenewalAttemptAt = null;
     }
@@ -200,10 +214,25 @@ public class StudentPackage
     }
 
     // As tentativas de renovação se esgotaram (ou, no legado, a Asaas desistiu de reprocessar) —
-    // cobrança vencida de fato.
+    // cobrança vencida de fato. Zera NextRenewalAttemptAt: só SetRenewalCard() volta a preenchê-lo
+    // — sem isso, o valor deixado por RecordRenewalFailure (ProblemSince + 3 dias) já está no
+    // passado assim que essa mesma tentativa esgota, e o job cobraria de novo a cada tick pra
+    // sempre (o pacote overdue nunca expira sozinho).
     public void MarkOverdue()
     {
         PaymentStatus = SubscriptionPaymentStatus.overdue;
+        NextRenewalAttemptAt = null;
+        LastSyncedAt = DateTime.UtcNow;
+    }
+
+    // Uma tentativa disparada pela troca de cartão num pacote já overdue também falhou — mantém
+    // overdue sem reiniciar as 3 tentativas nem gerar outro alerta (o aluno já está bloqueado e
+    // os admins já foram avisados). Só uma cobrança confirmada tira o pacote desse estado.
+    public void KeepOverdueAfterRetryFailure(string? failureReason)
+    {
+        PaymentStatus = SubscriptionPaymentStatus.overdue;
+        LastFailureReason = failureReason;
+        NextRenewalAttemptAt = null;
         LastSyncedAt = DateTime.UtcNow;
     }
 }

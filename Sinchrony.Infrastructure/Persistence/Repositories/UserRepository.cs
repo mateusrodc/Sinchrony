@@ -61,9 +61,12 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
         if (!string.IsNullOrEmpty(paymentStatus)
             && Enum.TryParse<Domain.Entities.SubscriptionPaymentStatus>(paymentStatus, out var psFilter))
         {
+            // Comparar PaymentStatus == psFilter já garante que só pacotes recorrentes (o campo é
+            // preenchido uma vez em EnableAutoRenew e nunca volta a null) entram no filtro — não
+            // precisa (nem devia) checar AsaasSubscriptionId, que é legado e fica null em toda
+            // contratação nova.
             query = query.Where(u => db.StudentPackages.Any(sp =>
                 sp.StudentId == u.Id &&
-                sp.AsaasSubscriptionId != null &&
                 sp.Status != Domain.Entities.StudentPackageStatus.cancelled &&
                 sp.PaymentStatus == psFilter));
         }

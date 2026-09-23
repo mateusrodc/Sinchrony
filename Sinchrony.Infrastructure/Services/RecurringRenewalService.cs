@@ -39,6 +39,12 @@ public class RecurringRenewalService(
         if (sp is null || !sp.AutoRenew || sp.Status != StudentPackageStatus.active)
             return;
 
+        // Segunda trava contra cobrança repetida, além da seleção em ListDueForRenewalAsync: se
+        // já existe uma retentativa agendada pro futuro, não cobra agora mesmo que alguém chame
+        // isso diretamente (ex.: /sync chamando ProcessRenewalAsync fora de hora).
+        if (sp.NextRenewalAttemptAt is { } nextAttempt && nextAttempt > DateTime.UtcNow)
+            return;
+
         // Já existe uma renovação em andamento (pending) ou confirmada pra este ciclo — evita
         // cobrar duas vezes (o job pode rodar de novo antes do webhook da tentativa anterior).
         if (await purchaseRepository.HasActiveRenewalForCycleAsync(sp.Id, sp.StartDate, ct))
@@ -208,6 +214,23 @@ public class RecurringRenewalService(
     private async Task ApplyRenewalFailureAsync(
         StudentPackage sp, User user, Purchase? purchase, string? failureReason, CancellationToken ct)
     {
+        // Já estava overdue (bloqueado, admins já alertados) — essa tentativa só existe porque o
+        // aluno trocou o cartão. Falhando de novo, mantém overdue sem reiniciar as 3 tentativas
+        // nem gerar um segundo alerta; só uma cobrança confirmada tira daqui.
+        if (sp.PaymentStatus == SubscriptionPaymentStatus.overdue)
+        {
+            sp.KeepOverdueAfterRetryFailure(failureReason);
+            await studentPackageRepository.SaveAsync(ct);
+
+            await auditService.LogAsync(
+                "subscription.renewal_retry_failed", "StudentPackage", sp.Id, user.Id,
+                $"Reason: {failureReason}", ct: ct);
+
+            logger.LogInformation(
+                "StudentPackage {Id}: retry after card update failed, staying overdue.", sp.Id);
+            return;
+        }
+
         sp.RecordRenewalFailure(failureReason);
         await studentPackageRepository.SaveAsync(ct);
 

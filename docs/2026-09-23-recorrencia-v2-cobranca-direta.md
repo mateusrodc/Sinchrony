@@ -1,7 +1,7 @@
 # Recorrência V2 — renovação automática cobrada pelo Sinchrony (sem assinatura Asaas)
 
-Data: 23/09/2026 · Escopo: back-end (API) + banco · Status: implementado localmente, ainda não
-commitado nem publicado
+Data: 23/09/2026 · Escopo: back-end (API) + banco · Status: commitado (`f4ad6f8`), corrigido após
+revisão (`REVISAO_RECORRENCIA_V2_BACKEND.md`) — ver seção 9. Ainda não publicado.
 
 ## 1. Resumo
 
@@ -130,3 +130,96 @@ mais valiosos: `ChargeRenewed()` encadeando a partir do `EndDate` antigo (não d
   redundantes à Asaas em deploys multi-instância.
 - **Créditos de renovação** usam `Package.GetCreditsToGrant()` — mesma regra já usada na
   contratação e no legado, considerando família/dependentes.
+
+## 9. Correções pós-revisão (`REVISAO_RECORRENCIA_V2_BACKEND.md`, mesmo dia)
+
+A revisão do commit `f4ad6f8` achou dois bugs que bloqueavam a publicação (cobrança repetida) e
+dois pontos menores. Todos corrigidos:
+
+1. **🔴 Retentativas ignoravam o intervalo de +1/+3 dias.**
+   `ListDueForRenewalAsync` usava `EndDate <= windowStart || NextRenewalAttemptAt <= now` — o
+   `EndDate` sozinho já bastava pra selecionar de novo no tick seguinte, ignorando o
+   `NextRenewalAttemptAt` agendado. Corrigido: quando `NextRenewalAttemptAt` está preenchido, só
+   ele decide (`StudentPackageRepository.ListDueForRenewalAsync`).
+2. **🔴 Depois de `overdue`, cobrança a cada 5 minutos pra sempre.**
+   `MarkOverdue()` não zerava `NextRenewalAttemptAt` (deixado em `ProblemSince + 3 dias` pela
+   última `RecordRenewalFailure`, já no passado assim que a 3ª tentativa esgota) — o pacote
+   `overdue` nunca expira sozinho, então voltava a ser selecionado todo tick. Corrigido:
+   `MarkOverdue()` zera `NextRenewalAttemptAt`; só `SetRenewalCard()` volta a preenchê-lo (e agora
+   também zera `RenewalAttempts`/`ProblemSince`, como o comentário do campo já dizia que
+   acontecia). Uma retentativa disparada pela troca de cartão num pacote já `overdue` que também
+   falha usa o novo `KeepOverdueAfterRetryFailure()` — mantém `overdue` sem reiniciar as 3
+   tentativas nem gerar um segundo alerta (`RecurringRenewalService.ApplyRenewalFailureAsync`).
+3. **🟡 Renovação confirmada num pacote que já expirou ficava sem efeito.**
+   A expiração só poupava `retrying`/`overdue`; uma renovação `pending` (antifraude) podia passar
+   de 24h, o pacote `up_to_date` vencia e expirava (créditos zerados, `Status = expired`) antes da
+   confirmação chegar — e nada devolvia `Status` pra `active` depois. Corrigido nos dois lados:
+   `StudentPackageLifecycleService` agora também poupa pacote com `Purchase(Kind=renewal,
+   Status=pending)` em aberto; `ChargeRenewed()` reativa `Status = active` (rede de segurança
+   caso a expiração aconteça mesmo assim).
+4. **🟡 Menores:** `SetRenewalCard()` corrigido pra bater com o próprio comentário (zera
+   `RenewalAttempts`); `CancelSubscriptionCommand` agora reativa o aluno se ele estava bloqueado
+   por `payment_failed` ao desistir da renovação (o pacote segue até o `EndDate` normalmente,
+   não faz sentido continuar bloqueado por um pagamento que ele já decidiu não tentar de novo).
+
+Ainda sem testes automatizados pra esse fluxo nesta rodada — os quatro critérios da revisão (§5)
+foram conferidos manualmente contra o código corrigido. Testes adicionados na rodada seguinte
+(seção 10).
+
+## 10. Segunda rodada — `DEMANDA_CORRECOES_RECORRENCIA_V2_BACKEND.md` (revisão de código do
+commit `f4ad6f8`, sem compilar/rodar — mesmo commit da seção 9, achou mais bugs que a primeira
+revisão não pegou)
+
+1. **🔴 CRÍTICO — confirmado, era o mesmo bug do item 1 da seção 9** (já corrigido antes desta
+   revisão chegar). A correção sugerida aqui é equivalente à já aplicada; adicionei também a
+   trava defensiva sugerida em `RecurringRenewalService.ProcessRenewalAsync` (sai se
+   `NextRenewalAttemptAt` ainda está no futuro), como segunda linha de defesa.
+2. **🟠 ALTO — pacote "na fila" atrás de um recorrente nunca ativava.** O ativo recorrente renova
+   sozinho ~24h antes de vencer, então nunca expira — o pacote `queued` atrás dele (estratégia
+   `queue`) ficava esperando pra sempre. Corrigido: `PurchasePackageService`, estratégia `queue`,
+   chama `active.CancelRenewal()` quando o ativo é recorrente — ele termina no `EndDate` normal e
+   o da fila assume.
+3. **🟡 MÉDIO — assinatura cancelada sumia de todas as telas.** `CancelRenewal()` põe
+   `AutoRenew = false`, e as queries que decidiam "isso é recorrente" usavam
+   `AutoRenew || AsaasSubscriptionId != null` — depois de cancelar, o pacote desaparecia de
+   `GET /api/subscriptions` (card "Canceladas" sempre 0), e `GET /students/me/subscription`
+   passava a dar 404 (aluno perdia o próprio histórico). Corrigido em todo lugar que fazia essa
+   pergunta (`StudentPackageRepository.GetSubscriptionByStudentAsync`/
+   `ListSubscriptionsPagedAsync`/`ListSubscriptionsByStudentIdsAsync`, e um caso a mais que a
+   revisão não citou — `UserRepository.ListStudentsPagedAsync`'s filtro `paymentStatus`, que
+   também só olhava `AsaasSubscriptionId`): o critério agora é `PaymentStatus != null` (setado
+   uma vez em `EnableAutoRenew`, nunca mais volta a null). `AutoRenew` continua sendo só o que
+   decide se o job cobra. `GetSubscriptionByStudentAsync` ganhou um terceiro fallback: sem pacote
+   ativo nem na fila, devolve o último recorrente (cancelado/expirado) pro aluno continuar vendo
+   o histórico.
+4. **🟡 MÉDIO — regularizar muito depois de vencido cobrava cheio e entregava pouco/nada.**
+   `ChargeRenewed()` sempre encadeava do `EndDate` antigo; se o ciclo já tinha passado inteiro, o
+   `EndDate` novo nascia no passado e a expiração zerava os créditos recém-pagos no tick
+   seguinte. Corrigido: `StartDate = max(EndDate antigo, agora)`.
+5. **🟡 MÉDIO — lista de alunos podia dar 500.** `ErpStudentsController.MapStudentsWithPaymentStatusAsync`
+   fazia `ToDictionary(sp => sp.StudentId, ...)`; um aluno com dois `StudentPackage` recorrentes
+   não cancelados (cenário real depois da correção do item 2 — ativo com renovação já desligada +
+   um novo na fila) gerava chave duplicada. Corrigido: agrupa por aluno e fica com o mais
+   relevante (`active` > `queued` > mais recente).
+6. **🔵 BAIXO:**
+   - Cartão exibido nas respostas de status agora é o `RenewalCardId` (o que de fato é cobrado),
+     caindo pro cartão padrão só quando não há um definido — `ErpSubscriptionsController` e
+     `StudentPackageController` (novo `ICardRepository.ListByIdsAsync` pro batch da listagem).
+   - `lastFailureReason` não usa mais `payment.description` (é só o texto que o próprio
+     Sinchrony manda ao criar a cobrança, não um motivo real de recusa) — fica `null` quando a
+     Asaas não dá um motivo de verdade, em vez de um texto enganoso (`WebhooksController`,
+     `AsaasService.GetPaymentAsync`).
+   - **Não corrigido nesta rodada:** duplicar cobrança se o `POST /payments` der timeout antes de
+     gravar a `Purchase` (a sugestão de usar `externalReference = Purchase.Id` exigiria uma nova
+     consulta à Asaas por referência externa, não só por id de pagamento — escopo maior, fica
+     pra uma rodada própria).
+   - **Testes adicionados**: `StudentPackageRenewalTests.cs` (domínio —
+     `RecordRenewalFailure`/`ChargeRenewed`/`MarkOverdue`/`SetRenewalCard`/`KeepOverdueAfterRetryFailure`)
+     e `StudentPackageRepositoryRenewalTests.cs` (a query `ListDueForRenewalAsync` de verdade,
+     contra EF Core InMemory) — cobrem exatamente os dois bugs críticos das duas revisões.
+
+**Item 7 do documento (decisão pendente, não é bug):** alunos que já contrataram plano recorrente
+antes de hoje compraram por `/payments/card` como avulso, então `AutoRenew = false` e não vão
+renovar. Precisa decidir com a cliente se esses pacotes migram pra `AutoRenew = true` (cartão
+padrão do aluno) ou se os alunos recontratam pelo App novo — não implementado, é decisão de
+produto, não bug de código.

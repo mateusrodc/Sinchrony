@@ -99,14 +99,29 @@ public class ErpStudentsController(
         }
     }
 
-    // Batched — evita uma query de StudentPackage por aluno da página.
+    // Batched — evita uma query de StudentPackage por aluno da página. Um aluno pode ter mais de
+    // um StudentPackage recorrente não cancelado (ex.: ativo com renovação já desligada + um
+    // novo na fila atrás dele) — agrupa e fica só com o mais relevante (active > queued > mais
+    // recente) pra não quebrar em chave duplicada.
     private async Task<IEnumerable<object>> MapStudentsWithPaymentStatusAsync(
         IEnumerable<User> items, CancellationToken ct)
     {
         var list = items.ToList();
         var subs = await studentPackageRepository.ListSubscriptionsByStudentIdsAsync(
             list.Select(u => u.Id), ct);
-        var byStudent = subs.ToDictionary(sp => sp.StudentId, sp => sp.PaymentStatus?.ToString());
+
+        var byStudent = subs
+            .GroupBy(sp => sp.StudentId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(sp => sp.Status switch
+                    {
+                        StudentPackageStatus.active => 0,
+                        StudentPackageStatus.queued => 1,
+                        _ => 2
+                    })
+                    .ThenByDescending(sp => sp.PurchasedAt)
+                    .First().PaymentStatus?.ToString());
 
         return list.Select(u => MapStudent(u, paymentStatus: byStudent.GetValueOrDefault(u.Id)));
     }

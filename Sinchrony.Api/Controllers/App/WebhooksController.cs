@@ -89,10 +89,10 @@ public class WebhooksController(
         var paymentValue = paymentEl.TryGetProperty("value", out var valueEl) && valueEl.TryGetDecimal(out var v)
             ? v : 0m;
 
-        // A Asaas não expõe um campo dedicado de "motivo da recusa" nesses eventos — usa a
-        // description do pagamento como melhor aproximação disponível.
-        var failureReason = paymentEl.TryGetProperty("description", out var descEl)
-            ? descEl.GetString() : null;
+        // A Asaas não expõe um campo dedicado de "motivo da recusa" nesses eventos.
+        // payment.description é só o texto que o Sinchrony mesmo mandou ao criar a cobrança
+        // ("4Sinchrony - X (renovação)") — usá-lo como motivo seria enganoso, melhor null.
+        string? failureReason = null;
 
         logger.LogInformation("Asaas webhook processing transactionId: {Id}", transactionId);
 

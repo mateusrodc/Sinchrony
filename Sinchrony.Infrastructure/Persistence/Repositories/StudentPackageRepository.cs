@@ -48,6 +48,11 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
             .OrderByDescending(sp => sp.PurchasedAt)
             .FirstOrDefaultAsync(ct);
 
+    // "É/foi recorrente" é julgado por PaymentStatus != null (setado uma vez em EnableAutoRenew e
+    // nunca voltado a null depois — CancelRenewal/Cancel só o levam pra "cancelled") em vez de
+    // AutoRenew sozinho: AutoRenew vira false ao cancelar a renovação, e se ele fosse o critério
+    // o pacote sumiria de todas as telas de status junto (inclusive do próprio histórico do
+    // aluno) assim que ele cancelasse. AutoRenew continua sendo o que decide se o job cobra.
     public async Task<StudentPackage?> GetSubscriptionByStudentAsync(Guid studentId, CancellationToken ct = default)
     {
         var active = await db.StudentPackages
@@ -55,20 +60,33 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
             .FirstOrDefaultAsync(sp =>
                 sp.StudentId == studentId &&
                 sp.Status == StudentPackageStatus.active &&
-                (sp.AutoRenew || sp.AsaasSubscriptionId != null), ct);
+                (sp.PaymentStatus != null || sp.AsaasSubscriptionId != null), ct);
         if (active is not null) return active;
 
-        return await db.StudentPackages
+        var queued = await db.StudentPackages
             .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
             .FirstOrDefaultAsync(sp =>
                 sp.StudentId == studentId &&
                 sp.Status == StudentPackageStatus.queued &&
-                (sp.AutoRenew || sp.AsaasSubscriptionId != null), ct);
+                (sp.PaymentStatus != null || sp.AsaasSubscriptionId != null), ct);
+        if (queued is not null) return queued;
+
+        // Sem pacote ativo nem na fila (cancelado ou expirado) — ainda assim devolve o último
+        // recorrente, pra o aluno continuar vendo o histórico de cobranças depois de cancelar.
+        return await db.StudentPackages
+            .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Where(sp => sp.StudentId == studentId &&
+                (sp.PaymentStatus != null || sp.AsaasSubscriptionId != null))
+            .OrderByDescending(sp => sp.PurchasedAt)
+            .FirstOrDefaultAsync(ct);
     }
 
-    // Elegível pro job cobrar agora: dentro das 24h antes do vencimento (gatilho automático,
-    // nunca pra quem já está overdue) ou com um NextRenewalAttemptAt explícito no passado
-    // (retentativa agendada, ou o aluno acabou de trocar o cartão — inclusive se overdue).
+    // Elegível pro job cobrar agora. Quando NextRenewalAttemptAt está preenchido, só ele decide
+    // (é uma retentativa agendada, ou o aluno acabou de trocar o cartão) — sem essa exclusividade,
+    // uma retentativa agendada pra daqui a 1/3 dias seria ignorada e o pacote seria selecionado de
+    // novo no próximo tick só por estar dentro da janela de 24h do vencimento. Sem
+    // NextRenewalAttemptAt, o gatilho é só a janela de 24h — e nunca pra quem já está overdue
+    // (só volta a ser tentado explicitamente via troca de cartão).
     public async Task<List<Guid>> ListDueForRenewalAsync(DateTime now, CancellationToken ct = default)
     {
         var windowStart = now.AddHours(24);
@@ -76,7 +94,8 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
             .Where(sp => sp.AutoRenew && sp.Status == StudentPackageStatus.active)
             .Where(sp =>
                 (sp.PaymentStatus != SubscriptionPaymentStatus.overdue
-                    && (sp.EndDate <= windowStart || sp.NextRenewalAttemptAt <= now))
+                    && ((sp.NextRenewalAttemptAt == null && sp.EndDate <= windowStart)
+                        || sp.NextRenewalAttemptAt <= now))
                 || (sp.PaymentStatus == SubscriptionPaymentStatus.overdue && sp.NextRenewalAttemptAt <= now))
             .Select(sp => sp.Id)
             .ToListAsync(ct);
@@ -86,7 +105,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
         SubscriptionListFilter filter, int page, int pageSize, CancellationToken ct = default)
     {
         var baseQuery = db.StudentPackages.AsNoTracking()
-            .Where(sp => sp.AutoRenew || sp.AsaasSubscriptionId != null);
+            .Where(sp => sp.PaymentStatus != null || sp.AsaasSubscriptionId != null);
 
         if (filter.UnitId.HasValue)
             baseQuery = baseQuery.Where(sp => sp.Student!.UnitId == filter.UnitId.Value);
@@ -160,7 +179,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
         IEnumerable<Guid> studentIds, CancellationToken ct = default)
         => await db.StudentPackages
             .Where(sp => studentIds.Contains(sp.StudentId)
-                && (sp.AutoRenew || sp.AsaasSubscriptionId != null)
+                && (sp.PaymentStatus != null || sp.AsaasSubscriptionId != null)
                 && sp.Status != StudentPackageStatus.cancelled)
             .ToListAsync(ct);
 }

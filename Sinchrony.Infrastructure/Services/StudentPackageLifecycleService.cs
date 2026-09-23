@@ -30,6 +30,11 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
             .Where(sp => (!sp.AutoRenew && sp.AsaasSubscriptionId == null)
                 || (sp.PaymentStatus != SubscriptionPaymentStatus.retrying
                     && sp.PaymentStatus != SubscriptionPaymentStatus.overdue))
+            // Uma renovação "pending" (antifraude) pode levar mais de 24h pra confirmar — não
+            // expira um pacote com cobrança em andamento, senão o aluno paga e fica sem pacote
+            // mesmo assim (ChargeRenewed reativa o Status, mas só quando a confirmação chegar).
+            .Where(sp => !db.Purchases.Any(p =>
+                p.StudentPackageId == sp.Id && p.Kind == "renewal" && p.Status == "pending"))
             .Select(sp => sp.Id)
             .ToListAsync(ct);
 
@@ -45,7 +50,9 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
                 && x.EndDate < now
                 && ((!x.AutoRenew && x.AsaasSubscriptionId == null)
                     || (x.PaymentStatus != SubscriptionPaymentStatus.retrying
-                        && x.PaymentStatus != SubscriptionPaymentStatus.overdue)), ct);
+                        && x.PaymentStatus != SubscriptionPaymentStatus.overdue))
+                && !db.Purchases.Any(p =>
+                    p.StudentPackageId == x.Id && p.Kind == "renewal" && p.Status == "pending"), ct);
         if (sp is null) return false;
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == sp.StudentId, ct);

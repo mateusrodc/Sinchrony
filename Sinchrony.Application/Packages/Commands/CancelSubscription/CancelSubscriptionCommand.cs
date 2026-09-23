@@ -1,4 +1,5 @@
 using MediatR;
+using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -13,6 +14,7 @@ public record CancelSubscriptionCommand(Guid UserId) : IRequest<Unit>;
 
 public class CancelSubscriptionCommandHandler(
     IStudentPackageRepository studentPackageRepository,
+    IUserRepository userRepository,
     IAsaasService asaasService) : IRequestHandler<CancelSubscriptionCommand, Unit>
 {
     public async Task<Unit> Handle(CancelSubscriptionCommand request, CancellationToken ct)
@@ -28,6 +30,16 @@ public class CancelSubscriptionCommandHandler(
 
         studentPackage.CancelRenewal();
         await studentPackageRepository.SaveAsync(ct);
+
+        // Desistir da renovação não é "resolver o pagamento", mas manter o aluno bloqueado por
+        // um pacote que ele já decidiu não renovar não faz sentido — o pacote segue válido até o
+        // EndDate e expira normalmente dali pra frente.
+        var user = await userRepository.GetByIdAsync(request.UserId, ct);
+        if (user is { Status: StudentStatus.blocked, BlockedReason: "payment_failed" })
+        {
+            user.Reactivate();
+            await userRepository.SaveAsync(ct);
+        }
 
         return Unit.Value;
     }

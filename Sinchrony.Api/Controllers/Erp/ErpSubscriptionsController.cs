@@ -50,12 +50,21 @@ public class ErpSubscriptionsController(
         var filter = new SubscriptionListFilter(status, search, effectiveUnitId, dueFrom, dueTo);
         var result = await studentPackageRepository.ListSubscriptionsPagedAsync(filter, page, pageSize, ct);
 
+        // O cartão exibido tem que ser o que de fato é cobrado (RenewalCardId) — só cai pro
+        // padrão do aluno quando a assinatura ainda não tem um definido.
         var studentIds = result.Items.Select(sp => sp.StudentId).Distinct().ToList();
+        var renewalCardIds = result.Items
+            .Where(sp => sp.RenewalCardId.HasValue)
+            .Select(sp => sp.RenewalCardId!.Value).Distinct().ToList();
+        var renewalCards = (await cardRepository.ListByIdsAsync(renewalCardIds, ct)).ToDictionary(c => c.Id);
         var defaultCards = (await cardRepository.ListDefaultByUserIdsAsync(studentIds, ct))
             .ToDictionary(c => c.UserId);
 
-        var data = result.Items.Select(sp =>
-            MapListItem(sp, defaultCards.GetValueOrDefault(sp.StudentId)));
+        Card? ResolveCard(StudentPackage sp) =>
+            (sp.RenewalCardId.HasValue ? renewalCards.GetValueOrDefault(sp.RenewalCardId.Value) : null)
+            ?? defaultCards.GetValueOrDefault(sp.StudentId);
+
+        var data = result.Items.Select(sp => MapListItem(sp, ResolveCard(sp)));
 
         var paged = PagedResult.Create(data, page, pageSize, result.Total);
         return Ok(new
@@ -85,7 +94,7 @@ public class ErpSubscriptionsController(
             && sp.Student?.UnitId != unitContext.UnitId)
             return Forbid();
 
-        var card = (await cardRepository.ListByUserAsync(id, ct)).FirstOrDefault(c => c.IsDefault);
+        var card = await ResolveRenewalCardAsync(sp, ct);
         var (payments, _) = await purchaseRepository.ListByStudentPackagePagedAsync(sp.Id, 1, 6, ct);
 
         return Ok(new { data = MapDetail(sp, card, payments) });
@@ -131,8 +140,21 @@ public class ErpSubscriptionsController(
         var sp = await studentPackageRepository.GetByIdAsync(studentPackageId, ct)
             ?? throw DomainException.NotFound("Pacote não encontrado.");
 
-        var card = (await cardRepository.ListByUserAsync(sp.StudentId, ct)).FirstOrDefault(c => c.IsDefault);
+        var card = await ResolveRenewalCardAsync(sp, ct);
         return Ok(new { data = MapListItem(sp, card) });
+    }
+
+    // O cartão exibido tem que ser o que de fato é cobrado (RenewalCardId) — só cai pro padrão
+    // do aluno quando a assinatura ainda não tem um definido.
+    private async Task<Card?> ResolveRenewalCardAsync(StudentPackage sp, CancellationToken ct)
+    {
+        if (sp.RenewalCardId.HasValue)
+        {
+            var renewalCard = await cardRepository.GetByIdAsync(sp.RenewalCardId.Value, ct);
+            if (renewalCard is not null) return renewalCard;
+        }
+
+        return (await cardRepository.ListByUserAsync(sp.StudentId, ct)).FirstOrDefault(c => c.IsDefault);
     }
 
     private static object MapListItem(StudentPackage sp, Card? card) => new
