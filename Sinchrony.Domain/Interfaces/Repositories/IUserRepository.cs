@@ -27,4 +27,7 @@ public interface IUserRepository
 
     // Destinatários do alerta de assinatura vencida (studio-wide, sem escopo de unidade).
     Task<IEnumerable<User>> ListAdminsAsync(CancellationToken ct = default);
+
+    // Batch por id — usado pra resolver nome de aluno sem N+1 (ex: GET /api/alerts).
+    Task<IEnumerable<User>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
 }

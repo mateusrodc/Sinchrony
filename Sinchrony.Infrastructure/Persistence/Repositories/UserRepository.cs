@@ -102,6 +102,9 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
             .Where(u => u.Role == Role.admin)
             .ToListAsync(ct);
 
+    public async Task<IEnumerable<User>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        => await db.Users.Where(u => ids.Contains(u.Id)).ToListAsync(ct);
+
     public async Task<User?> GetByCpfAsync(string cpf, CancellationToken ct = default)
     => await db.Users.FirstOrDefaultAsync(u => u.Cpf == cpf, ct);
 }

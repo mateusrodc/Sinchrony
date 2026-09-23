@@ -41,4 +41,7 @@ public interface IStudentPackageRepository
     // do ERP quando ela precisa mostrar o paymentStatus de cada um).
     Task<IEnumerable<StudentPackage>> ListSubscriptionsByStudentIdsAsync(
         IEnumerable<Guid> studentIds, CancellationToken ct = default);
+
+    // Batch por id, com Package — usado pra resolver packageName sem N+1 (ex: GET /api/alerts).
+    Task<IEnumerable<StudentPackage>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
 }

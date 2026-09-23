@@ -199,6 +199,20 @@ public class WebhooksController(
                         "StudentPackage {Id} activated for user {UserId}.",
                         queuedPackage.Id, purchase.UserId);
                 }
+                else if (activePackage.AutoRenew)
+                {
+                    // Pacote na fila atrás de um ativo recorrente: o ativo renova sozinho ~24h
+                    // antes de vencer e nunca chegaria a expirar — sem desligar a renovação aqui,
+                    // o aluno pagaria pelo novo pacote e continuaria sendo cobrado pelo antigo
+                    // pra sempre (mesmo ajuste já feito em PurchasePackageService pro caminho
+                    // síncrono; este é o caminho PIX/antifraude, confirmado só no webhook).
+                    // Termina no EndDate normalmente, como qualquer cancelamento de renovação.
+                    activePackage.CancelRenewal();
+                    logger.LogInformation(
+                        "StudentPackage {ActiveId} teve a renovação cancelada — pacote {QueuedId} " +
+                        "na fila vai assumir quando o ativo vencer (user {UserId}).",
+                        activePackage.Id, queuedPackage.Id, purchase.UserId);
+                }
             }
 
             await auditSvc.LogAsync(
