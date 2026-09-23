@@ -26,6 +26,7 @@ public class PurchasePackageCommandHandler(
     IDependentPackageAllocationRepository allocationRepository,
     IDependentRepository dependentRepository,
     ICreditTransactionRepository creditTransactionRepository,
+    ICardRepository cardRepository,
     IAsaasService asaasService,
     IAuditService auditService) : IRequestHandler<PurchasePackageCommand, StudentPackageResultDto>
 {
@@ -105,30 +106,16 @@ public class PurchasePackageCommandHandler(
             studentPackageRepository,
             allocationRepository,
             dependentRepository,
-            userRepository);
+            userRepository,
+            asaasService);
 
         string transactionId;
         StudentPackage? studentPackage;
         Purchase? purchase = null;
 
-        if (package.IsRecurring)
-        {
-            // Assinatura: a Asaas cobra e reprocessa sozinha, no ciclo dela. O primeiro
-            // pagamento (e cada renovação) chega de forma assíncrona via webhook
-            // (payment.subscription) — aqui só criamos a assinatura e deixamos o pacote
-            // na fila aguardando a primeira confirmação.
-            var subscription = await asaasService.CreateSubscriptionAsync(
-                customerId, request.CardToken!, request.Amount,
-                $"4Sinchrony - {package.Name}", ct);
+        Card? renewalCard = null;
 
-            transactionId = subscription.SubscriptionId;
-
-            studentPackage = StudentPackage.CreateQueued(
-                request.UserId, package.Id, package.ValidityDays);
-            studentPackage.SetAsaasSubscriptionId(subscription.SubscriptionId);
-            await studentPackageRepository.AddAsync(studentPackage, ct);
-        }
-        else if (request.PaymentMethod == "pix")
+        if (request.PaymentMethod == "pix")
         {
             if (string.IsNullOrEmpty(cpf))
                 throw DomainException.Validation("CPF_REQUIRED", "CPF é obrigatório para pagamento via PIX.");
@@ -152,13 +139,20 @@ public class PurchasePackageCommandHandler(
             if (string.IsNullOrEmpty(request.CardToken))
                 throw DomainException.Validation("CARD_TOKEN_REQUIRED", "Token do cartão é obrigatório.");
 
+            // Plano recorrente: a cobrança se repete a cada ciclo, nunca confia no "amount"
+            // enviado pelo App — sempre usa o preço real do pacote. Guarda o Card pelo token
+            // pra saber qual cartão usar nas renovações automáticas (RenewalCardId).
+            var amount = package.IsRecurring ? package.Price : request.Amount;
+            if (package.IsRecurring)
+                renewalCard = await cardRepository.GetByTokenAsync(request.UserId, request.CardToken, ct);
+
             var cardResult = await asaasService.ChargeCardAsync(
-                customerId, request.CardToken, request.Amount,
+                customerId, request.CardToken, amount,
                 $"4Sinchrony - {package.Name}", ct);
             transactionId = cardResult.TransactionId;
 
             purchase = Purchase.CreatePending(
-                user.Id, package.Id, request.Amount,
+                user.Id, package.Id, amount,
                 request.PaymentMethod, transactionId, coupon?.Id);
             await purchaseRepository.AddAsync(purchase, ct);
 
@@ -176,6 +170,9 @@ public class PurchasePackageCommandHandler(
                     request.UserId, package.Id, package.ValidityDays);
                 await studentPackageRepository.AddAsync(studentPackage, ct);
             }
+
+            if (package.IsRecurring)
+                studentPackage.EnableAutoRenew(renewalCard?.Id);
         }
         else
         {

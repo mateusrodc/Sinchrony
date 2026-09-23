@@ -27,4 +27,23 @@ public interface IPurchaseRepository
     Task SaveAsync(CancellationToken ct = default);
     Task<(IEnumerable<Purchase> Items, int Total)> ListByUserPagedAsync(
     Guid userId, int page, int pageSize, CancellationToken ct = default);
+
+    // Histórico de ciclos pagos de uma assinatura recorrente (payments[] da API de status).
+    Task<(IEnumerable<Purchase> Items, int Total)> ListByStudentPackagePagedAsync(
+    Guid studentPackageId, int page, int pageSize, CancellationToken ct = default);
+
+    // Já existe uma renovação (Kind=renewal) pending ou confirmed pro ciclo atual desse pacote?
+    // Evita cobrar duas vezes o mesmo ciclo (RecurringRenewalService.ProcessRenewalAsync).
+    Task<bool> HasActiveRenewalForCycleAsync(
+        Guid studentPackageId, DateTime cycleStart, CancellationToken ct = default);
+
+    // Renovações (Kind=renewal) ainda `pending` há mais de `olderThan` — o webhook de
+    // confirmação/recusa provavelmente se perdeu (RecurringRenewalJob reconcilia essas).
+    Task<IEnumerable<Purchase>> ListStalePendingRenewalsAsync(
+        DateTime olderThan, CancellationToken ct = default);
+
+    // A renovação pending mais recente desse pacote, se houver (POST /sync manual).
+    Task<Purchase?> GetPendingRenewalAsync(Guid studentPackageId, CancellationToken ct = default);
+
+    Task<Purchase?> GetByIdAsync(Guid id, CancellationToken ct = default);
 }

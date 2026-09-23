@@ -31,7 +31,7 @@ public class ErpStudentsController(
     IAuditService auditService,
     IUnitOfWork unitOfWork) : ControllerBase
 {
-    private static object MapStudent(User u, string? derivedPlan = null) => new
+    private static object MapStudent(User u, string? derivedPlan = null, string? paymentStatus = null) => new
     {
         id = u.Id,
         name = u.Name,
@@ -40,6 +40,7 @@ public class ErpStudentsController(
         phone = u.Phone,
         status = u.Status.ToString(),
         blockedReason = u.BlockedReason,
+        paymentStatus,
         plan = derivedPlan ?? u.PlanName,
         credits = u.Credits,
         avatar = u.Avatar,
@@ -62,25 +63,52 @@ public class ErpStudentsController(
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] string? status,
+        [FromQuery] string? paymentStatus,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
         if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
         {
-            var (items, total) = await userRepository.ListStudentsPagedAsync(status, page, pageSize, ct);
-            return Ok(PagedResult.Create(items.Select(u => MapStudent(u)), page, pageSize, total));
+            var (items, total) = await userRepository.ListStudentsPagedAsync(
+                status, page, pageSize, ct, paymentStatus);
+            var mapped = await MapStudentsWithPaymentStatusAsync(items, ct);
+            return Ok(PagedResult.Create(mapped, page, pageSize, total));
         }
         else
         {
             var all = await userRepository.ListStudentsByUnitAsync(unitContext.UnitId.Value, ct);
             if (!string.IsNullOrEmpty(status))
                 all = all.Where(u => u.Status.ToString() == status);
+
+            if (!string.IsNullOrEmpty(paymentStatus))
+            {
+                var allIds = all.Select(u => u.Id).ToList();
+                var subs = await studentPackageRepository.ListSubscriptionsByStudentIdsAsync(allIds, ct);
+                var matchingStudentIds = subs
+                    .Where(sp => sp.PaymentStatus?.ToString() == paymentStatus)
+                    .Select(sp => sp.StudentId).ToHashSet();
+                all = all.Where(u => matchingStudentIds.Contains(u.Id));
+            }
+
             var list = all.ToList();
             var total = list.Count;
-            var items = list.Skip((page - 1) * pageSize).Take(pageSize);
-            return Ok(PagedResult.Create(items.Select(u => MapStudent(u)), page, pageSize, total));
+            var items = list.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var mapped = await MapStudentsWithPaymentStatusAsync(items, ct);
+            return Ok(PagedResult.Create(mapped, page, pageSize, total));
         }
+    }
+
+    // Batched — evita uma query de StudentPackage por aluno da página.
+    private async Task<IEnumerable<object>> MapStudentsWithPaymentStatusAsync(
+        IEnumerable<User> items, CancellationToken ct)
+    {
+        var list = items.ToList();
+        var subs = await studentPackageRepository.ListSubscriptionsByStudentIdsAsync(
+            list.Select(u => u.Id), ct);
+        var byStudent = subs.ToDictionary(sp => sp.StudentId, sp => sp.PaymentStatus?.ToString());
+
+        return list.Select(u => MapStudent(u, paymentStatus: byStudent.GetValueOrDefault(u.Id)));
     }
 
     [HttpGet("{id}")]

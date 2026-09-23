@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -18,6 +19,7 @@ public class ErpDashboardController(
     IBookingRepository bookingRepository,
     IPurchaseRepository purchaseRepository,
     IAttendanceRepository attendanceRepository,
+    IStudentPackageRepository studentPackageRepository,
     IUnitContext unitContext) : ControllerBase
 {
     [HttpGet("admin/dashboard")]
@@ -91,6 +93,13 @@ public class ErpDashboardController(
         }
 
         var activeSubscriptions = students.Count(s => s.Status == StudentStatus.active);
+
+        // Card de assinaturas recorrentes com problema de cobrança — sempre visível, com 0
+        // quando não há nenhuma (ESPECIFICACAO_API_STATUS_ASSINATURAS.md §4.6).
+        var recurringSubscriptions = await studentPackageRepository
+            .ListSubscriptionsByStudentIdsAsync(students.Select(s => s.Id), ct);
+        var subscriptionsRetrying = recurringSubscriptions.Count(sp => sp.PaymentStatus == SubscriptionPaymentStatus.retrying);
+        var subscriptionsOverdue = recurringSubscriptions.Count(sp => sp.PaymentStatus == SubscriptionPaymentStatus.overdue);
         var checkinsToday = allBookings.Count(b =>
             b.Class != null && b.Class.Date == today && b.CheckedIn);
 
@@ -187,6 +196,8 @@ public class ErpDashboardController(
             totalClassesThisMonth = monthClasses.Count,
             revenueThisMonth,
             activeSubscriptions,
+            subscriptionsRetrying,
+            subscriptionsOverdue,
             occupancyRate,
             checkinsToday,
             upcomingClasses,

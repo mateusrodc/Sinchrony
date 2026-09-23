@@ -5,9 +5,9 @@ using Sinchrony.Domain.Interfaces.Services;
 
 namespace Sinchrony.Application.Packages.Commands.UpdateSubscriptionCard;
 
-// Aluno bloqueado (ou prestes a ser) regulariza a forma de pagamento da própria assinatura
-// recorrente, sem precisar comprar o pacote de novo. A próxima cobrança que a Asaas confirmar
-// pra essa mesma assinatura é quem desbloqueia o acesso (via webhook), não este endpoint.
+// Aluno bloqueado (ou prestes a ser) regulariza a forma de pagamento do próprio pacote
+// recorrente, sem precisar comprar de novo. Se estava retrying/overdue, sinaliza pro job de
+// renovação tentar cobrar de novo já no próximo tick — não desbloqueia direto aqui.
 public record UpdateSubscriptionCardCommand(Guid UserId, Guid CardId) : IRequest<Unit>;
 
 public class UpdateSubscriptionCardCommandHandler(
@@ -23,16 +23,15 @@ public class UpdateSubscriptionCardCommandHandler(
         if (card.UserId != request.UserId)
             throw DomainException.Forbidden("Este cartão não pertence a você.");
 
-        var active = await studentPackageRepository.GetActiveByStudentAsync(request.UserId, ct);
-        var queued = await studentPackageRepository.GetQueuedByStudentAsync(request.UserId, ct);
-        var studentPackage = active?.AsaasSubscriptionId is not null ? active
-            : queued?.AsaasSubscriptionId is not null ? queued
-            : null;
+        var studentPackage = await studentPackageRepository.GetSubscriptionByStudentAsync(request.UserId, ct)
+            ?? throw DomainException.NotFound("Você não possui uma assinatura recorrente ativa.");
 
-        if (studentPackage?.AsaasSubscriptionId is null)
-            throw DomainException.NotFound("Você não possui uma assinatura recorrente ativa.");
+        // Legado: se ainda vem de uma assinatura Asaas, atualiza o cartão por lá também.
+        if (studentPackage.AsaasSubscriptionId is not null)
+            await asaasService.UpdateSubscriptionCardAsync(studentPackage.AsaasSubscriptionId, card.Token, ct);
 
-        await asaasService.UpdateSubscriptionCardAsync(studentPackage.AsaasSubscriptionId, card.Token, ct);
+        studentPackage.SetRenewalCard(card.Id);
+        await studentPackageRepository.SaveAsync(ct);
 
         return Unit.Value;
     }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.App;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Packages.Commands.CancelSubscription;
 using Sinchrony.Application.Packages.Commands.UpdateSubscriptionCard;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -19,8 +20,11 @@ namespace Sinchrony.Api.Controllers.App;
 [Produces("application/json")]
 public class StudentPackageController(
     IStudentPackageRepository studentPackageRepository, IPackageRepository packageRepository,
-    IAuditService auditService, IMediator mediator) : ControllerBase
+    IAuditService auditService, IMediator mediator, IAsaasService asaasService,
+    IPurchaseRepository purchaseRepository, ICardRepository cardRepository) : ControllerBase
 {
+    private const int MaxPageSize = 100;
+
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? User.FindFirstValue("sub")!);
 
@@ -39,6 +43,11 @@ public class StudentPackageController(
         purchasedAt = sp.PurchasedAt,
         startDate = sp.StartDate,
         endDate = sp.EndDate,
+        // Renovação automática (DEMANDA_RECORRENCIA...V2.md §4.4) — nextDueDate é o próprio
+        // EndDate em horário de Brasília, é quando a próxima cobrança acontece.
+        autoRenew = sp.AutoRenew,
+        paymentStatus = sp.PaymentStatus?.ToString(),
+        nextDueDate = sp.AutoRenew ? Application.Common.BrasiliaTime.ToDate(sp.EndDate) : (DateOnly?)null,
         allocations = sp.Allocations.Select(a => new
         {
             dependentId = a.DependentId,
@@ -61,8 +70,8 @@ public class StudentPackageController(
     public record UpdateSubscriptionCardRequest(Guid cardId);
 
     // Aluno bloqueado por falha de pagamento (ou querendo trocar o cartão preventivamente)
-    // atualiza a forma de pagamento da própria assinatura recorrente. Não desbloqueia na hora —
-    // o desbloqueio acontece sozinho quando a Asaas confirmar a próxima cobrança (webhook).
+    // atualiza o cartão usado nas renovações automáticas. Se estava retrying/overdue, o job de
+    // renovação tenta cobrar de novo já no próximo tick — não desbloqueia na hora.
     [HttpPatch("students/me/subscription/card")]
     public async Task<IActionResult> UpdateSubscriptionCard(
         [FromBody] UpdateSubscriptionCardRequest req, CancellationToken ct)
@@ -75,6 +84,80 @@ public class StudentPackageController(
 
         return Ok(new { message = "Cartão da assinatura atualizado. A próxima cobrança usará o novo cartão." });
     }
+
+    // Aluno desiste da renovação automática. O pacote continua válido normalmente até o EndDate
+    // atual (não é cancelado agora) — só para de gerar um próximo ciclo. Créditos já concedidos
+    // ficam no saldo, não são estornados.
+    [HttpPost("students/me/subscription/cancel")]
+    public async Task<IActionResult> CancelSubscription(CancellationToken ct)
+    {
+        await mediator.Send(new CancelSubscriptionCommand(UserId), ct);
+
+        await auditService.LogAsync(
+            "subscription.cancelled_by_student", "User", UserId, UserId, ct: ct);
+
+        return Ok(new { message = "Assinatura cancelada." });
+    }
+
+    // Status de pagamento da própria assinatura — mesmo formato do endpoint admin
+    // (GET /api/students/{id}/subscription), sem lastSyncedAt (detalhe interno de reconciliação).
+    // O aluno vê o histórico completo dos últimos ciclos; os anteriores vêm do endpoint paginado.
+    [HttpGet("students/me/subscription")]
+    [ProducesResponseType(typeof(object), 200)]
+    public async Task<IActionResult> GetMySubscription(CancellationToken ct)
+    {
+        var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(UserId, ct)
+            ?? throw DomainException.NotFound("Você não possui uma assinatura recorrente.");
+
+        var card = (await cardRepository.ListByUserAsync(UserId, ct)).FirstOrDefault(c => c.IsDefault);
+        var (payments, _) = await purchaseRepository.ListByStudentPackagePagedAsync(sp.Id, 1, 6, ct);
+
+        return Ok(new { data = MapSubscription(sp, card, payments) });
+    }
+
+    [HttpGet("students/me/subscription/payments")]
+    [ProducesResponseType(typeof(object), 200)]
+    public async Task<IActionResult> GetMySubscriptionPayments(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(UserId, ct)
+            ?? throw DomainException.NotFound("Você não possui uma assinatura recorrente.");
+
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+
+        var (items, total) = await purchaseRepository.ListByStudentPackagePagedAsync(sp.Id, page, pageSize, ct);
+        return Ok(Application.Common.PagedResult.Create(items.Select(MapPayment), page, pageSize, total));
+    }
+
+    private static object MapSubscription(
+        Domain.Entities.StudentPackage sp, Domain.Entities.Card? card, IEnumerable<Domain.Entities.Purchase> payments) => new
+    {
+        studentPackageId = sp.Id,
+        packageId = sp.PackageId,
+        packageName = sp.Package?.Name ?? string.Empty,
+        paymentStatus = sp.PaymentStatus?.ToString(),
+        amount = sp.Package?.Price,
+        nextDueDate = Application.Common.BrasiliaTime.ToDate(sp.EndDate),
+        lastPaidAt = sp.LastPaidAt,
+        lastPaidAmount = sp.LastPaidAmount,
+        problemSince = sp.ProblemSince,
+        lastFailureReason = sp.LastFailureReason,
+        cardBrand = card?.Brand,
+        cardLastDigits = card?.LastDigits,
+        payments = payments.Select(MapPayment)
+    };
+
+    // Purchase não guarda a data de vencimento — dueDate aproxima pela data de criação.
+    private static object MapPayment(Domain.Entities.Purchase p) => new
+    {
+        purchaseId = p.Id,
+        transactionId = p.TransactionId,
+        amount = p.Amount,
+        status = p.Status,
+        dueDate = DateOnly.FromDateTime(p.CreatedAt),
+        createdAt = p.CreatedAt
+    };
 
     [HttpGet("api/students/{id}/packages")]
     [Authorize(Roles = "admin")]
@@ -150,6 +233,13 @@ public class StudentPackageController(
                 "Este pacote já está cancelado.");
 
         var package = await packageRepository.GetByIdAsync(sp.PackageId, ct);
+
+        // Legado: se esse pacote ainda vem de uma assinatura Asaas, cancela por lá primeiro —
+        // se falhar, não cancela localmente, senão a Asaas continua cobrando um pacote que o
+        // ERP já mostra como cancelado. O modelo atual (AutoRenew) não precisa disso, Cancel()
+        // já desliga a renovação localmente.
+        if (sp.AsaasSubscriptionId is not null)
+            await asaasService.CancelSubscriptionAsync(sp.AsaasSubscriptionId, ct);
 
         sp.Cancel();
         await studentPackageRepository.SaveAsync(ct);

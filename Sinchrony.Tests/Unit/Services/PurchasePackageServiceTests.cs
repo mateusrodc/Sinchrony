@@ -4,6 +4,7 @@ using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Xunit;
 
 namespace Sinchrony.Tests.Unit.Services;
@@ -17,6 +18,7 @@ public class PurchasePackageServiceTests
     private readonly Mock<IDependentPackageAllocationRepository> _allocationRepo = new();
     private readonly Mock<IDependentRepository> _dependentRepo = new();
     private readonly Mock<IUserRepository> _userRepo = new();
+    private readonly Mock<IAsaasService> _asaasService = new();
 
     public PurchasePackageServiceTests()
     {
@@ -27,7 +29,7 @@ public class PurchasePackageServiceTests
     }
 
     private PurchasePackageService CreateService() =>
-        new(_studentPackageRepo.Object, _allocationRepo.Object, _dependentRepo.Object, _userRepo.Object);
+        new(_studentPackageRepo.Object, _allocationRepo.Object, _dependentRepo.Object, _userRepo.Object, _asaasService.Object);
 
     private static User CreateStudent() => User.Create("Student", "student@test.com", null, "hash", Role.student);
 

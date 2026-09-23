@@ -40,6 +40,19 @@ public class PayWithPixCommandHandler(
         {
             var pkg = await packageRepository.GetByIdAsync(pkgId, ct)
                 ?? throw DomainException.NotFound($"Package {pkgId} not found.");
+
+            // Plano recorrente precisa criar uma assinatura na Asaas (POST /subscriptions),
+            // não uma cobrança avulsa — sem essa checagem, um App antigo ou um POST direto
+            // consegue "comprar" o plano sem nunca gerar a assinatura, e ele nunca renova.
+            // A Asaas também não oferece assinatura recorrente via PIX.
+            if (pkg.IsRecurring)
+                throw DomainException.Validation("RECURRING_REQUIRES_SUBSCRIPTION",
+                    "Este plano tem renovação automática. Atualize o aplicativo para contratá-lo.");
+
+            if (!pkg.AllowsPix)
+                throw DomainException.Validation("PAYMENT_METHOD_NOT_ALLOWED",
+                    "Este pacote não aceita pagamento via PIX.");
+
             packages.Add(pkg);
         }
 

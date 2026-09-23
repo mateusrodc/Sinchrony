@@ -174,36 +174,25 @@ public class AsaasService(
             message);
     }
 
-    public async Task<SubscriptionResult> CreateSubscriptionAsync(
-        string customerId, string cardToken, decimal amount, string description, CancellationToken ct = default)
+    public async Task<PaymentStatusResult> GetPaymentAsync(string paymentId, CancellationToken ct = default)
     {
-        var body = new
-        {
-            customer = customerId,
-            billingType = "CREDIT_CARD",
-            cycle = "MONTHLY",
-            value = amount,
-            nextDueDate = DateTime.UtcNow.ToString("yyyy-MM-dd"),
-            description,
-            creditCardToken = cardToken
-        };
-
-        var resp = await httpClient.PostAsJsonAsync($"{BaseUrl}/subscriptions", body, ct);
+        var resp = await httpClient.GetAsync($"{BaseUrl}/payments/{paymentId}", ct);
         var content = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)
         {
-            logger.LogError("Asaas: failed to create subscription. Status: {Status}, Body: {Body}",
-                resp.StatusCode, content);
+            logger.LogError("Asaas: failed to fetch payment {Id}. Status: {Status}, Body: {Body}",
+                paymentId, resp.StatusCode, content);
 
-            var errorDescription = ExtractErrorDescription(content, "Erro ao criar assinatura recorrente.");
-            throw DomainException.Validation("ASAAS_SUBSCRIPTION_ERROR", errorDescription);
+            var description = ExtractErrorDescription(content, "Erro ao consultar cobrança.");
+            throw DomainException.Validation("ASAAS_PAYMENT_FETCH_ERROR", description);
         }
 
-        var subscription = JsonSerializer.Deserialize<JsonElement>(content);
-        return new SubscriptionResult(
-            subscription.GetProperty("id").GetString()!,
-            subscription.GetProperty("status").GetString()!);
+        var payment = JsonSerializer.Deserialize<JsonElement>(content);
+        var failureReason = payment.TryGetProperty("description", out var descEl)
+            ? descEl.GetString() : null;
+
+        return new PaymentStatusResult(payment.GetProperty("status").GetString()!, failureReason);
     }
 
     public async Task UpdateSubscriptionCardAsync(string subscriptionId, string cardToken, CancellationToken ct = default)
@@ -221,6 +210,23 @@ public class AsaasService(
             var description = ExtractErrorDescription(content, "Erro ao atualizar cartão da assinatura.");
             throw DomainException.Validation("ASAAS_SUBSCRIPTION_CARD_UPDATE_ERROR", description);
         }
+    }
+
+    public async Task CancelSubscriptionAsync(string subscriptionId, CancellationToken ct = default)
+    {
+        var resp = await httpClient.DeleteAsync($"{BaseUrl}/subscriptions/{subscriptionId}", ct);
+
+        // 404: a assinatura já não existe mais na Asaas (ex.: cancelada por lá diretamente) —
+        // o objetivo (parar de cobrar) já está atingido, trata como sucesso (idempotente).
+        if (resp.IsSuccessStatusCode || resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return;
+
+        var content = await resp.Content.ReadAsStringAsync(ct);
+        logger.LogError("Asaas: failed to cancel subscription {Id}. Status: {Status}, Body: {Body}",
+            subscriptionId, resp.StatusCode, content);
+
+        var description = ExtractErrorDescription(content, "Erro ao cancelar assinatura recorrente.");
+        throw DomainException.Validation("ASAAS_SUBSCRIPTION_CANCEL_ERROR", description);
     }
 
     public async Task<CardTokenizationResult> TokenizeCardAsync(

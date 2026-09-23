@@ -12,14 +12,25 @@ public class Purchase
     public string? TransactionId { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
+    // Preenchido só para compras vinculadas a um pacote recorrente (contratação inicial ou
+    // renovação automática) — permite montar o histórico de pagamentos de uma assinatura.
+    public Guid? StudentPackageId { get; private set; }
+
+    // "purchase" (contratação/compra avulsa) | "renewal" (cobrança automática de um ciclo
+    // seguinte, gerada pelo RecurringRenewalService). Só existe pra diferenciar no histórico —
+    // não afeta o fluxo de confirmação/falha em si.
+    public string Kind { get; private set; } = "purchase";
+
     public User? User { get; private set; }
     public Package? Package { get; private set; }
     public Coupon? Coupon { get; private set; }
+    public StudentPackage? StudentPackage { get; private set; }
 
     protected Purchase() { }
 
     public static Purchase Create(Guid userId, Guid packageId, decimal amount,
-        string paymentMethod, string? transactionId = null, Guid? couponId = null)
+        string paymentMethod, string? transactionId = null, Guid? couponId = null,
+        Guid? studentPackageId = null)
         => new()
         {
             UserId = userId,
@@ -27,7 +38,8 @@ public class Purchase
             Amount = amount,
             PaymentMethod = paymentMethod,
             TransactionId = transactionId,
-            CouponId = couponId
+            CouponId = couponId,
+            StudentPackageId = studentPackageId
         };
 
     public void Confirm()
@@ -41,7 +53,8 @@ public class Purchase
     }
 
     public static Purchase CreatePending(Guid userId, Guid packageId, decimal amount,
-    string paymentMethod, string? transactionId = null, Guid? couponId = null)
+    string paymentMethod, string? transactionId = null, Guid? couponId = null,
+    Guid? studentPackageId = null)
     => new()
     {
         UserId = userId,
@@ -50,15 +63,25 @@ public class Purchase
         PaymentMethod = paymentMethod,
         TransactionId = transactionId,
         CouponId = couponId,
+        StudentPackageId = studentPackageId,
         Status = "pending"  // aguarda webhook
     };
 
     public static Purchase CreateConfirmed(
     Guid userId, Guid packageId, decimal amount,
-    string paymentMethod, string? transactionId)
+    string paymentMethod, string? transactionId, Guid? studentPackageId = null)
     {
-        var purchase = CreatePending(userId, packageId, amount, paymentMethod, transactionId, null);
+        var purchase = CreatePending(userId, packageId, amount, paymentMethod, transactionId, null, studentPackageId);
         purchase.Confirm();
+        return purchase;
+    }
+
+    // Cobrança automática de um ciclo seguinte de um pacote recorrente (RecurringRenewalService).
+    public static Purchase CreateRenewalPending(
+        Guid userId, Guid packageId, Guid studentPackageId, decimal amount, string? transactionId)
+    {
+        var purchase = CreatePending(userId, packageId, amount, "card", transactionId, null, studentPackageId);
+        purchase.Kind = "renewal";
         return purchase;
     }
 }

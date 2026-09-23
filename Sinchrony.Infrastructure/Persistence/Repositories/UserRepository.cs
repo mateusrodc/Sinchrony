@@ -51,11 +51,22 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
         => await db.SaveChangesAsync(ct);
 
     public async Task<(IEnumerable<User> Items, int Total)> ListStudentsPagedAsync(
-    string? status, int page, int pageSize, CancellationToken ct = default)
+    string? status, int page, int pageSize, CancellationToken ct = default,
+    string? paymentStatus = null)
     {
         var query = db.Users.Include(u => u.Unit).Where(u => u.Role == Domain.Enums.Role.student);
         if (!string.IsNullOrEmpty(status))
             query = query.Where(u => u.Status.ToString() == status);
+
+        if (!string.IsNullOrEmpty(paymentStatus)
+            && Enum.TryParse<Domain.Entities.SubscriptionPaymentStatus>(paymentStatus, out var psFilter))
+        {
+            query = query.Where(u => db.StudentPackages.Any(sp =>
+                sp.StudentId == u.Id &&
+                sp.AsaasSubscriptionId != null &&
+                sp.Status != Domain.Entities.StudentPackageStatus.cancelled &&
+                sp.PaymentStatus == psFilter));
+        }
 
         var total = await query.CountAsync(ct);
         var items = await query
@@ -81,6 +92,11 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
         => await db.Users
             .Where(u => u.Role == Role.teacher && u.UnitId == unitId)
             .OrderBy(u => u.Name)
+            .ToListAsync(ct);
+
+    public async Task<IEnumerable<User>> ListAdminsAsync(CancellationToken ct = default)
+        => await db.Users
+            .Where(u => u.Role == Role.admin)
             .ToListAsync(ct);
 
     public async Task<User?> GetByCpfAsync(string cpf, CancellationToken ct = default)

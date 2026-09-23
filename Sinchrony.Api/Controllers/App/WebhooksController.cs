@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sinchrony.Domain.Entities;
-using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Infrastructure.Services;
 using System.Text.Json;
 
 namespace Sinchrony.Api.Controllers.App;
@@ -14,7 +14,6 @@ namespace Sinchrony.Api.Controllers.App;
 [Produces("application/json")]
 public class WebhooksController(
     IServiceScopeFactory scopeFactory,
-    IAuditService auditService,
     ILogger<WebhooksController> logger,
     IConfiguration configuration) : ControllerBase
 {
@@ -45,15 +44,15 @@ public class WebhooksController(
             var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
             var creditTransactionRepository = scope.ServiceProvider.GetRequiredService<ICreditTransactionRepository>();
             var studentPackageRepository = scope.ServiceProvider.GetRequiredService<IStudentPackageRepository>();
-            var settingsRepository = scope.ServiceProvider.GetRequiredService<ISettingsRepository>();
-            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
             var auditSvc = scope.ServiceProvider.GetRequiredService<IAuditService>();
+            var asaasService = scope.ServiceProvider.GetRequiredService<IAsaasService>();
+            var recurringRenewalService = scope.ServiceProvider.GetRequiredService<RecurringRenewalService>();
 
             try
             {
                 await ProcessWebhookAsync(payloadCopy, purchaseRepository, userRepository,
-                    creditTransactionRepository, studentPackageRepository, settingsRepository,
-                    emailService, auditSvc, CancellationToken.None);
+                    creditTransactionRepository, studentPackageRepository,
+                    auditSvc, asaasService, recurringRenewalService, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -70,9 +69,9 @@ public class WebhooksController(
         IUserRepository userRepository,
         ICreditTransactionRepository creditTransactionRepository,
         IStudentPackageRepository studentPackageRepository,
-        ISettingsRepository settingsRepository,
-        IEmailService emailService,
         IAuditService auditSvc,
+        IAsaasService asaasService,
+        RecurringRenewalService recurringRenewalService,
         CancellationToken ct)
     {
         var eventType = payload.TryGetProperty("event", out var ev)
@@ -87,58 +86,45 @@ public class WebhooksController(
 
         if (string.IsNullOrEmpty(transactionId)) return;
 
-        var subscriptionId = paymentEl.TryGetProperty("subscription", out var subEl)
-            ? subEl.GetString() : null;
-
         var paymentValue = paymentEl.TryGetProperty("value", out var valueEl) && valueEl.TryGetDecimal(out var v)
             ? v : 0m;
 
-        logger.LogInformation("Asaas webhook processing transactionId: {Id}, subscription: {SubscriptionId}",
-            transactionId, subscriptionId);
+        // A Asaas não expõe um campo dedicado de "motivo da recusa" nesses eventos — usa a
+        // description do pagamento como melhor aproximação disponível.
+        var failureReason = paymentEl.TryGetProperty("description", out var descEl)
+            ? descEl.GetString() : null;
+
+        logger.LogInformation("Asaas webhook processing transactionId: {Id}", transactionId);
 
         switch (eventType)
         {
             case "PAYMENT_CONFIRMED" or "PAYMENT_RECEIVED":
-                if (!string.IsNullOrEmpty(subscriptionId))
-                    await HandleSubscriptionPaymentConfirmedAsync(
-                        subscriptionId, transactionId, paymentValue, eventType!,
-                        studentPackageRepository, purchaseRepository, userRepository,
-                        creditTransactionRepository, settingsRepository, emailService, auditSvc, ct);
-                else
-                    await HandleAdHocPaymentConfirmedAsync(
-                        transactionId, eventType!, purchaseRepository, userRepository,
-                        creditTransactionRepository, studentPackageRepository, auditSvc, ct);
-                break;
-
-            case "PAYMENT_OVERDUE":
-                if (!string.IsNullOrEmpty(subscriptionId))
-                    await HandleSubscriptionOverdueAsync(
-                        subscriptionId, transactionId, paymentValue,
-                        studentPackageRepository, purchaseRepository, userRepository,
-                        settingsRepository, emailService, auditSvc, ct);
+                await HandleAdHocPaymentConfirmedAsync(
+                    transactionId, eventType!, purchaseRepository, userRepository,
+                    creditTransactionRepository, studentPackageRepository, auditSvc, asaasService,
+                    recurringRenewalService, ct);
                 break;
 
             case "PAYMENT_REPROVED_BY_RISK_ANALYSIS" or "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED":
-                if (!string.IsNullOrEmpty(subscriptionId))
-                    await SendPreventiveFailureEmailAsync(
-                        subscriptionId, studentPackageRepository, userRepository,
-                        settingsRepository, emailService, ct);
-                else
-                    await HandleAdHocPaymentRefusedAsync(
-                        transactionId, eventType!, purchaseRepository, userRepository,
-                        creditTransactionRepository, studentPackageRepository, auditSvc, ct);
+                await HandleAdHocPaymentRefusedAsync(
+                    transactionId, eventType!, failureReason, purchaseRepository, userRepository,
+                    creditTransactionRepository, studentPackageRepository, auditSvc,
+                    recurringRenewalService, ct);
                 break;
         }
     }
 
-    // Compra avulsa (PIX ou cartão único, não vinculada a assinatura): confirma a Purchase
-    // pendente que corresponde ao transactionId, credita e ativa o StudentPackage na fila.
+    // Compra avulsa OU renovação automática (Purchase.Kind == "renewal"): confirma a Purchase
+    // pendente que corresponde ao transactionId. Uma renovação delega pro RecurringRenewalService
+    // (credita/encadeia o próximo ciclo do pacote já ativo); o resto segue o fluxo de sempre:
+    // credita e ativa o StudentPackage na fila (contratação nova).
     private async Task HandleAdHocPaymentConfirmedAsync(
         string transactionId, string eventType,
         IPurchaseRepository purchaseRepository, IUserRepository userRepository,
         ICreditTransactionRepository creditTransactionRepository,
         IStudentPackageRepository studentPackageRepository,
-        IAuditService auditSvc, CancellationToken ct)
+        IAuditService auditSvc, IAsaasService asaasService,
+        RecurringRenewalService recurringRenewalService, CancellationToken ct)
     {
         var allPurchases = await purchaseRepository.ListAllAsync(ct);
 
@@ -163,6 +149,12 @@ public class WebhooksController(
 
         foreach (var purchase in pendingPurchases)
         {
+            if (purchase.Kind == "renewal")
+            {
+                await recurringRenewalService.ConfirmRenewalAsync(purchase, ct);
+                continue;
+            }
+
             purchase.Confirm();
 
             var user = await userRepository.GetByIdAsync(purchase.UserId, ct);
@@ -195,6 +187,12 @@ public class WebhooksController(
                 if (activePackage is null
                     || queuedPackage.Package?.ReplacesActive(activePackage.Package) == true)
                 {
+                    // Legado: se o pacote substituído vinha de uma assinatura Asaas, encerra a
+                    // cobrança por lá — o modelo atual (AutoRenew) não precisa disso, Cancel()
+                    // já desliga a renovação localmente.
+                    if (activePackage?.AsaasSubscriptionId is not null)
+                        await asaasService.CancelSubscriptionAsync(activePackage.AsaasSubscriptionId, ct);
+
                     activePackage?.Cancel();
                     queuedPackage.Activate();
                     logger.LogInformation(
@@ -218,188 +216,16 @@ public class WebhooksController(
         logger.LogInformation("Asaas webhook: transaction {Id} processed successfully.", transactionId);
     }
 
-    // Ciclo de assinatura recorrente confirmado (primeira cobrança ou renovação mensal):
-    // gera/confirma a Purchase do ciclo, credita, renova a vigência e desbloqueia o aluno se
-    // ele estava bloqueado por falha de pagamento dessa mesma assinatura.
-    private async Task HandleSubscriptionPaymentConfirmedAsync(
-        string subscriptionId, string transactionId, decimal paymentValue, string eventType,
-        IStudentPackageRepository studentPackageRepository, IPurchaseRepository purchaseRepository,
-        IUserRepository userRepository, ICreditTransactionRepository creditTransactionRepository,
-        ISettingsRepository settingsRepository, IEmailService emailService,
-        IAuditService auditSvc, CancellationToken ct)
-    {
-        var studentPackage = await studentPackageRepository.GetByAsaasSubscriptionIdAsync(subscriptionId, ct);
-        if (studentPackage is null)
-        {
-            logger.LogWarning("Asaas webhook: no StudentPackage found for subscription {SubscriptionId}.", subscriptionId);
-            return;
-        }
-
-        var user = await userRepository.GetByIdAsync(studentPackage.StudentId, ct);
-        if (user is null) return;
-
-        var allPurchases = await purchaseRepository.ListAllAsync(ct);
-        if (allPurchases.Any(p => p.TransactionId == transactionId && p.Status == "confirmed"))
-        {
-            logger.LogInformation(
-                "Asaas webhook: subscription {SubscriptionId} payment {PaymentId} already processed.",
-                subscriptionId, transactionId);
-            return;
-        }
-
-        var purchase = Purchase.CreateConfirmed(
-            user.Id, studentPackage.PackageId, paymentValue, "card", transactionId);
-        await purchaseRepository.AddAsync(purchase, ct);
-
-        var credits = studentPackage.Package?.GetCreditsToGrant() ?? 0;
-        if (credits > 0)
-        {
-            user.AddCredits(credits);
-            var creditTx = CreditTransaction.Create(
-                user.Id, credits, user.Credits,
-                $"Recurring subscription payment confirmed: {transactionId}",
-                "purchase", purchase.Id);
-            await creditTransactionRepository.AddAsync(creditTx, ct);
-        }
-
-        if (studentPackage.Status == StudentPackageStatus.queued)
-            studentPackage.Activate();
-        else
-            studentPackage.RenewCycle();
-
-        var wasBlockedForPayment = user.Status == StudentStatus.blocked && user.BlockedReason == "payment_failed";
-        if (wasBlockedForPayment)
-            user.Reactivate();
-
-        await purchaseRepository.SaveAsync(ct);
-        await userRepository.SaveAsync(ct);
-        await creditTransactionRepository.SaveAsync(ct);
-        await studentPackageRepository.SaveAsync(ct);
-
-        await auditSvc.LogAsync(
-            "subscription.payment_confirmed", "StudentPackage",
-            studentPackage.Id, user.Id,
-            $"SubscriptionId: {subscriptionId}, PaymentId: {transactionId}, Event: {eventType}, Credits: {credits}, Reactivated: {wasBlockedForPayment}",
-            ct: ct);
-
-        logger.LogInformation(
-            "Asaas webhook: subscription {SubscriptionId} cycle confirmed for user {UserId}.",
-            subscriptionId, user.Id);
-
-        if (wasBlockedForPayment && !string.IsNullOrWhiteSpace(user.Email))
-        {
-            var settings = await settingsRepository.GetAsync(ct);
-            var body = $"""
-                <h2>Acesso liberado</h2>
-                <p>Olá, {user.Name}!</p>
-                <p>Seu pagamento foi confirmado e seu acesso ao 4Sinchrony foi reativado. Já pode agendar suas aulas normalmente.</p>
-                <br>
-                <small>4Sinchrony Experience</small>
-                """;
-
-            SendEmailFireAndForget(user.Email, "Acesso liberado — pagamento confirmado", body, settings, emailService);
-        }
-    }
-
-    // A Asaas desistiu de reprocessar (retentativa automática esgotada) e marcou a cobrança
-    // como vencida: só aqui o acesso é bloqueado. Créditos já concedidos ficam intactos.
-    private async Task HandleSubscriptionOverdueAsync(
-        string subscriptionId, string transactionId, decimal paymentValue,
-        IStudentPackageRepository studentPackageRepository, IPurchaseRepository purchaseRepository,
-        IUserRepository userRepository, ISettingsRepository settingsRepository,
-        IEmailService emailService, IAuditService auditSvc, CancellationToken ct)
-    {
-        var studentPackage = await studentPackageRepository.GetByAsaasSubscriptionIdAsync(subscriptionId, ct);
-        if (studentPackage is null)
-        {
-            logger.LogWarning("Asaas webhook: no StudentPackage found for overdue subscription {SubscriptionId}.", subscriptionId);
-            return;
-        }
-
-        var user = await userRepository.GetByIdAsync(studentPackage.StudentId, ct);
-        if (user is null) return;
-
-        var allPurchases = await purchaseRepository.ListAllAsync(ct);
-        if (!allPurchases.Any(p => p.TransactionId == transactionId))
-        {
-            var failedPurchase = Purchase.CreatePending(
-                user.Id, studentPackage.PackageId, paymentValue, "card", transactionId);
-            failedPurchase.Fail();
-            await purchaseRepository.AddAsync(failedPurchase, ct);
-            await purchaseRepository.SaveAsync(ct);
-        }
-
-        if (user.Status == StudentStatus.blocked)
-        {
-            logger.LogInformation("Asaas webhook: user {UserId} already blocked, skipping.", user.Id);
-            return;
-        }
-
-        user.Block("payment_failed");
-        await userRepository.SaveAsync(ct);
-
-        await auditSvc.LogAsync(
-            "subscription.blocked", "User",
-            user.Id, user.Id,
-            $"SubscriptionId: {subscriptionId}, PaymentId: {transactionId}",
-            ct: ct);
-
-        logger.LogInformation(
-            "Asaas webhook: user {UserId} blocked after subscription {SubscriptionId} went overdue.",
-            user.Id, subscriptionId);
-
-        if (!string.IsNullOrWhiteSpace(user.Email))
-        {
-            var settings = await settingsRepository.GetAsync(ct);
-            var body = $"""
-                <h2>Acesso suspenso</h2>
-                <p>Olá, {user.Name}!</p>
-                <p>Não conseguimos confirmar o pagamento da sua assinatura após várias tentativas e seu acesso ao 4Sinchrony foi suspenso.</p>
-                <p>Seus créditos continuam guardados — atualize a forma de pagamento no aplicativo para reativar o acesso automaticamente.</p>
-                <br>
-                <small>4Sinchrony Experience</small>
-                """;
-
-            SendEmailFireAndForget(user.Email, "Acesso suspenso — pagamento não confirmado", body, settings, emailService);
-        }
-    }
-
-    // Aviso preventivo: a cobrança do ciclo falhou uma vez, mas a Asaas ainda vai reprocessar
-    // sozinha por alguns dias antes de declarar OVERDUE. Não bloqueia nada — só avisa.
-    private async Task SendPreventiveFailureEmailAsync(
-        string subscriptionId, IStudentPackageRepository studentPackageRepository,
-        IUserRepository userRepository, ISettingsRepository settingsRepository,
-        IEmailService emailService, CancellationToken ct)
-    {
-        var studentPackage = await studentPackageRepository.GetByAsaasSubscriptionIdAsync(subscriptionId, ct);
-        if (studentPackage is null) return;
-
-        var user = await userRepository.GetByIdAsync(studentPackage.StudentId, ct);
-        if (user is null || user.Status == StudentStatus.blocked || string.IsNullOrWhiteSpace(user.Email))
-            return;
-
-        var settings = await settingsRepository.GetAsync(ct);
-        var body = $"""
-            <h2>Não conseguimos processar seu pagamento</h2>
-            <p>Olá, {user.Name}!</p>
-            <p>A cobrança da sua assinatura não foi aprovada dessa vez. Vamos tentar novamente automaticamente nos próximos dias.</p>
-            <p>Para evitar a suspensão do acesso, atualize o cartão cadastrado no aplicativo.</p>
-            <br>
-            <small>4Sinchrony Experience</small>
-            """;
-
-        SendEmailFireAndForget(user.Email, "Pagamento não aprovado — vamos tentar novamente", body, settings, emailService);
-    }
-
-    // Cobrança avulsa (não vinculada a assinatura) que tinha sido aprovada e depois foi
-    // reprovada na análise antifraude ou teve a captura recusada: reverte créditos/pacote já
-    // concedidos, se houver.
+    // Cobrança avulsa/renovação que foi reprovada na análise antifraude ou teve a captura
+    // recusada. Uma renovação (Kind=renewal) delega pro RecurringRenewalService (conta como
+    // tentativa falha, agenda retentativa ou bloqueia se já eram 3); o resto reverte
+    // créditos/pacote já concedidos, se a purchase avulsa já tinha sido confirmada antes.
     private async Task HandleAdHocPaymentRefusedAsync(
-        string transactionId, string eventType,
+        string transactionId, string eventType, string? failureReason,
         IPurchaseRepository purchaseRepository, IUserRepository userRepository,
         ICreditTransactionRepository creditTransactionRepository,
         IStudentPackageRepository studentPackageRepository,
-        IAuditService auditSvc, CancellationToken ct)
+        IAuditService auditSvc, RecurringRenewalService recurringRenewalService, CancellationToken ct)
     {
         var allPurchases = await purchaseRepository.ListAllAsync(ct);
         var matches = allPurchases.Where(p => p.TransactionId == transactionId).ToList();
@@ -412,6 +238,12 @@ public class WebhooksController(
 
         foreach (var purchase in matches)
         {
+            if (purchase.Kind == "renewal")
+            {
+                await recurringRenewalService.RefuseRenewalAsync(purchase, failureReason, ct);
+                continue;
+            }
+
             if (purchase.Status == "confirmed")
             {
                 var user = await userRepository.GetByIdAsync(purchase.UserId, ct);
@@ -449,21 +281,5 @@ public class WebhooksController(
         }
 
         await purchaseRepository.SaveAsync(ct);
-    }
-
-    private void SendEmailFireAndForget(
-        string to, string subject, string body, Settings? settings, IEmailService emailService)
-    {
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await emailService.SendWithSettingsAsync(to, subject, body, settings, CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Asaas webhook: falha ao enviar e-mail para {Email}.", to);
-            }
-        });
     }
 }

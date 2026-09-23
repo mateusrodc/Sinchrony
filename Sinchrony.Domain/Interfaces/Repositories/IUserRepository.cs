@@ -17,10 +17,14 @@ public interface IUserRepository
     Task<User?> GetByGoogleIdAsync(string googleId, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
     Task<(IEnumerable<User> Items, int Total)> ListStudentsPagedAsync(
-    string? status, int page, int pageSize, CancellationToken ct = default);
+    string? status, int page, int pageSize, CancellationToken ct = default,
+    string? paymentStatus = null);
 
     Task<User?> GetByCpfAsync(string cpf, CancellationToken ct = default);
 
     Task<IEnumerable<User>> ListStudentsByUnitAsync(Guid unitId, CancellationToken ct = default);
     Task<IEnumerable<User>> ListTeachersByUnitAsync(Guid unitId, CancellationToken ct = default);
+
+    // Destinatários do alerta de assinatura vencida (studio-wide, sem escopo de unidade).
+    Task<IEnumerable<User>> ListAdminsAsync(CancellationToken ct = default);
 }

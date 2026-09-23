@@ -19,6 +19,12 @@ namespace Sinchrony.Infrastructure.Persistence.Configurations
             builder.Property(sp => sp.CreditsGranted).HasDefaultValue(0);
             builder.Property(sp => sp.AsaasSubscriptionId).HasMaxLength(50).IsRequired(false);
 
+            builder.Property(sp => sp.PaymentStatus).HasConversion<string>().HasMaxLength(20);
+            builder.Property(sp => sp.LastPaidAmount).HasPrecision(10, 2);
+            builder.Property(sp => sp.LastFailureReason).HasMaxLength(500);
+            builder.Property(sp => sp.AutoRenew).HasDefaultValue(false);
+            builder.Property(sp => sp.RenewalAttempts).HasDefaultValue(0);
+
             builder.HasIndex(sp => sp.AsaasSubscriptionId);
 
             builder.HasOne(sp => sp.Student).WithMany()
@@ -26,6 +32,9 @@ namespace Sinchrony.Infrastructure.Persistence.Configurations
 
             builder.HasOne(sp => sp.Package).WithMany()
                 .HasForeignKey(sp => sp.PackageId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne<Card>().WithMany()
+                .HasForeignKey(sp => sp.RenewalCardId).OnDelete(DeleteBehavior.SetNull);
 
             // Máximo 1 active + 1 queued por student — enforced na aplicação
             builder.HasIndex(sp => new { sp.StudentId, sp.Status });

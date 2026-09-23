@@ -15,8 +15,16 @@ public class CardRepository(ApplicationDbContext db) : ICardRepository
             .OrderBy(c => c.CreatedAt)
             .ToListAsync(ct);
 
+    public async Task<IEnumerable<Card>> ListDefaultByUserIdsAsync(IEnumerable<Guid> userIds, CancellationToken ct = default)
+        => await db.Cards
+            .Where(c => userIds.Contains(c.UserId) && c.IsDefault)
+            .ToListAsync(ct);
+
     public async Task<bool> ExistsByTokenAsync(Guid userId, string token, CancellationToken ct = default)
         => await db.Cards.AnyAsync(c => c.UserId == userId && c.Token == token, ct);
+
+    public async Task<Card?> GetByTokenAsync(Guid userId, string token, CancellationToken ct = default)
+        => await db.Cards.FirstOrDefaultAsync(c => c.UserId == userId && c.Token == token, ct);
 
     public async Task AddAsync(Card card, CancellationToken ct = default)
         => await db.Cards.AddAsync(card, ct);

@@ -1,6 +1,7 @@
 ﻿using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 
 namespace Sinchrony.Application.Payments.Commands;
 
@@ -12,7 +13,8 @@ public class PurchasePackageService(
     IStudentPackageRepository studentPackageRepository,
     IDependentPackageAllocationRepository allocationRepository,
     IDependentRepository dependentRepository,
-    IUserRepository userRepository)
+    IUserRepository userRepository,
+    IAsaasService asaasService)
 {
     public async Task<PackageGrantResult> ProcessAsync(
         Guid studentId, Package package,
@@ -80,6 +82,11 @@ public class PurchasePackageService(
                     break;
 
                 case "activate_immediately":
+                    // Substitui o pacote ativo na hora. Se ele era uma assinatura recorrente,
+                    // encerra a cobrança na Asaas — senão ela continua cobrando um pacote que
+                    // o aluno já não usa mais.
+                    if (active.AsaasSubscriptionId is not null)
+                        await asaasService.CancelSubscriptionAsync(active.AsaasSubscriptionId, ct);
                     active.Cancel();
                     var newSp = StudentPackage.Create(studentId, package.Id, package.ValidityDays);
                     newSp.SetSource(source, credits);

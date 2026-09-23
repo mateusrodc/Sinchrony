@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sinchrony.Application.Payments.Commands;
+using Sinchrony.Application.Subscriptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Infrastructure.Persistence;
@@ -61,6 +62,10 @@ public static class DependencyInjection
         services.AddHostedService<ToleranceEnforcementService>();
         services.AddScoped<StudentPackageLifecycleService>();
         services.AddHostedService<PackageExpirationService>();
+        services.AddScoped<IAdminAlertRepository, AdminAlertRepository>();
+        services.AddScoped<SubscriptionOverdueService>();
+        services.AddScoped<RecurringRenewalService>();
+        services.AddHostedService<RecurringRenewalJob>();
 
         services.AddHttpClient<IStorageService, SupabaseStorageService>(client =>
         {

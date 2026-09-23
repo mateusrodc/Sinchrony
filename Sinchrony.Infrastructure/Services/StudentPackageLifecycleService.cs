@@ -23,6 +23,13 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
     public async Task<List<Guid>> ListExpiredIdsAsync(DateTime now, CancellationToken ct = default)
         => await db.StudentPackages
             .Where(sp => sp.Status == StudentPackageStatus.active && sp.EndDate < now)
+            // Pacote recorrente (AutoRenew, ou legado AsaasSubscriptionId) com cobrança em
+            // retentativa ou vencida (o aluno já está bloqueado nesse caso) não deve zerar os
+            // créditos por passar da data — a renovação ou o cancelamento é quem resolve esse
+            // estado, não a expiração.
+            .Where(sp => (!sp.AutoRenew && sp.AsaasSubscriptionId == null)
+                || (sp.PaymentStatus != SubscriptionPaymentStatus.retrying
+                    && sp.PaymentStatus != SubscriptionPaymentStatus.overdue))
             .Select(sp => sp.Id)
             .ToListAsync(ct);
 
@@ -35,7 +42,10 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
             .Include(x => x.Allocations)
             .FirstOrDefaultAsync(x => x.Id == studentPackageId
                 && x.Status == StudentPackageStatus.active
-                && x.EndDate < now, ct);
+                && x.EndDate < now
+                && ((!x.AutoRenew && x.AsaasSubscriptionId == null)
+                    || (x.PaymentStatus != SubscriptionPaymentStatus.retrying
+                        && x.PaymentStatus != SubscriptionPaymentStatus.overdue)), ct);
         if (sp is null) return false;
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == sp.StudentId, ct);

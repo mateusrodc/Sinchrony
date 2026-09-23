@@ -94,4 +94,43 @@ public class PurchaseRepository(ApplicationDbContext db) : IPurchaseRepository
 
         return (items, total);
     }
+
+    public async Task<(IEnumerable<Purchase> Items, int Total)> ListByStudentPackagePagedAsync(
+    Guid studentPackageId, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = db.Purchases.Where(p => p.StudentPackageId == studentPackageId);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
+
+    public async Task<bool> HasActiveRenewalForCycleAsync(
+        Guid studentPackageId, DateTime cycleStart, CancellationToken ct = default)
+        => await db.Purchases.AnyAsync(p =>
+            p.StudentPackageId == studentPackageId &&
+            p.Kind == "renewal" &&
+            p.CreatedAt >= cycleStart &&
+            (p.Status == "pending" || p.Status == "confirmed"), ct);
+
+    public async Task<IEnumerable<Purchase>> ListStalePendingRenewalsAsync(
+        DateTime olderThan, CancellationToken ct = default)
+        => await db.Purchases
+            .Include(p => p.Package)
+            .Where(p => p.Kind == "renewal" && p.Status == "pending" && p.CreatedAt < olderThan)
+            .ToListAsync(ct);
+
+    public async Task<Purchase?> GetPendingRenewalAsync(Guid studentPackageId, CancellationToken ct = default)
+        => await db.Purchases
+            .Where(p => p.StudentPackageId == studentPackageId && p.Kind == "renewal" && p.Status == "pending")
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+    public async Task<Purchase?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => await db.Purchases.FirstOrDefaultAsync(p => p.Id == id, ct);
 }
