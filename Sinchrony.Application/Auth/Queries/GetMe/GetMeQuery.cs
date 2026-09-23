@@ -29,6 +29,8 @@ public class GetMeQueryHandler(
                 user.IsDependent,
                 user.ResponsibleStudentId,
                 user.TermsAcceptedAt,
-                user.TermsVersion);
+                user.TermsVersion,
+                user.Status.ToString(),
+                user.BlockedReason);
     }
 }

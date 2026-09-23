@@ -21,4 +21,6 @@ public record UserDto(
     bool IsDependent = false,
     Guid? ResponsibleStudentId = null,
     DateTime? TermsAcceptedAt = null,
-    string? TermsVersion = null);
+    string? TermsVersion = null,
+    string? Status = null,
+    string? BlockedReason = null);

@@ -22,8 +22,6 @@ public class RefreshTokenCommandHandler(
         if (token is null || !token.IsValid())
             throw DomainException.Unauthorized("INVALID_REFRESH_TOKEN");
 
-        if (user.Status == Domain.Enums.StudentStatus.blocked)
-            throw DomainException.Forbidden("Account is blocked.");
         if (user.Status == Domain.Enums.StudentStatus.inactive)
             throw DomainException.Forbidden("Account is inactive.");
 

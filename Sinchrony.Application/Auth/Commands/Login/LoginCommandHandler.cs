@@ -25,9 +25,6 @@ public class LoginCommandHandler(
             throw DomainException.Unauthorized("Invalid credentials.");
         }
 
-        if (user.Status == StudentStatus.blocked)
-            throw DomainException.Forbidden("Account is blocked.");
-
         if (user.Status == StudentStatus.inactive)
             throw DomainException.Forbidden("Account is inactive.");
 
@@ -53,5 +50,7 @@ public class LoginCommandHandler(
             user.IsDependent,
             user.ResponsibleStudentId,
             user.TermsAcceptedAt,
-            user.TermsVersion));
+            user.TermsVersion,
+            user.Status.ToString(),
+            user.BlockedReason));
 }

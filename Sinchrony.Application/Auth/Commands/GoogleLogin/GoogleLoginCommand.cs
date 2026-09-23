@@ -53,9 +53,6 @@ public class GoogleLoginCommandHandler(
             }
         }
 
-        if (user.Status == StudentStatus.blocked)
-            throw DomainException.Forbidden("Account is blocked.");
-
         if (user.Status == StudentStatus.inactive)
             throw DomainException.Forbidden("Account is inactive.");
 
