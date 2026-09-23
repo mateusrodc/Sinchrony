@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -43,7 +44,7 @@ public class RescheduleBookingCommandHandler(
 
         // Valida deadline
         var deadlineHours = PackageRuleResolver.GetReschedulingDeadlineHours(studentPackage);
-        var classStart = currentClass.Date.ToDateTime(TimeOnly.Parse(currentClass.StartTime));
+        var classStart = BrasiliaTime.ToUtc(currentClass.Date.ToDateTime(TimeOnly.Parse(currentClass.StartTime)));
         if (DateTime.UtcNow > classStart.AddHours(-deadlineHours))
             throw DomainException.Validation("RESCHEDULING_DEADLINE_EXCEEDED",
                 $"Remarcação deve ser feita com no mínimo {deadlineHours}h de antecedência.");

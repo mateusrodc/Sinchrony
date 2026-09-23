@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -67,7 +68,9 @@ public class ToleranceEnforcementService(
         {
             if (b.Class is null || !TimeOnly.TryParse(b.Class.StartTime, out var start))
                 return false;
-            var classStart = b.Class.Date.ToDateTime(start);
+            // Class.Date/StartTime são horário local (BRT) — precisa converter pra UTC antes de
+            // comparar com DateTime.UtcNow, senão a tolerância vence ~3h antes da aula de verdade.
+            var classStart = BrasiliaTime.ToUtc(b.Class.Date.ToDateTime(start));
             return now > classStart.AddMinutes(settings.ToleranceMinutes);
         }).ToList();
 
