@@ -46,7 +46,7 @@ public class StudentPackageController(
         // EndDate em horário de Brasília, é quando a próxima cobrança acontece.
         autoRenew = sp.AutoRenew,
         paymentStatus = sp.PaymentStatus?.ToString(),
-        nextDueDate = sp.AutoRenew ? Application.Common.BrasiliaTime.ToDate(sp.EndDate) : (DateOnly?)null,
+        nextDueDate = sp.AutoRenew ? Application.Common.BrasiliaTime.ToDate(sp.NextRenewalDueAt) : (DateOnly?)null,
         allocations = sp.Allocations.Select(a => new
         {
             dependentId = a.DependentId,
@@ -141,7 +141,7 @@ public class StudentPackageController(
         packageName = sp.Package?.Name ?? string.Empty,
         paymentStatus = sp.PaymentStatus?.ToString(),
         amount = sp.Package?.Price,
-        nextDueDate = Application.Common.BrasiliaTime.ToDate(sp.EndDate),
+        nextDueDate = Application.Common.BrasiliaTime.ToDate(sp.NextRenewalDueAt),
         lastPaidAt = sp.LastPaidAt,
         lastPaidAmount = sp.LastPaidAmount,
         problemSince = sp.ProblemSince,

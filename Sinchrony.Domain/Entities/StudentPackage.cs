@@ -82,6 +82,12 @@ public class StudentPackage
 
     public bool IsExpired() => EndDate < DateTime.UtcNow;
 
+    // Próxima cobrança de fato. Normalmente é o EndDate — mas quando o ciclo seguinte já foi
+    // pago (RenewalPaidForCycle) e só está esperando o EndDate virar, essa cobrança já
+    // aconteceu: a próxima só ocorre depois que o ciclo novo também vencer.
+    public DateTime NextRenewalDueAt =>
+        RenewalPaidForCycle ? EndDate.AddDays(Package?.ValidityDays ?? 0) : EndDate;
+
     public void Expire()
     {
         Status = StudentPackageStatus.expired;
