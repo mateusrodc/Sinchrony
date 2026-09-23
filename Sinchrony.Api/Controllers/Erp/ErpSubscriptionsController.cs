@@ -6,6 +6,7 @@ using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Infrastructure.Services;
+using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -17,10 +18,16 @@ public class ErpSubscriptionsController(
     IStudentPackageRepository studentPackageRepository,
     IPurchaseRepository purchaseRepository,
     ICardRepository cardRepository,
+    IUserRepository userRepository,
+    IAsaasService asaasService,
+    IAuditService auditService,
     IUnitContext unitContext,
     RecurringRenewalService recurringRenewalService) : ControllerBase
 {
     private const int MaxPageSize = 100;
+
+    private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue("sub")!);
 
     [HttpGet("api/subscriptions")]
     [ProducesResponseType(typeof(object), 200)]
@@ -139,6 +146,51 @@ public class ErpSubscriptionsController(
 
         var sp = await studentPackageRepository.GetByIdAsync(studentPackageId, ct)
             ?? throw DomainException.NotFound("Pacote não encontrado.");
+
+        var card = await ResolveRenewalCardAsync(sp, ct);
+        return Ok(new { data = MapListItem(sp, card) });
+    }
+
+    public record CancelSubscriptionRequest(string? reason);
+
+    // Só o admin cancela a renovação automática (DEMANDA_CANCELAMENTO_RENOVACAO_SO_ADMIN_BACKEND.md)
+    // — o aluno não tem mais essa rota, fala com o estúdio. O pacote continua válido até o
+    // EndDate normalmente, só deixa de gerar o próximo ciclo.
+    [HttpPost("api/students/{id}/subscription/cancel")]
+    [Authorize(Roles = "admin")]
+    [ProducesResponseType(typeof(object), 200)]
+    public async Task<IActionResult> CancelSubscription(
+        Guid id, [FromBody] CancelSubscriptionRequest? request, CancellationToken ct)
+    {
+        var student = await userRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Aluno não encontrado.");
+
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
+            && student.UnitId != unitContext.UnitId)
+            return Forbid();
+
+        var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(id, ct)
+            ?? throw DomainException.NotFound("Aluno não possui assinatura recorrente.");
+
+        if (!sp.AutoRenew)
+            throw DomainException.Validation("RENEWAL_ALREADY_CANCELLED",
+                "A renovação automática já está cancelada.");
+
+        // Legado: se ainda vem de uma assinatura Asaas, encerra a cobrança por lá primeiro — o
+        // modelo atual (AutoRenew) não depende da Asaas pra isso, é só cobrança direta no cartão.
+        if (sp.AsaasSubscriptionId is not null)
+            await asaasService.CancelSubscriptionAsync(sp.AsaasSubscriptionId, ct);
+
+        sp.CancelRenewal();
+        await studentPackageRepository.SaveAsync(ct);
+
+        // Diferente do antigo cancelamento pelo aluno: aqui NÃO desbloqueia automaticamente quem
+        // estava bloqueado por payment_failed — o admin decide caso a caso pelo toggle da ficha.
+        var reason = string.IsNullOrWhiteSpace(request?.reason) ? null : request.reason.Trim();
+        await auditService.LogAsync(
+            "subscription.cancelled_by_admin", "StudentPackage", sp.Id, AdminId,
+            reason is null ? $"StudentId: {id}" : $"StudentId: {id}, Motivo: {reason}",
+            ct: ct);
 
         var card = await ResolveRenewalCardAsync(sp, ct);
         return Ok(new { data = MapListItem(sp, card) });

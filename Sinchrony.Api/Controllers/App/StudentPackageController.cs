@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.App;
 using Sinchrony.Api.SwaggerExamples.Erp;
-using Sinchrony.Application.Packages.Commands.CancelSubscription;
 using Sinchrony.Application.Packages.Commands.UpdateSubscriptionCard;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -85,19 +84,9 @@ public class StudentPackageController(
         return Ok(new { message = "Cartão da assinatura atualizado. A próxima cobrança usará o novo cartão." });
     }
 
-    // Aluno desiste da renovação automática. O pacote continua válido normalmente até o EndDate
-    // atual (não é cancelado agora) — só para de gerar um próximo ciclo. Créditos já concedidos
-    // ficam no saldo, não são estornados.
-    [HttpPost("students/me/subscription/cancel")]
-    public async Task<IActionResult> CancelSubscription(CancellationToken ct)
-    {
-        await mediator.Send(new CancelSubscriptionCommand(UserId), ct);
-
-        await auditService.LogAsync(
-            "subscription.cancelled_by_student", "User", UserId, UserId, ct: ct);
-
-        return Ok(new { message = "Assinatura cancelada." });
-    }
+    // Cancelamento da renovação automática saiu do App do aluno — quem cancela agora é só o
+    // admin (DEMANDA_CANCELAMENTO_RENOVACAO_SO_ADMIN_BACKEND.md), via
+    // POST /api/students/{id}/subscription/cancel no ErpSubscriptionsController.
 
     // Status de pagamento da própria assinatura — mesmo formato do endpoint admin
     // (GET /api/students/{id}/subscription), sem lastSyncedAt (detalhe interno de reconciliação).

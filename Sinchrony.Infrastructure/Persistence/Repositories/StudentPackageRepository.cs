@@ -57,6 +57,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
     {
         var active = await db.StudentPackages
             .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Include(sp => sp.Student)
             .FirstOrDefaultAsync(sp =>
                 sp.StudentId == studentId &&
                 sp.Status == StudentPackageStatus.active &&
@@ -65,6 +66,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
 
         var queued = await db.StudentPackages
             .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Include(sp => sp.Student)
             .FirstOrDefaultAsync(sp =>
                 sp.StudentId == studentId &&
                 sp.Status == StudentPackageStatus.queued &&
@@ -75,6 +77,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
         // recorrente, pra o aluno continuar vendo o histórico de cobranças depois de cancelar.
         return await db.StudentPackages
             .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Include(sp => sp.Student)
             .Where(sp => sp.StudentId == studentId &&
                 (sp.PaymentStatus != null || sp.AsaasSubscriptionId != null))
             .OrderByDescending(sp => sp.PurchasedAt)
