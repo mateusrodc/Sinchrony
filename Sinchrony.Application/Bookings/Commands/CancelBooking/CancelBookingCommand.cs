@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -60,7 +61,7 @@ public class CancelBookingCommandHandler(
         if (settings is not null && booking.Class is not null)
         {
             var deadlineHours = PackageRuleResolver.GetCancellationDeadlineHours(studentPackage, settings);
-            var classStart = booking.Class.Date.ToDateTime(TimeOnly.Parse(booking.Class.StartTime));
+            var classStart = BrasiliaTime.ToUtc(booking.Class.Date.ToDateTime(TimeOnly.Parse(booking.Class.StartTime)));
 
             if (DateTime.UtcNow > classStart.AddHours(-deadlineHours))
                 throw DomainException.Validation("CANCELLATION_DEADLINE_EXCEEDED",

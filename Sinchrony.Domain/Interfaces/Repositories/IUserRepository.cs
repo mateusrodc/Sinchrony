@@ -38,4 +38,7 @@ public interface IUserRepository
 
     // Alunos que fazem aniversário no mês (1..12), ordenados pelo dia. unitId restringe à unidade.
     Task<IReadOnlyList<User>> ListBirthdaysAsync(int month, Guid? unitId, CancellationToken ct = default);
+
+    // Batch por id — usado pra resolver nome de aluno sem N+1 (ex: GET /api/alerts).
+    Task<IEnumerable<User>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
 }

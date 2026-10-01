@@ -57,6 +57,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
     {
         var active = await db.StudentPackages
             .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Include(sp => sp.Student)
             .FirstOrDefaultAsync(sp =>
                 sp.StudentId == studentId &&
                 sp.Status == StudentPackageStatus.active &&
@@ -65,6 +66,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
 
         var queued = await db.StudentPackages
             .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Include(sp => sp.Student)
             .FirstOrDefaultAsync(sp =>
                 sp.StudentId == studentId &&
                 sp.Status == StudentPackageStatus.queued &&
@@ -75,6 +77,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
         // recorrente, pra o aluno continuar vendo o histórico de cobranças depois de cancelar.
         return await db.StudentPackages
             .Include(sp => sp.Package).ThenInclude(p => p!.PackageType)
+            .Include(sp => sp.Student)
             .Where(sp => sp.StudentId == studentId &&
                 (sp.PaymentStatus != null || sp.AsaasSubscriptionId != null))
             .OrderByDescending(sp => sp.PurchasedAt)
@@ -142,8 +145,11 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
 
         // amount = preço atual do pacote (não guardamos mais um valor "próxima cobrança"
         // separado — é sempre Package.Price, ver PurchasePackageCommand/RecurringRenewalService).
+        // Só em dia + em retentativa (ESPECIFICACAO_API_STATUS_ASSINATURAS_V2.md) — vencida já
+        // entra em overdueAmount, somar aqui também duplicava o valor nos dois cards.
         var expectedMonthlyRevenue = await baseQuery
-            .Where(sp => sp.PaymentStatus != SubscriptionPaymentStatus.cancelled)
+            .Where(sp => sp.PaymentStatus == SubscriptionPaymentStatus.up_to_date
+                || sp.PaymentStatus == SubscriptionPaymentStatus.retrying)
             .SumAsync(sp => (decimal?)sp.Package!.Price, ct) ?? 0m;
 
         var overdueAmount = await baseQuery
@@ -183,5 +189,12 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
             .Where(sp => studentIds.Contains(sp.StudentId)
                 && (sp.PaymentStatus != null || sp.AsaasSubscriptionId != null)
                 && sp.Status != StudentPackageStatus.cancelled)
+            .ToListAsync(ct);
+
+    public async Task<IEnumerable<StudentPackage>> ListByIdsAsync(
+        IEnumerable<Guid> ids, CancellationToken ct = default)
+        => await db.StudentPackages
+            .Include(sp => sp.Package)
+            .Where(sp => ids.Contains(sp.Id))
             .ToListAsync(ct);
 }

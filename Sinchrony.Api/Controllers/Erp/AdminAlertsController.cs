@@ -13,7 +13,10 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/alerts")]
 [Produces("application/json")]
-public class AdminAlertsController(IAdminAlertRepository adminAlertRepository) : ControllerBase
+public class AdminAlertsController(
+    IAdminAlertRepository adminAlertRepository,
+    IUserRepository userRepository,
+    IStudentPackageRepository studentPackageRepository) : ControllerBase
 {
     private const int MaxPageSize = 100;
 
@@ -30,12 +33,22 @@ public class AdminAlertsController(IAdminAlertRepository adminAlertRepository) :
 
         var result = await adminAlertRepository.ListPagedAsync(unread, page, pageSize, ct);
 
+        // O ERP monta "Assinatura vencida — Fulano" e precisa do nome sem buscar aluno por
+        // aluno — resolve nome/pacote em batch pelos ids dos alertas da página.
+        var studentIds = result.Items.Select(a => a.StudentId).Distinct().ToList();
+        var studentPackageIds = result.Items.Select(a => a.StudentPackageId).Distinct().ToList();
+        var students = (await userRepository.ListByIdsAsync(studentIds, ct)).ToDictionary(u => u.Id);
+        var studentPackages = (await studentPackageRepository.ListByIdsAsync(studentPackageIds, ct))
+            .ToDictionary(sp => sp.Id);
+
         var data = result.Items.Select(a => new
         {
             id = a.Id,
             type = a.Type,
             studentId = a.StudentId,
+            studentName = students.GetValueOrDefault(a.StudentId)?.Name ?? string.Empty,
             studentPackageId = a.StudentPackageId,
+            packageName = studentPackages.GetValueOrDefault(a.StudentPackageId)?.Package?.Name ?? string.Empty,
             transactionId = a.TransactionId,
             amount = a.Amount,
             createdAt = a.CreatedAt,
