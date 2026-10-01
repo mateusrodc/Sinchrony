@@ -29,6 +29,7 @@ public class OncePerStudentGuard(
 {
     public const string AlreadyPurchasedCode = "PACKAGE_ALREADY_PURCHASED";
     public const string PaymentInProgressCode = "PAYMENT_ALREADY_IN_PROGRESS";
+    public const string NotForDependentCode = "PACKAGE_NOT_AVAILABLE_FOR_DEPENDENT";
 
     // A cobrança PIX é criada com dueDate = hoje(UTC) + 1 dia (AsaasService.CreatePixChargeAsync) e
     // fica pagável até o fim desse dia. Só consideramos vencida a partir do começo do dia seguinte
@@ -100,6 +101,12 @@ public class OncePerStudentGuard(
     private async Task<Purchase?> CheckPackageAsync(
         Guid userId, Package package, StudentFamily family, PurchaseOrigin origin, CancellationToken ct)
     {
+        // Quem já é dependente não compra pacote de compra única (ex.: Primeira Experiência é para
+        // quem ainda não é aluno do estúdio). RootId != userId vale nos dois modelos de dependente.
+        if (family.RootId != userId)
+            throw DomainException.Conflict(NotForDependentCode,
+                "Este pacote não está disponível para dependentes.");
+
         var purchases = await purchaseRepository.ListConfirmedOrPendingByPackageAndUsersAsync(
             package.Id, family.UserIds, ct);
 

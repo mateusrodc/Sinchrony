@@ -12,7 +12,7 @@ public record PayWithPixCommand(
     string? Cpf = null)
     : IRequest<PixPaymentResponseDto>;
 
-public record PixPaymentResponseDto(bool Success, string TransactionId, string PixCode, string QrCodeBase64);
+public record PixPaymentResponseDto(bool Success, string TransactionId, string PixCode, string QrCodeBase64, bool Reused = false);
 
 public class PayWithPixCommandHandler(
     IUserRepository userRepository,
@@ -81,7 +81,7 @@ public class PayWithPixCommandHandler(
             if (reusable is not null)
             {
                 var existing = await asaasService.GetPixQrCodeAsync(reusable.TransactionId!, ct);
-                return new PixPaymentResponseDto(true, existing.TransactionId, existing.PixCode, existing.QrCodeBase64);
+                return new PixPaymentResponseDto(true, existing.TransactionId, existing.PixCode, existing.QrCodeBase64, Reused: true);
             }
 
             // Usa CPF do request se informado, senão usa o do cadastro

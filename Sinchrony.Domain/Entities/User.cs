@@ -120,9 +120,14 @@ public class User
         UpdatedAt = DateTime.UtcNow;
     }
 
+    // Forma canônica das observações (Trim; vazio = null) — a mesma que SetNotes grava, para
+    // comparar "texto enviado" com "texto salvo".
+    public static string? NormalizeNotes(string? notes)
+        => string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+
     public void SetNotes(string? notes)
     {
-        var trimmed = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        var trimmed = NormalizeNotes(notes);
         if (trimmed is not null && trimmed.Length > NotesMaxLength)
             throw DomainException.Validation("NOTES_TOO_LONG",
                 $"As observações podem ter no máximo {NotesMaxLength} caracteres.");

@@ -90,7 +90,7 @@ public class OncePerStudentGuardTests
         (await Thrown(() => Check(_owner, PurchaseOrigin.AppCard, _firstExperience)))
             .Code.Should().Be("PACKAGE_ALREADY_PURCHASED");
         (await Thrown(() => Check(_dependent, PurchaseOrigin.AppCard, _firstExperience)))
-            .Code.Should().Be("PACKAGE_ALREADY_PURCHASED");
+            .Code.Should().Be("PACKAGE_NOT_AVAILABLE_FOR_DEPENDENT");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class OncePerStudentGuardTests
         Add(_owner, _firstExperience, "cash", "confirmed");
 
         (await Thrown(() => Check(_dependent, PurchaseOrigin.AppPix, _firstExperience)))
-            .Code.Should().Be("PACKAGE_ALREADY_PURCHASED");
+            .Code.Should().Be("PACKAGE_NOT_AVAILABLE_FOR_DEPENDENT");
     }
 
     [Fact]
@@ -160,6 +160,66 @@ public class OncePerStudentGuardTests
 
         (await Thrown(() => Check(_owner, PurchaseOrigin.AppPix, _firstExperience)))
             .Code.Should().Be("PACKAGE_ALREADY_PURCHASED");
+    }
+
+    // ---- dependente não compra pacote de compra única ----
+
+    [Fact]
+    public async Task Dependent_WithoutAnyPurchase_CannotBuy_UserModel()
+    {
+        _dependent.SetAsDependent(_owner.Id);
+        _db.SaveChanges();
+
+        var ex = await Thrown(() => Check(_dependent, PurchaseOrigin.AppPix, _firstExperience));
+
+        ex.Code.Should().Be("PACKAGE_NOT_AVAILABLE_FOR_DEPENDENT");
+        ex.HttpStatus.Should().Be(409);
+        ex.Message.Should().Be("Este pacote não está disponível para dependentes.");
+    }
+
+    [Fact]
+    public async Task Dependent_DependentsTableModel_CannotBuy_EvenViaCounter()
+    {
+        var row = Dependent.Create(_owner.Id, "Dependente");
+        row.LinkUser(_dependent.Id);
+        _db.Dependents.Add(row);
+        _db.SaveChanges();
+
+        (await Thrown(() => Check(_dependent, PurchaseOrigin.Counter, _firstExperience)))
+            .Code.Should().Be("PACKAGE_NOT_AVAILABLE_FOR_DEPENDENT");
+    }
+
+    [Fact]
+    public async Task TwoSiblingDependents_NeitherCanBuy()
+    {
+        var sibling = User.Create("Irmão", "i.com", null, "h", Role.student);
+        _db.Users.Add(sibling);
+        _dependent.SetAsDependent(_owner.Id);
+        sibling.SetAsDependent(_owner.Id);
+        _db.SaveChanges();
+
+        (await Thrown(() => Check(_dependent, PurchaseOrigin.AppCard, _firstExperience)))
+            .Code.Should().Be("PACKAGE_NOT_AVAILABLE_FOR_DEPENDENT");
+        (await Thrown(() => Check(sibling, PurchaseOrigin.AppCard, _firstExperience)))
+            .Code.Should().Be("PACKAGE_NOT_AVAILABLE_FOR_DEPENDENT");
+    }
+
+    [Fact]
+    public async Task Dependent_CanStillBuyRegularPackage()
+    {
+        _dependent.SetAsDependent(_owner.Id);
+        _db.SaveChanges();
+
+        (await Check(_dependent, PurchaseOrigin.AppPix, _regular)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Owner_WithoutPriorPurchase_BuysNormally_EvenWithDependents()
+    {
+        _dependent.SetAsDependent(_owner.Id);
+        _db.SaveChanges();
+
+        (await Check(_owner, PurchaseOrigin.AppPix, _firstExperience)).Should().BeNull();
     }
 
     // ---- cobrança em aberto ----

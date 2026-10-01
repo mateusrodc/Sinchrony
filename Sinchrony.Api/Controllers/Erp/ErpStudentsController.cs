@@ -77,12 +77,14 @@ public class ErpStudentsController(
 
     private bool IsAdmin => User.IsInRole("admin");
 
-    private async Task<bool> CanViewNotesAsync(CancellationToken ct)
-        => IsAdmin || await permissionService.HasPermissionAsync(AdminId, "student_notes", "view", ct);
+    private Task<bool> CanViewNotesAsync(CancellationToken ct)
+        => permissionService.HasPermissionAsync(AdminId, "student_notes", "view", ct);
 
-    private async Task<bool> CanEditNotesAsync(CancellationToken ct)
-        => IsAdmin || await permissionService.HasPermissionAsync(AdminId, "student_notes", "edit", ct);
+    private Task<bool> CanEditNotesAsync(CancellationToken ct)
+        => permissionService.HasPermissionAsync(AdminId, "student_notes", "edit", ct);
 
+    // Observações: decididas SÓ pela permissão (student_notes), sem atalho por role — a secretária é
+    // role admin com acesso restrito. Admin de acesso total já tem as duas permissões (migration).
     // Aniversário só pode ser definido/alterado pelo admin (o aluno só cadastra, uma vez, pelo App).
     // Quem não é admin pode reenviar o valor que já está salvo (o form do ERP manda o objeto todo).
     private void EnsureBirthDateEditable(DateOnly? requested, DateOnly? current)
@@ -255,7 +257,20 @@ public class ErpStudentsController(
 
         // Valida permissões ANTES de mutar qualquer coisa.
         EnsureBirthDateEditable(req.birthDate, student.BirthDate);
-        if (req.notes is not null && !await CanEditNotesAsync(ct))
+
+        if (req.clearBirthDate == true)
+        {
+            if (req.birthDate.HasValue)
+                throw DomainException.Validation("BIRTHDATE_CONFLICT",
+                    "Envie birthDate ou clearBirthDate, não os dois.");
+            if (!IsAdmin)
+                throw DomainException.Forbidden("Somente o administrador pode alterar a data de aniversário.");
+        }
+
+        // notes igual ao valor salvo (já normalizado) não é edição — mesma regra do birthDate.
+        var notesChanged = req.notes is not null
+            && Domain.Entities.User.NormalizeNotes(req.notes) != student.Notes;
+        if (notesChanged && !await CanEditNotesAsync(ct))
             throw DomainException.Forbidden("Você não tem permissão para editar as observações do aluno.");
 
         student.UpdateProfile(req.name, req.email, req.phone, student.Avatar);
@@ -287,9 +302,11 @@ public class ErpStudentsController(
 
         if (req.plan is not null) student.UpdatePlan(req.plan);
 
-        if (req.birthDate.HasValue && req.birthDate != student.BirthDate)
+        if (req.clearBirthDate == true)
+            student.SetBirthDate(null);
+        else if (req.birthDate.HasValue && req.birthDate != student.BirthDate)
             student.SetBirthDate(req.birthDate);
-        if (req.notes is not null)
+        if (notesChanged)
             student.SetNotes(req.notes);
 
         student.UpdateAddress(req.cep, req.logradouro, req.numero,
@@ -653,4 +670,5 @@ public record UpdateStudentRequest(
     string? cep, string? logradouro, string? numero,
     string? complemento, string? bairro, string? cidade, string? estado,
     Guid? unitId = null,
-    DateOnly? birthDate = null, string? notes = null);
+    DateOnly? birthDate = null, string? notes = null,
+    bool? clearBirthDate = null);

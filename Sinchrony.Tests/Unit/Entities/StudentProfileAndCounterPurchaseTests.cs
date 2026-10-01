@@ -46,6 +46,18 @@ public class StudentProfileAndCounterPurchaseTests
         u.Notes.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("  obs  ", "obs")]
+    [InlineData("   ", null)]
+    [InlineData(null, null)]
+    public void NormalizeNotes_MatchesWhatSetNotesStores(string? input, string? expected)
+    {
+        User.NormalizeNotes(input).Should().Be(expected);
+        var u = Student();
+        u.SetNotes(input);
+        u.Notes.Should().Be(User.NormalizeNotes(input));
+    }
+
     [Fact]
     public void AnonymizeForDeletion_ClearsBirthDateAndNotes()
     {

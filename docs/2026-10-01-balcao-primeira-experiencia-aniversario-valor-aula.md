@@ -73,3 +73,15 @@ cancelado nem lista de espera (antes a reserva sumia ao lançar a presença).
 `TeacherClassReportRepositoryTests`, `StudentProfileAndCounterPurchaseTests`.
 `CreateBookingCommandTests.cs` continua não compilando por motivo pré-existente e não relacionado
 (assinatura desatualizada de `CreateBookingCommand`) — foi excluído temporariamente só para rodar a suíte.
+
+## 4. Ajustes pós-revisão (`DEMANDA_AJUSTES_POS_REVISAO_2026-10-01_BACKEND_v2.md`)
+
+1. `GET /purchases` (App) devolve `transactionId` e `channel`.
+2. Observações decididas só por `student_notes:view/edit`, sem atalho por role admin.
+3. Dependente (qualquer dos dois modelos) não compra pacote `OncePerStudent` nos 4 caminhos, inclusive balcão:
+   `409 PACKAGE_NOT_AVAILABLE_FOR_DEPENDENT`, checado antes das compras da família.
+4. `PixPaymentResponseDto.Reused` (`true` quando devolve o PIX já existente).
+5. `notes` igual ao salvo (normalizado) não conta como edição.
+6. `clearBirthDate: true` no `PUT /api/students/{id}` (só admin; junto com `birthDate` → 422 `BIRTHDATE_CONFLICT`).
+
+Sem migration. A decisão de irmãos (item "fora desta demanda") ficou como estava.
