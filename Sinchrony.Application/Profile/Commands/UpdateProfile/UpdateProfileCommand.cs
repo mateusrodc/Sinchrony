@@ -11,7 +11,8 @@ public record UpdateProfileCommand(
     string? Phone, string? Avatar, string? Cpf,
     string? Cep, string? Logradouro, string? Numero,
     string? Complemento, string? Bairro, string? Cidade, string? Estado,
-    Guid? UnitId) : IRequest<UserDto>;
+    Guid? UnitId,
+    DateOnly? BirthDate = null) : IRequest<UserDto>;
 
 public class UpdateProfileCommandHandler(IUserRepository userRepository)
     : IRequestHandler<UpdateProfileCommand, UserDto>
@@ -20,6 +21,16 @@ public class UpdateProfileCommandHandler(IUserRepository userRepository)
     {
         var user = await userRepository.GetByIdAsync(request.UserId, ct)
             ?? throw DomainException.NotFound("User not found.");
+
+        // Aniversário: o aluno só CADASTRA (uma vez); depois só o admin altera, pra não repetir
+        // promoção de aniversário. Reenviar o mesmo valor é inofensivo (o App manda o perfil todo).
+        if (request.BirthDate.HasValue && request.BirthDate != user.BirthDate)
+        {
+            if (user.BirthDate.HasValue)
+                throw DomainException.Validation("BIRTHDATE_ALREADY_SET",
+                    "Para alterar a data de aniversário, fale com o estúdio.");
+            user.SetBirthDate(request.BirthDate);
+        }
 
         user.UpdateAddress(request.Cep, request.Logradouro, request.Numero,
     request.Complemento, request.Bairro, request.Cidade, request.Estado);
@@ -55,6 +66,7 @@ public class UpdateProfileCommandHandler(IUserRepository userRepository)
             user.IsDependent,
             user.ResponsibleStudentId,
             user.TermsAcceptedAt,
-            user.TermsVersion);
+            user.TermsVersion,
+            BirthDate: user.BirthDate);
     }
 }

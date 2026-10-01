@@ -26,4 +26,21 @@ public interface IClassRepository
     Task<(IEnumerable<Class> Items, int Total)> ListForReportsPagedAsync(
         DateOnly? from, DateOnly? to, Guid? studioId, Guid? teacherId, Guid? classTypeId,
         IEnumerable<Guid>? restrictToStudioIds, int page, int pageSize, CancellationToken ct = default);
+
+    // Relatório de aulas do professor: uma linha por aula que atende aos filtros, com a contagem de
+    // reservas/presenças já agregada no banco. Nada é excluído de propósito (aula cancelada, em
+    // andamento ou sem presentes entra se o filtro pedir).
+    Task<IReadOnlyList<TeacherClassReportRow>> ListForTeacherReportAsync(
+        TeacherClassReportFilter filter, CancellationToken ct = default);
 }
+
+public record TeacherClassReportFilter(
+    DateOnly? From, DateOnly? To, Guid? TeacherId, Guid? ClassTypeId, Guid? StudioId,
+    IReadOnlyCollection<Sinchrony.Domain.Enums.ClassStatus>? Statuses, int? MinAttended,
+    IEnumerable<Guid>? RestrictToStudioIds);
+
+public record TeacherClassReportRow(
+    Guid ClassId, DateOnly Date, string StartTime, Guid TeacherId, string Teacher,
+    Guid ClassTypeId, string ClassType, string ClassName, string Studio,
+    Sinchrony.Domain.Enums.ClassStatus Status,
+    int Booked, int Attended, int NoShow, int CancelledBookings);

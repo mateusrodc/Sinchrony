@@ -108,7 +108,11 @@ public class AsaasService(
         var payment = JsonSerializer.Deserialize<JsonElement>(content);
         var transactionId = payment.GetProperty("id").GetString()!;
 
-        // Busca QR Code PIX
+        return await GetPixQrCodeAsync(transactionId, ct);
+    }
+
+    public async Task<PixPaymentResult> GetPixQrCodeAsync(string transactionId, CancellationToken ct = default)
+    {
         string pixCode = string.Empty;
         string qrCodeBase64 = string.Empty;
 
@@ -134,6 +138,21 @@ public class AsaasService(
         }
 
         return new PixPaymentResult(transactionId, pixCode, qrCodeBase64);
+    }
+
+    public async Task CancelPaymentAsync(string paymentId, CancellationToken ct = default)
+    {
+        var resp = await httpClient.DeleteAsync($"{BaseUrl}/payments/{paymentId}", ct);
+
+        if (resp.IsSuccessStatusCode || resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return;
+
+        var content = await resp.Content.ReadAsStringAsync(ct);
+        logger.LogError("Asaas: failed to cancel payment {Id}. Status: {Status}, Body: {Body}",
+            paymentId, resp.StatusCode, content);
+
+        var description = ExtractErrorDescription(content, "Erro ao cancelar cobrança.");
+        throw DomainException.Validation("ASAAS_PAYMENT_CANCEL_ERROR", description);
     }
 
     public async Task<CardPaymentResult> ChargeCardAsync(
@@ -177,6 +196,11 @@ public class AsaasService(
     public async Task<PaymentStatusResult> GetPaymentAsync(string paymentId, CancellationToken ct = default)
     {
         var resp = await httpClient.GetAsync($"{BaseUrl}/payments/{paymentId}", ct);
+
+        // 404: a cobrança foi removida na Asaas (ex.: cancelada por CancelPaymentAsync). Mesmo status
+        // que a Asaas usa pra cobrança apagada, que os chamadores já tratam como "não paga".
+        if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return new PaymentStatusResult("PAYMENT_DELETED", null);
         var content = await resp.Content.ReadAsStringAsync(ct);
 
         if (!resp.IsSuccessStatusCode)

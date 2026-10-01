@@ -20,7 +20,8 @@ public class PayWithPixCommandHandler(
     IPurchaseRepository purchaseRepository,
     ICouponRepository couponRepository,
     IAsaasService asaasService,
-    IAuditService auditService) : IRequestHandler<PayWithPixCommand, PixPaymentResponseDto>
+    IAuditService auditService,
+    OncePerStudentGuard oncePerStudentGuard) : IRequestHandler<PayWithPixCommand, PixPaymentResponseDto>
 {
     public async Task<PixPaymentResponseDto> Handle(PayWithPixCommand request, CancellationToken ct)
     {
@@ -40,6 +41,9 @@ public class PayWithPixCommandHandler(
         {
             var pkg = await packageRepository.GetByIdAsync(pkgId, ct)
                 ?? throw DomainException.NotFound($"Package {pkgId} not found.");
+
+            if (!pkg.Active)
+                throw DomainException.Validation("PACKAGE_INACTIVE", "Package is not available.");
 
             // Plano recorrente precisa criar uma assinatura na Asaas (POST /subscriptions),
             // não uma cobrança avulsa — sem essa checagem, um App antigo ou um POST direto
@@ -68,31 +72,44 @@ public class PayWithPixCommandHandler(
             throw DomainException.Validation("AMOUNT_MISMATCH",
                 "O valor informado não corresponde ao preço dos pacotes selecionados.");
 
-        // Usa CPF do request se informado, senão usa o do cadastro
-        var cpf = request.Cpf ?? user.Cpf;
-
-        var customerId = await asaasService.GetOrCreateCustomerAsync(
-            user.Name, user.Email, cpf, ct);
-
-        var result = await asaasService.CreatePixChargeAsync(
-            customerId, expectedAmount, "4Sinchrony - Pacote de aulas", ct);
-
-        // PIX: compra fica PENDING até confirmação via webhook
-        foreach (var pkg in packages)
+        // Pacote de compra única: checagem + criação da cobrança sob trava por família+pacote.
+        return await oncePerStudentGuard.RunLockedAsync(user.Id, packages, async () =>
         {
-            var purchase = Purchase.CreatePending(
-                user.Id, pkg.Id, expectedAmount, "pix",
-                result.TransactionId, coupon?.Id);
-            await purchaseRepository.AddAsync(purchase, ct);
-        }
+            // Já existe PIX em aberto deste pacote pra esta pessoa: devolve o MESMO PIX (mesmo
+            // transactionId e QR Code) em vez de gerar uma segunda cobrança.
+            var reusable = await oncePerStudentGuard.CheckAsync(user.Id, packages, PurchaseOrigin.AppPix, ct);
+            if (reusable is not null)
+            {
+                var existing = await asaasService.GetPixQrCodeAsync(reusable.TransactionId!, ct);
+                return new PixPaymentResponseDto(true, existing.TransactionId, existing.PixCode, existing.QrCodeBase64);
+            }
 
-        await purchaseRepository.SaveAsync(ct);
+            // Usa CPF do request se informado, senão usa o do cadastro
+            var cpf = request.Cpf ?? user.Cpf;
 
-        await auditService.LogAsync(
-            "payment.pix_initiated", "Purchase",
-            null, user.Id,
-            $"TransactionId: {result.TransactionId}, Amount: {request.Amount}", ct: ct);
+            var customerId = await asaasService.GetOrCreateCustomerAsync(
+                user.Name, user.Email, cpf, ct);
 
-        return new PixPaymentResponseDto(true, result.TransactionId, result.PixCode, result.QrCodeBase64);
+            var result = await asaasService.CreatePixChargeAsync(
+                customerId, expectedAmount, "4Sinchrony - Pacote de aulas", ct);
+
+            // PIX: compra fica PENDING até confirmação via webhook
+            foreach (var pkg in packages)
+            {
+                var purchase = Purchase.CreatePending(
+                    user.Id, pkg.Id, expectedAmount, "pix",
+                    result.TransactionId, coupon?.Id);
+                await purchaseRepository.AddAsync(purchase, ct);
+            }
+
+            await purchaseRepository.SaveAsync(ct);
+
+            await auditService.LogAsync(
+                "payment.pix_initiated", "Purchase",
+                null, user.Id,
+                $"TransactionId: {result.TransactionId}, Amount: {request.Amount}", ct: ct);
+
+            return new PixPaymentResponseDto(true, result.TransactionId, result.PixCode, result.QrCodeBase64);
+        }, ct);
     }
 }

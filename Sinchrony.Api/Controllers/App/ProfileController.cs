@@ -25,7 +25,7 @@ public class ProfileController(IMediator mediator) : ControllerBase
         new UpdateProfileCommand(UserId, req.name, req.email, req.phone, req.avatar, req.cpf,
             req.cep, req.logradouro, req.numero,
             req.complemento, req.bairro, req.cidade, req.estado,
-            req.unitId), ct);
+            req.unitId, req.birthDate), ct);
         return Ok(result);
     }
 
@@ -43,4 +43,5 @@ public record UpdateProfileRequest(
     string name, string email, string? phone, string? avatar, string? cpf,
     string? cep, string? logradouro, string? numero,
     string? complemento, string? bairro, string? cidade, string? estado,
-    Guid? unitId);
+    Guid? unitId,
+    DateOnly? birthDate = null);

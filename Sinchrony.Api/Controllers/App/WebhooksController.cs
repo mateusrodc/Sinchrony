@@ -47,12 +47,13 @@ public class WebhooksController(
             var auditSvc = scope.ServiceProvider.GetRequiredService<IAuditService>();
             var asaasService = scope.ServiceProvider.GetRequiredService<IAsaasService>();
             var recurringRenewalService = scope.ServiceProvider.GetRequiredService<RecurringRenewalService>();
+            var paymentConfirmationService = scope.ServiceProvider.GetRequiredService<IPaymentConfirmationService>();
 
             try
             {
                 await ProcessWebhookAsync(payloadCopy, purchaseRepository, userRepository,
                     creditTransactionRepository, studentPackageRepository,
-                    auditSvc, asaasService, recurringRenewalService, CancellationToken.None);
+                    auditSvc, asaasService, recurringRenewalService, paymentConfirmationService, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -72,6 +73,7 @@ public class WebhooksController(
         IAuditService auditSvc,
         IAsaasService asaasService,
         RecurringRenewalService recurringRenewalService,
+        IPaymentConfirmationService paymentConfirmationService,
         CancellationToken ct)
     {
         var eventType = payload.TryGetProperty("event", out var ev)
@@ -99,10 +101,7 @@ public class WebhooksController(
         switch (eventType)
         {
             case "PAYMENT_CONFIRMED" or "PAYMENT_RECEIVED":
-                await HandleAdHocPaymentConfirmedAsync(
-                    transactionId, eventType!, purchaseRepository, userRepository,
-                    creditTransactionRepository, studentPackageRepository, auditSvc, asaasService,
-                    recurringRenewalService, ct);
+                await paymentConfirmationService.ConfirmPendingAsync(transactionId, eventType!, ct);
                 break;
 
             case "PAYMENT_REPROVED_BY_RISK_ANALYSIS" or "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED":
@@ -112,108 +111,6 @@ public class WebhooksController(
                     recurringRenewalService, ct);
                 break;
         }
-    }
-
-    // Compra avulsa OU renovação automática (Purchase.Kind == "renewal"): confirma a Purchase
-    // pendente que corresponde ao transactionId. Uma renovação delega pro RecurringRenewalService
-    // (credita/encadeia o próximo ciclo do pacote já ativo); o resto segue o fluxo de sempre:
-    // credita e ativa o StudentPackage na fila (contratação nova).
-    private async Task HandleAdHocPaymentConfirmedAsync(
-        string transactionId, string eventType,
-        IPurchaseRepository purchaseRepository, IUserRepository userRepository,
-        ICreditTransactionRepository creditTransactionRepository,
-        IStudentPackageRepository studentPackageRepository,
-        IAuditService auditSvc, IAsaasService asaasService,
-        RecurringRenewalService recurringRenewalService, CancellationToken ct)
-    {
-        var allPurchases = await purchaseRepository.ListAllAsync(ct);
-
-        var alreadyConfirmed = allPurchases.Any(p =>
-            p.TransactionId == transactionId && p.Status == "confirmed");
-
-        if (alreadyConfirmed)
-        {
-            logger.LogInformation("Asaas webhook: transaction {Id} already processed.", transactionId);
-            return;
-        }
-
-        var pendingPurchases = allPurchases
-            .Where(p => p.TransactionId == transactionId && p.Status == "pending")
-            .ToList();
-
-        if (pendingPurchases.Count == 0)
-        {
-            logger.LogWarning("Asaas webhook: no pending purchase found for {Id}.", transactionId);
-            return;
-        }
-
-        foreach (var purchase in pendingPurchases)
-        {
-            if (purchase.Kind == "renewal")
-            {
-                await recurringRenewalService.ConfirmRenewalAsync(purchase, ct);
-                continue;
-            }
-
-            purchase.Confirm();
-
-            var user = await userRepository.GetByIdAsync(purchase.UserId, ct);
-            if (user is null) continue;
-
-            var credits = purchase.Package?.Credits ?? 0;
-            logger.LogInformation("Asaas webhook: adding {Credits} credits to user {UserId}.",
-                credits, user.Id);
-
-            if (credits > 0)
-            {
-                user.AddCredits(credits);
-                var creditTx = CreditTransaction.Create(
-                    user.Id, credits, user.Credits,
-                    $"Card/PIX purchase confirmed: {transactionId}",
-                    "purchase", purchase.Id);
-                await creditTransactionRepository.AddAsync(creditTx, ct);
-            }
-
-            // Ativa StudentPackage queued
-            var queuedPackage = await studentPackageRepository
-                .GetQueuedByStudentAsync(purchase.UserId, ct);
-
-            if (queuedPackage is not null && queuedPackage.PackageId == purchase.PackageId)
-            {
-                var activePackage = await studentPackageRepository
-                    .GetActiveByStudentAsync(purchase.UserId, ct);
-
-                // Aula Avulsa ativa não segura um plano real pago: substitui na hora.
-                if (activePackage is null
-                    || queuedPackage.Package?.ReplacesActive(activePackage.Package) == true)
-                {
-                    // Legado: se o pacote substituído vinha de uma assinatura Asaas, encerra a
-                    // cobrança por lá — o modelo atual (AutoRenew) não precisa disso, Cancel()
-                    // já desliga a renovação localmente.
-                    if (activePackage?.AsaasSubscriptionId is not null)
-                        await asaasService.CancelSubscriptionAsync(activePackage.AsaasSubscriptionId, ct);
-
-                    activePackage?.Cancel();
-                    queuedPackage.Activate();
-                    logger.LogInformation(
-                        "StudentPackage {Id} activated for user {UserId}.",
-                        queuedPackage.Id, purchase.UserId);
-                }
-            }
-
-            await auditSvc.LogAsync(
-                "payment.confirmed", "Purchase",
-                purchase.Id, purchase.UserId,
-                $"TransactionId: {transactionId}, Event: {eventType}, Credits: {credits}",
-                ct: ct);
-        }
-
-        await purchaseRepository.SaveAsync(ct);
-        await userRepository.SaveAsync(ct);
-        await creditTransactionRepository.SaveAsync(ct);
-        await studentPackageRepository.SaveAsync(ct);
-
-        logger.LogInformation("Asaas webhook: transaction {Id} processed successfully.", transactionId);
     }
 
     // Cobrança avulsa/renovação que foi reprovada na análise antifraude ou teve a captura

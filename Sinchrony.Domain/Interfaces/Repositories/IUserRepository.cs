@@ -2,6 +2,9 @@
 
 namespace Sinchrony.Domain.Interfaces.Repositories;
 
+// Família de um aluno para a regra de compra única: o titular (RootId) e todo mundo ligado a ele.
+public record StudentFamily(Guid RootId, IReadOnlyCollection<Guid> UserIds);
+
 public interface IUserRepository
 {
     Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default);
@@ -27,4 +30,12 @@ public interface IUserRepository
 
     // Destinatários do alerta de assinatura vencida (studio-wide, sem escopo de unidade).
     Task<IEnumerable<User>> ListAdminsAsync(CancellationToken ct = default);
+
+    // Família do aluno: ele mesmo, o responsável dele e os dependentes dele. Considera os DOIS
+    // modelos de dependente: a tabela dependents (ResponsibleStudentId + UserId) e
+    // users.IsDependent + users.ResponsibleStudentId.
+    Task<StudentFamily> GetFamilyAsync(Guid userId, CancellationToken ct = default);
+
+    // Alunos que fazem aniversário no mês (1..12), ordenados pelo dia. unitId restringe à unidade.
+    Task<IReadOnlyList<User>> ListBirthdaysAsync(int month, Guid? unitId, CancellationToken ct = default);
 }

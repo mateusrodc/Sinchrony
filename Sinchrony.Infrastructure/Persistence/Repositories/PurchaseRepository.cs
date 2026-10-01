@@ -48,6 +48,8 @@ public class PurchaseRepository(ApplicationDbContext db) : IPurchaseRepository
             query = query.Where(p => p.Status == filter.Status);
         if (!string.IsNullOrEmpty(filter.PaymentMethod))
             query = query.Where(p => p.PaymentMethod == filter.PaymentMethod);
+        if (!string.IsNullOrEmpty(filter.Channel))
+            query = query.Where(p => p.Channel == filter.Channel);
         if (filter.UnitId.HasValue)
             query = query.Where(p => p.User!.UnitId == filter.UnitId.Value);
         if (!string.IsNullOrWhiteSpace(filter.StudentSearch))
@@ -133,4 +135,20 @@ public class PurchaseRepository(ApplicationDbContext db) : IPurchaseRepository
 
     public async Task<Purchase?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await db.Purchases.FirstOrDefaultAsync(p => p.Id == id, ct);
+
+    public async Task<IReadOnlyList<Purchase>> ListConfirmedOrPendingByPackageAndUsersAsync(
+        Guid packageId, IReadOnlyCollection<Guid> userIds, CancellationToken ct = default)
+        => await db.Purchases
+            .Where(p => p.PackageId == packageId
+                && userIds.Contains(p.UserId)
+                && (p.Status == "confirmed" || p.Status == "pending"))
+            .OrderBy(p => p.CreatedAt)
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Purchase>> ListByTransactionIdAsync(
+        string transactionId, CancellationToken ct = default)
+        => await db.Purchases
+            .Include(p => p.Package)
+            .Where(p => p.TransactionId == transactionId)
+            .ToListAsync(ct);
 }

@@ -7,7 +7,13 @@ public class Purchase
     public Guid PackageId { get; private set; }
     public decimal Amount { get; private set; }
     public Guid? CouponId { get; private set; }
-    public string PaymentMethod { get; private set; } = string.Empty; // pix | card
+    public string PaymentMethod { get; private set; } = string.Empty; // pix | card | cash | courtesy (cash/courtesy só no balcão)
+
+    // Canal onde a compra foi feita: "app" (aluno pagou pelo aplicativo) | "balcao" (recepção
+    // lançou pelo ERP, em qualquer método: dinheiro, cortesia, pix ou cartão da maquininha).
+    // Independe do Status — "confirmed" vale para as duas origens.
+    public string Channel { get; private set; } = "app";
+
     public string Status { get; private set; } = "confirmed";
     public string? TransactionId { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
@@ -73,6 +79,15 @@ public class Purchase
     {
         var purchase = CreatePending(userId, packageId, amount, paymentMethod, transactionId, null, studentPackageId);
         purchase.Confirm();
+        return purchase;
+    }
+
+    // Concessão feita no balcão (ERP): já nasce confirmada e com canal "balcao".
+    public static Purchase CreateCounterConfirmed(
+        Guid userId, Guid packageId, decimal amount, string paymentMethod)
+    {
+        var purchase = CreateConfirmed(userId, packageId, amount, paymentMethod, null);
+        purchase.Channel = "balcao";
         return purchase;
     }
 

@@ -14,9 +14,13 @@ public class PurchaseConfiguration : IEntityTypeConfiguration<Purchase>
         builder.Property(p => p.PaymentMethod).IsRequired().HasMaxLength(10);
         builder.Property(p => p.Status).IsRequired().HasMaxLength(20);
         builder.Property(p => p.Kind).IsRequired().HasMaxLength(20).HasDefaultValue("purchase");
+        builder.Property(p => p.Channel).IsRequired().HasMaxLength(10).HasDefaultValue("app");
 
         // Listagem do ERP filtra por período e ordena por data decrescente
         builder.HasIndex(p => p.CreatedAt);
+
+        // Regra de compra única: busca por pacote + usuário + status
+        builder.HasIndex(p => new { p.PackageId, p.UserId, p.Status });
 
         builder.HasOne(p => p.User).WithMany(u => u.Purchases)
             .HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);

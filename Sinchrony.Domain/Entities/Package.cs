@@ -51,6 +51,11 @@ public class Package
     // assinatura recorrente via PIX.
     public bool IsRecurring { get; private set; }
 
+    // Pacote de compra única (ex.: "Primeira Experiência"): cada aluno — e a família dele
+    // (titular/dependentes) — só pode ter UMA compra paga. Ninguém libera uma segunda, nem o
+    // admin. Ver OncePerStudentGuard.
+    public bool OncePerStudent { get; private set; }
+
     public Guid? PackageTypeId { get; private set; }
     public PackageType? PackageType { get; private set; }
     public ICollection<PackageBenefit> PackageBenefits { get; private set; } = [];
@@ -155,6 +160,12 @@ public class Package
     public void SetSingleClass(bool isSingleClass)
     {
         IsSingleClass = isSingleClass;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetOncePerStudent(bool oncePerStudent)
+    {
+        OncePerStudent = oncePerStudent;
         UpdatedAt = DateTime.UtcNow;
     }
 

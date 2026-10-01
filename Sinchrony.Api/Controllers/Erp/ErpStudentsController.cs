@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.Filters;
 using Sinchrony.Application.Common;
+using Sinchrony.Application.Payments;
 using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
@@ -29,36 +30,67 @@ public class ErpStudentsController(
     ICreditTransactionRepository creditTransactionRepository,
     PurchasePackageService purchasePackageService,
     IAuditService auditService,
-    IUnitOfWork unitOfWork) : ControllerBase
+    IUnitOfWork unitOfWork,
+    IPermissionService permissionService,
+    OncePerStudentGuard oncePerStudentGuard) : ControllerBase
 {
-    private static object MapStudent(User u, string? derivedPlan = null, string? paymentStatus = null) => new
+    // `notes` só entra na resposta quando quem chama pode vê-las (admin ou student_notes:view); sem
+    // permissão o campo é omitido (não vai null) — por isso Dictionary em vez de objeto anônimo.
+    private static object MapStudent(
+        User u, string? derivedPlan = null, string? paymentStatus = null, bool includeNotes = false)
     {
-        id = u.Id,
-        name = u.Name,
-        email = u.Email,
-        cpf = u.Cpf,
-        phone = u.Phone,
-        status = u.Status.ToString(),
-        blockedReason = u.BlockedReason,
-        paymentStatus,
-        plan = derivedPlan ?? u.PlanName,
-        credits = u.Credits,
-        avatar = u.Avatar,
-        unitId = u.UnitId,
-        unitName = u.Unit?.Name,
-        isDependent = u.IsDependent,
-        responsibleStudentId = u.ResponsibleStudentId,
-        registeredAt = u.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-        lastVisit = (string?)null,
-        totalClasses = 0,
-        cep = u.Cep,
-        logradouro = u.Logradouro,
-        numero = u.Numero,
-        complemento = u.Complemento,
-        bairro = u.Bairro,
-        cidade = u.Cidade,
-        estado = u.Estado
-    };
+        var result = new Dictionary<string, object?>
+        {
+            ["id"] = u.Id,
+            ["name"] = u.Name,
+            ["email"] = u.Email,
+            ["cpf"] = u.Cpf,
+            ["phone"] = u.Phone,
+            ["status"] = u.Status.ToString(),
+            ["blockedReason"] = u.BlockedReason,
+            ["paymentStatus"] = paymentStatus,
+            ["plan"] = derivedPlan ?? u.PlanName,
+            ["credits"] = u.Credits,
+            ["avatar"] = u.Avatar,
+            ["unitId"] = u.UnitId,
+            ["unitName"] = u.Unit?.Name,
+            ["isDependent"] = u.IsDependent,
+            ["responsibleStudentId"] = u.ResponsibleStudentId,
+            ["registeredAt"] = u.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            ["lastVisit"] = (string?)null,
+            ["totalClasses"] = 0,
+            ["cep"] = u.Cep,
+            ["logradouro"] = u.Logradouro,
+            ["numero"] = u.Numero,
+            ["complemento"] = u.Complemento,
+            ["bairro"] = u.Bairro,
+            ["cidade"] = u.Cidade,
+            ["estado"] = u.Estado,
+            ["birthDate"] = u.BirthDate?.ToString("yyyy-MM-dd")
+        };
+
+        if (includeNotes)
+            result["notes"] = u.Notes;
+
+        return result;
+    }
+
+    private bool IsAdmin => User.IsInRole("admin");
+
+    private async Task<bool> CanViewNotesAsync(CancellationToken ct)
+        => IsAdmin || await permissionService.HasPermissionAsync(AdminId, "student_notes", "view", ct);
+
+    private async Task<bool> CanEditNotesAsync(CancellationToken ct)
+        => IsAdmin || await permissionService.HasPermissionAsync(AdminId, "student_notes", "edit", ct);
+
+    // Aniversário só pode ser definido/alterado pelo admin (o aluno só cadastra, uma vez, pelo App).
+    // Quem não é admin pode reenviar o valor que já está salvo (o form do ERP manda o objeto todo).
+    private void EnsureBirthDateEditable(DateOnly? requested, DateOnly? current)
+    {
+        if (requested is null || requested == current) return;
+        if (!IsAdmin)
+            throw DomainException.Forbidden("Somente o administrador pode alterar a data de aniversário.");
+    }
 
     [HttpGet]
     public async Task<IActionResult> List(
@@ -107,6 +139,7 @@ public class ErpStudentsController(
         IEnumerable<User> items, CancellationToken ct)
     {
         var list = items.ToList();
+        var includeNotes = await CanViewNotesAsync(ct);
         var subs = await studentPackageRepository.ListSubscriptionsByStudentIdsAsync(
             list.Select(u => u.Id), ct);
 
@@ -123,7 +156,8 @@ public class ErpStudentsController(
                     .ThenByDescending(sp => sp.PurchasedAt)
                     .First().PaymentStatus?.ToString());
 
-        return list.Select(u => MapStudent(u, paymentStatus: byStudent.GetValueOrDefault(u.Id)));
+        return list.Select(u => MapStudent(
+            u, paymentStatus: byStudent.GetValueOrDefault(u.Id), includeNotes: includeNotes));
     }
 
     [HttpGet("{id}")]
@@ -140,7 +174,7 @@ public class ErpStudentsController(
         var activePackage = await studentPackageRepository.GetActiveByStudentAsync(id, ct);
         var derivedPlan = activePackage?.Package?.PackageType?.Name ?? student.PlanName;
 
-        return Ok(MapStudent(student, derivedPlan));
+        return Ok(MapStudent(student, derivedPlan, includeNotes: await CanViewNotesAsync(ct)));
     }
 
     [HttpGet("{id}/history")]
@@ -181,6 +215,16 @@ public class ErpStudentsController(
         if (!string.IsNullOrEmpty(req.plan))
             student.UpdatePlan(req.plan);
 
+        EnsureBirthDateEditable(req.birthDate, null);
+        if (req.birthDate.HasValue) student.SetBirthDate(req.birthDate);
+
+        if (req.notes is not null)
+        {
+            if (!await CanEditNotesAsync(ct))
+                throw DomainException.Forbidden("Você não tem permissão para editar as observações do aluno.");
+            student.SetNotes(req.notes);
+        }
+
         student.UpdateAddress(req.cep, req.logradouro, req.numero,
             req.complemento, req.bairro, req.cidade, req.estado);
 
@@ -196,7 +240,7 @@ public class ErpStudentsController(
             "student.created", "User", student.Id, AdminId,
             $"Name: {student.Name}, Email: {student.Email}", ct: ct);
 
-        return StatusCode(201, MapStudent(student));
+        return StatusCode(201, MapStudent(student, includeNotes: await CanViewNotesAsync(ct)));
     }
 
     [HttpPut("{id}")]
@@ -208,6 +252,11 @@ public class ErpStudentsController(
         if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
             && student.UnitId != unitContext.UnitId)
             return Forbid();
+
+        // Valida permissões ANTES de mutar qualquer coisa.
+        EnsureBirthDateEditable(req.birthDate, student.BirthDate);
+        if (req.notes is not null && !await CanEditNotesAsync(ct))
+            throw DomainException.Forbidden("Você não tem permissão para editar as observações do aluno.");
 
         student.UpdateProfile(req.name, req.email, req.phone, student.Avatar);
 
@@ -238,6 +287,11 @@ public class ErpStudentsController(
 
         if (req.plan is not null) student.UpdatePlan(req.plan);
 
+        if (req.birthDate.HasValue && req.birthDate != student.BirthDate)
+            student.SetBirthDate(req.birthDate);
+        if (req.notes is not null)
+            student.SetNotes(req.notes);
+
         student.UpdateAddress(req.cep, req.logradouro, req.numero,
             req.complemento, req.bairro, req.cidade, req.estado);
 
@@ -250,7 +304,7 @@ public class ErpStudentsController(
             "student.updated", "User", student.Id, AdminId,
             $"Name: {student.Name}, Email: {student.Email}", ct: ct);
 
-        return Ok(MapStudent(student));
+        return Ok(MapStudent(student, includeNotes: await CanViewNotesAsync(ct)));
     }
     [HttpPatch("{id}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
@@ -293,13 +347,14 @@ public class ErpStudentsController(
             throw DomainException.Validation("REASON_REQUIRED",
                 "O motivo da concessão é obrigatório (mínimo 3 caracteres).");
 
-        if (req.paymentMethod != "cash" && req.paymentMethod != "courtesy")
+        // No balcão também se recebe Pix e cartão (maquininha), não só dinheiro.
+        if (!CounterPaymentMethods.Contains(req.paymentMethod))
             throw DomainException.Validation("INVALID_PAYMENT_METHOD",
-                "Método de pagamento inválido. Use 'cash' ou 'courtesy'.");
+                "Método de pagamento inválido. Use 'pix', 'card', 'cash' ou 'courtesy'.");
 
-        if (req.paymentMethod == "cash" && (req.amount == null || req.amount <= 0))
+        if (req.paymentMethod != "courtesy" && (req.amount == null || req.amount <= 0))
             throw DomainException.Validation("AMOUNT_REQUIRED",
-                "O valor é obrigatório para pagamento em dinheiro.");
+                "O valor é obrigatório, exceto para cortesia.");
 
         var student = await userRepository.GetByIdAsync(studentId, ct)
             ?? throw DomainException.NotFound("Student not found.");
@@ -318,13 +373,19 @@ public class ErpStudentsController(
 
         var amount = req.paymentMethod == "courtesy" ? 0 : (req.amount ?? 0);
 
-        var purchase = Purchase.CreateConfirmed(
-            studentId, package.Id, amount,
-            req.paymentMethod, null);
-        await purchaseRepository.AddAsync(purchase, ct);
-        await purchaseRepository.SaveAsync(ct);
+        // Pacote de compra única (ex.: Primeira Experiência): sem exceção para admin. Checagem e
+        // criação da Purchase juntas, sob trava por família+pacote (concorrência com o App).
+        var (purchase, grant) = await oncePerStudentGuard.RunLockedAsync(studentId, [package], async () =>
+        {
+            await oncePerStudentGuard.CheckAsync(studentId, [package], PurchaseOrigin.Counter, ct);
 
-        var grant = await purchasePackageService.ProcessAsync(studentId, package, "manual", ct);
+            var purchase = Purchase.CreateCounterConfirmed(studentId, package.Id, amount, req.paymentMethod);
+            await purchaseRepository.AddAsync(purchase, ct);
+            await purchaseRepository.SaveAsync(ct);
+
+            var grant = await purchasePackageService.ProcessAsync(studentId, package, "manual", ct);
+            return (purchase, grant);
+        }, ct);
 
         // Recarrega student para pegar Credits já creditados pelo ProcessAsync
         student = await userRepository.GetByIdAsync(studentId, ct)!;
@@ -347,7 +408,7 @@ public class ErpStudentsController(
         await auditService.LogAsync(
             "package.granted_by_admin", "Purchase",
             purchase.Id, AdminId,
-            $"Aluno: {student.Name}, Pacote: {package.Name}, Método: {req.paymentMethod}, Motivo: {req.reason}",
+            $"Aluno: {student.Name}, Pacote: {package.Name}, Método: {req.paymentMethod}, Canal: balcao, Motivo: {req.reason}",
             ct: ct);
 
         // Pacote tratado por esta concessão — pode ser um pacote em fila, diferente do ativo.
@@ -362,9 +423,13 @@ public class ErpStudentsController(
             startDate = sp?.StartDate,
             endDate = sp?.EndDate,
             transactionId = (string?)null,
-            paymentMethod = req.paymentMethod
+            paymentMethod = req.paymentMethod,
+            channel = purchase.Channel
         });
     }
+
+    private static readonly string[] CounterPaymentMethods = ["pix", "card", "cash", "courtesy"];
+
     [HttpDelete("{studentId}/packages/{studentPackageId}")]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> RemovePackage(
@@ -579,11 +644,13 @@ public record CreateStudentRequest(
     string? plan, string? status, string? cpf,
     string? cep, string? logradouro, string? numero,
     string? complemento, string? bairro, string? cidade, string? estado,
-    Guid? unitId = null);
+    Guid? unitId = null,
+    DateOnly? birthDate = null, string? notes = null);
 
 public record UpdateStudentRequest(
     string name, string email, string? phone,
     string? status, string? plan, string? cpf,
     string? cep, string? logradouro, string? numero,
     string? complemento, string? bairro, string? cidade, string? estado,
-    Guid? unitId = null);
+    Guid? unitId = null,
+    DateOnly? birthDate = null, string? notes = null);

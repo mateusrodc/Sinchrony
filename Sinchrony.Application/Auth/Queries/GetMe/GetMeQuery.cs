@@ -31,6 +31,7 @@ public class GetMeQueryHandler(
                 user.TermsAcceptedAt,
                 user.TermsVersion,
                 user.Status.ToString(),
-                user.BlockedReason);
+                user.BlockedReason,
+                user.BirthDate);
     }
 }

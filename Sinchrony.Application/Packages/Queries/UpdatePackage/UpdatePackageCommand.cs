@@ -34,7 +34,8 @@ public record UpdatePackageCommand(
     bool AllowsInstallments = true,
     int? MaxInstallments = null,
     bool? IsSingleClass = null,
-    bool? IsRecurring = null) : IRequest<PackageDto>;
+    bool? IsRecurring = null,
+    bool? OncePerStudent = null) : IRequest<PackageDto>;
 
 public class UpdatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -76,6 +77,9 @@ public class UpdatePackageCommandHandler(
 
         if (request.IsRecurring.HasValue)
             package.SetRecurring(request.IsRecurring.Value);
+
+        if (request.OncePerStudent.HasValue)
+            package.SetOncePerStudent(request.OncePerStudent.Value);
 
         await packageRepository.UpdateBenefitsAsync(request.Id, request.BenefitIds, ct);
         await packageRepository.SaveAsync(ct);

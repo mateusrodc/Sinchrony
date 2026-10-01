@@ -36,6 +36,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
     public DbSet<AdminAlert> AdminAlerts => Set<AdminAlert>();
+    public DbSet<ClassRate> ClassRates => Set<ClassRate>();
+    public DbSet<TeacherBonusRate> TeacherBonusRates => Set<TeacherBonusRate>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

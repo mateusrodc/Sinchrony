@@ -52,5 +52,6 @@ public class LoginCommandHandler(
             user.TermsAcceptedAt,
             user.TermsVersion,
             user.Status.ToString(),
-            user.BlockedReason));
+            user.BlockedReason,
+            user.BirthDate));
 }

@@ -24,6 +24,13 @@ public class User
     public string? Specialties { get; private set; }
     public string? Cargo { get; private set; }
 
+    // Aniversário do aluno. O próprio aluno só consegue cadastrar (uma vez, pelo App); depois
+    // disso só o admin altera — evita repetir promoção de aniversário.
+    public DateOnly? BirthDate { get; private set; }
+
+    // Observações internas do estúdio sobre o aluno. Nunca é exposta ao próprio aluno.
+    public string? Notes { get; private set; }
+
     // Motivo do bloqueio quando Status == blocked. Distingue bloqueio automático por falha
     // de pagamento recorrente ("payment_failed") de bloqueio manual do admin (null).
     public string? BlockedReason { get; private set; }
@@ -99,6 +106,27 @@ public class User
         Email = email.ToLower();
         Phone = phone;
         Avatar = avatar;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public const int NotesMaxLength = 1000;
+
+    public void SetBirthDate(DateOnly? birthDate)
+    {
+        if (birthDate is { } d && (d > DateOnly.FromDateTime(DateTime.UtcNow) || d.Year < 1900))
+            throw DomainException.Validation("INVALID_BIRTHDATE", "Data de aniversário inválida.");
+
+        BirthDate = birthDate;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetNotes(string? notes)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        if (trimmed is not null && trimmed.Length > NotesMaxLength)
+            throw DomainException.Validation("NOTES_TOO_LONG",
+                $"As observações podem ter no máximo {NotesMaxLength} caracteres.");
+        Notes = trimmed;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -211,6 +239,8 @@ public class User
         Email = $"deleted+{Id}@4sinchrony.local";
         Phone = null;
         Cpf = null;
+        BirthDate = null;
+        Notes = null;
         Avatar = null;
         Cep = null;
         Logradouro = null;

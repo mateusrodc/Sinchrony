@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Sinchrony.Application.Payments;
 using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Application.Subscriptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -63,6 +64,9 @@ public static class DependencyInjection
         services.AddScoped<StudentPackageLifecycleService>();
         services.AddHostedService<PackageExpirationService>();
         services.AddScoped<IAdminAlertRepository, AdminAlertRepository>();
+        services.AddScoped<ITeacherRateRepository, TeacherRateRepository>();
+        services.AddScoped<OncePerStudentGuard>();
+        services.AddScoped<IPaymentConfirmationService, PaymentConfirmationService>();
         services.AddScoped<SubscriptionOverdueService>();
         services.AddScoped<RecurringRenewalService>();
         services.AddHostedService<RecurringRenewalJob>();

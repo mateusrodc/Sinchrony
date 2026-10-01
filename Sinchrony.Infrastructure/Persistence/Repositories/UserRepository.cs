@@ -104,4 +104,50 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
 
     public async Task<User?> GetByCpfAsync(string cpf, CancellationToken ct = default)
     => await db.Users.FirstOrDefaultAsync(u => u.Cpf == cpf, ct);
+
+    public async Task<StudentFamily> GetFamilyAsync(Guid userId, CancellationToken ct = default)
+    {
+        var me = await db.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.IsDependent, u.ResponsibleStudentId })
+            .FirstOrDefaultAsync(ct);
+
+        // Quem é o titular: o responsável (modelo users.IsDependent) OU o responsável da linha da
+        // tabela dependents que aponta pra este usuário. Sem nenhum dos dois, ele mesmo é o titular.
+        var rootId = me is { IsDependent: true, ResponsibleStudentId: { } responsible } ? responsible : (Guid?)null;
+        rootId ??= await db.Dependents.AsNoTracking()
+            .Where(d => d.UserId == userId)
+            .Select(d => (Guid?)d.ResponsibleStudentId)
+            .FirstOrDefaultAsync(ct);
+        var root = rootId ?? userId;
+
+        var ids = new HashSet<Guid> { userId, root };
+
+        // Dependentes do próprio usuário (ele como titular) — dois modelos.
+        ids.UnionWith(await db.Users.AsNoTracking()
+            .Where(u => u.ResponsibleStudentId == userId)
+            .Select(u => u.Id)
+            .ToListAsync(ct));
+        ids.UnionWith(await db.Dependents.AsNoTracking()
+            .Where(d => d.ResponsibleStudentId == userId && d.UserId != null)
+            .Select(d => d.UserId!.Value)
+            .ToListAsync(ct));
+
+        return new StudentFamily(root, ids);
+    }
+
+    public async Task<IReadOnlyList<User>> ListBirthdaysAsync(
+        int month, Guid? unitId, CancellationToken ct = default)
+    {
+        var query = db.Users
+            .Where(u => u.Role == Role.student && u.BirthDate != null && u.BirthDate.Value.Month == month);
+
+        if (unitId.HasValue)
+            query = query.Where(u => u.UnitId == unitId.Value);
+
+        return await query
+            .OrderBy(u => u.BirthDate!.Value.Day)
+            .ThenBy(u => u.Name)
+            .ToListAsync(ct);
+    }
 }

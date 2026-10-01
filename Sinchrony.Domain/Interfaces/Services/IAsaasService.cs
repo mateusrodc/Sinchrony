@@ -24,6 +24,14 @@ public interface IAsaasService
     // reconciliação de uma renovação "pending" cujo webhook se perdeu.
     Task<PaymentStatusResult> GetPaymentAsync(string paymentId, CancellationToken ct = default);
 
+    // QR Code de uma cobrança PIX já criada (mesmo transactionId, mesmo QR) — usado para devolver
+    // o PIX pendente em vez de gerar uma segunda cobrança do mesmo pacote.
+    Task<PixPaymentResult> GetPixQrCodeAsync(string transactionId, CancellationToken ct = default);
+
+    // Cancela uma cobrança avulsa ainda não paga (DELETE /v3/payments/{id}). Idempotente: uma
+    // cobrança que já não existe (404) conta como cancelada.
+    Task CancelPaymentAsync(string paymentId, CancellationToken ct = default);
+
     // --- Legado: assinatura Asaas (POST /v3/subscriptions), modelo abandonado em 23/09 em favor
     // de renovação automática cobrada pelo próprio Sinchrony (ver RecurringRenewalService).
     // Mantidos só como rede de segurança caso sobre algum registro com AsaasSubscriptionId.

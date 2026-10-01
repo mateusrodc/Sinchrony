@@ -19,7 +19,8 @@ public class ErpPurchasesController(
 {
     private const int MaxPageSize = 100;
     private static readonly string[] ValidStatuses = ["pending", "confirmed", "failed"];
-    private static readonly string[] ValidPaymentMethods = ["pix", "card"];
+    private static readonly string[] ValidPaymentMethods = ["pix", "card", "cash", "courtesy"];
+    private static readonly string[] ValidChannels = ["app", "balcao"];
 
     // Tela de acompanhamento (não é módulo financeiro): quem comprou o quê, quando e o status do pagamento.
     // Todo filtro é opcional. `summary` reflete o recorte filtrado, não o total do sistema.
@@ -31,6 +32,7 @@ public class ErpPurchasesController(
         [FromQuery] DateTime? to,
         [FromQuery] string? status,
         [FromQuery] string? paymentMethod,
+        [FromQuery] string? channel,
         [FromQuery] string? studentSearch,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
@@ -52,7 +54,11 @@ public class ErpPurchasesController(
 
         var normalizedMethod = paymentMethod?.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(normalizedMethod) && !ValidPaymentMethods.Contains(normalizedMethod))
-            throw new DomainException("INVALID_PAYMENT_METHOD", "paymentMethod deve ser 'pix' ou 'card'.");
+            throw new DomainException("INVALID_PAYMENT_METHOD", "paymentMethod deve ser 'pix', 'card', 'cash' ou 'courtesy'.");
+
+        var normalizedChannel = channel?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(normalizedChannel) && !ValidChannels.Contains(normalizedChannel))
+            throw new DomainException("INVALID_CHANNEL", "channel deve ser 'app' ou 'balcao'.");
 
         var fromUtc = from.HasValue ? ToUtc(from.Value) : (DateTime?)null;
         DateTime? toExclusiveUtc = null;
@@ -70,7 +76,7 @@ public class ErpPurchasesController(
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
         var filter = new PurchaseListFilter(
-            fromUtc, toExclusiveUtc, normalizedStatus, normalizedMethod, studentSearch, unitId);
+            fromUtc, toExclusiveUtc, normalizedStatus, normalizedMethod, studentSearch, unitId, normalizedChannel);
         var result = await purchaseRepository.ListErpPagedAsync(filter, page, pageSize, ct);
 
         var data = result.Items.Select(p => new
@@ -82,6 +88,7 @@ public class ErpPurchasesController(
             packageName = p.Package?.Name ?? string.Empty,
             amount = p.Amount,
             paymentMethod = p.PaymentMethod,
+            channel = p.Channel,
             status = p.Status,
             transactionId = p.TransactionId,
             isRecurring = p.Package?.IsRecurring ?? false,

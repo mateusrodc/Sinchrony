@@ -21,7 +21,8 @@ public class PayWithCardCommandHandler(
     ICreditTransactionRepository creditTransactionRepository,
     ICardRepository cardRepository,
     IAsaasService asaasService,
-    IAuditService auditService) : IRequestHandler<PayWithCardCommand, CardPaymentResponseDto>
+    IAuditService auditService,
+    OncePerStudentGuard oncePerStudentGuard) : IRequestHandler<PayWithCardCommand, CardPaymentResponseDto>
 {
     public async Task<CardPaymentResponseDto> Handle(PayWithCardCommand request, CancellationToken ct)
     {
@@ -49,6 +50,9 @@ public class PayWithCardCommandHandler(
             var pkg = await packageRepository.GetByIdAsync(pkgId, ct)
                 ?? throw DomainException.NotFound($"Package {pkgId} not found.");
 
+            if (!pkg.Active)
+                throw DomainException.Validation("PACKAGE_INACTIVE", "Package is not available.");
+
             // Plano recorrente precisa criar uma assinatura na Asaas (POST /subscriptions),
             // não uma cobrança avulsa — sem essa checagem, um App antigo ou um POST direto
             // consegue "comprar" o plano sem nunca gerar a assinatura, e ele nunca renova.
@@ -74,65 +78,73 @@ public class PayWithCardCommandHandler(
             throw DomainException.Validation("AMOUNT_MISMATCH",
                 "O valor informado não corresponde ao preço dos pacotes selecionados.");
 
-        var customerId = await asaasService.GetOrCreateCustomerAsync(
-            user.Name, user.Email, user.Cpf, ct);
-
-        var result = await asaasService.ChargeCardAsync(
-            customerId, request.CardToken, expectedAmount,
-            "4Sinchrony - Pacote de aulas", ct);
-
-        if (result.Status is "CONFIRMED" or "RECEIVED")
+        // Pacote de compra única: checagem + cobrança sob trava por família+pacote. Um PIX em
+        // aberto do mesmo pacote bloqueia o cartão (não dá pra devolver um PIX aqui).
+        return await oncePerStudentGuard.RunLockedAsync(user.Id, packages, async () =>
         {
-            // Cartão aprovado de forma síncrona — credita imediatamente
-            var totalCredits = packages.Sum(p => p.Credits);
-            user.AddCredits(totalCredits);
+            await oncePerStudentGuard.CheckAsync(user.Id, packages, PurchaseOrigin.AppCard, ct);
 
-            var creditTx = CreditTransaction.Create(
-                user.Id, totalCredits, user.Credits,
-                $"Card purchase confirmed: {result.TransactionId}",
-                "purchase", null);
-            await creditTransactionRepository.AddAsync(creditTx, ct);
+            var customerId = await asaasService.GetOrCreateCustomerAsync(
+                user.Name, user.Email, user.Cpf, ct);
 
-            foreach (var pkg in packages)
+            var result = await asaasService.ChargeCardAsync(
+                customerId, request.CardToken, expectedAmount,
+                "4Sinchrony - Pacote de aulas", ct);
+
+            if (result.Status is "CONFIRMED" or "RECEIVED")
             {
-                var purchase = Purchase.Create(
-                    user.Id, pkg.Id, expectedAmount, "card",
-                    result.TransactionId, coupon?.Id);
-                await purchaseRepository.AddAsync(purchase, ct);
+                // Cartão aprovado de forma síncrona — credita imediatamente
+                var totalCredits = packages.Sum(p => p.Credits);
+                user.AddCredits(totalCredits);
+
+                var creditTx = CreditTransaction.Create(
+                    user.Id, totalCredits, user.Credits,
+                    $"Card purchase confirmed: {result.TransactionId}",
+                    "purchase", null);
+                await creditTransactionRepository.AddAsync(creditTx, ct);
+
+                foreach (var pkg in packages)
+                {
+                    var purchase = Purchase.Create(
+                        user.Id, pkg.Id, expectedAmount, "card",
+                        result.TransactionId, coupon?.Id);
+                    await purchaseRepository.AddAsync(purchase, ct);
+                }
+
+                await userRepository.SaveAsync(ct);
+                await creditTransactionRepository.SaveAsync(ct);
+                await purchaseRepository.SaveAsync(ct);
+
+                await auditService.LogAsync(
+                    "payment.card_confirmed", "Purchase",
+                    null, user.Id,
+                    $"TransactionId: {result.TransactionId}, Amount: {request.Amount}",
+                    ct: ct);
+            }
+            else
+            {
+                // PENDING: aguardando análise antifraude — créditos só são concedidos quando o
+                // webhook confirmar (PAYMENT_CONFIRMED/PAYMENT_RECEIVED), evitando dar créditos
+                // por um cartão que a Asaas ainda pode reprovar.
+                foreach (var pkg in packages)
+                {
+                    var purchase = Purchase.CreatePending(
+                        user.Id, pkg.Id, expectedAmount, "card",
+                        result.TransactionId, coupon?.Id);
+                    await purchaseRepository.AddAsync(purchase, ct);
+                }
+
+                await purchaseRepository.SaveAsync(ct);
+
+                await auditService.LogAsync(
+                    "payment.card_pending", "Purchase",
+                    null, user.Id,
+                    $"TransactionId: {result.TransactionId}, Amount: {request.Amount}",
+                    ct: ct);
             }
 
-            await userRepository.SaveAsync(ct);
-            await creditTransactionRepository.SaveAsync(ct);
-            await purchaseRepository.SaveAsync(ct);
 
-            await auditService.LogAsync(
-                "payment.card_confirmed", "Purchase",
-                null, user.Id,
-                $"TransactionId: {result.TransactionId}, Amount: {request.Amount}",
-                ct: ct);
-        }
-        else
-        {
-            // PENDING: aguardando análise antifraude — créditos só são concedidos quando o
-            // webhook confirmar (PAYMENT_CONFIRMED/PAYMENT_RECEIVED), evitando dar créditos
-            // por um cartão que a Asaas ainda pode reprovar.
-            foreach (var pkg in packages)
-            {
-                var purchase = Purchase.CreatePending(
-                    user.Id, pkg.Id, expectedAmount, "card",
-                    result.TransactionId, coupon?.Id);
-                await purchaseRepository.AddAsync(purchase, ct);
-            }
-
-            await purchaseRepository.SaveAsync(ct);
-
-            await auditService.LogAsync(
-                "payment.card_pending", "Purchase",
-                null, user.Id,
-                $"TransactionId: {result.TransactionId}, Amount: {request.Amount}",
-                ct: ct);
-        }
-
-        return new CardPaymentResponseDto(result.Status is "CONFIRMED" or "RECEIVED", result.TransactionId, result.Message);
+            return new CardPaymentResponseDto(result.Status is "CONFIRMED" or "RECEIVED", result.TransactionId, result.Message);
+        }, ct);
     }
 }

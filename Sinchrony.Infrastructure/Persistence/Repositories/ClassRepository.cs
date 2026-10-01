@@ -146,4 +146,41 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
 
         return (items, total);
     }
+
+    public async Task<IReadOnlyList<TeacherClassReportRow>> ListForTeacherReportAsync(
+        TeacherClassReportFilter filter, CancellationToken ct = default)
+    {
+        var query = db.Classes.AsNoTracking().AsQueryable();
+
+        if (filter.From.HasValue) query = query.Where(c => c.Date >= filter.From.Value);
+        if (filter.To.HasValue) query = query.Where(c => c.Date <= filter.To.Value);
+        if (filter.TeacherId.HasValue) query = query.Where(c => c.TeacherId == filter.TeacherId.Value);
+        if (filter.ClassTypeId.HasValue) query = query.Where(c => c.ClassTypeId == filter.ClassTypeId.Value);
+        if (filter.StudioId.HasValue) query = query.Where(c => c.StudioId == filter.StudioId.Value);
+        if (filter.Statuses is { Count: > 0 }) query = query.Where(c => filter.Statuses.Contains(c.Status));
+        if (filter.RestrictToStudioIds is not null)
+            query = query.Where(c => filter.RestrictToStudioIds.Contains(c.StudioId));
+
+        // Contagens agregadas no banco (uma query), sem carregar reservas/presenças. "Presente" é a
+        // presença confirmada (AttendanceRecord.Status == attended) pelo professor ou pela recepção.
+        var rows = await query
+            .OrderBy(c => c.Date).ThenBy(c => c.StartTime).ThenBy(c => c.Name)
+            .Select(c => new TeacherClassReportRow(
+                c.Id, c.Date, c.StartTime, c.TeacherId,
+                c.Teacher != null ? c.Teacher.Name : string.Empty,
+                c.ClassTypeId,
+                c.ClassType != null ? c.ClassType.Name : string.Empty,
+                c.Name,
+                c.Studio != null ? c.Studio.Name : string.Empty,
+                c.Status,
+                c.Bookings.Count(b => b.Status != BookingStatus.cancelled && b.Status != BookingStatus.waitlisted),
+                db.AttendanceRecords.Count(a => a.ClassId == c.Id && a.Status == BookingStatus.attended),
+                db.AttendanceRecords.Count(a => a.ClassId == c.Id && a.Status == BookingStatus.no_show),
+                c.Bookings.Count(b => b.Status == BookingStatus.cancelled)))
+            .ToListAsync(ct);
+
+        return filter.MinAttended.HasValue
+            ? rows.Where(r => r.Attended >= filter.MinAttended.Value).ToList()
+            : rows;
+    }
 }

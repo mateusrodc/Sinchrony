@@ -23,4 +23,5 @@ public record UserDto(
     DateTime? TermsAcceptedAt = null,
     string? TermsVersion = null,
     string? Status = null,
-    string? BlockedReason = null);
+    string? BlockedReason = null,
+    DateOnly? BirthDate = null);

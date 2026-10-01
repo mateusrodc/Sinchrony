@@ -9,7 +9,8 @@ public record PurchaseListFilter(
     string? Status = null,
     string? PaymentMethod = null,
     string? StudentSearch = null,
-    Guid? UnitId = null);
+    Guid? UnitId = null,
+    string? Channel = null);
 
 // TotalAmount/ConfirmedAmount somam o recorte filtrado inteiro (não só a página atual).
 public record PurchaseListPage(
@@ -46,4 +47,12 @@ public interface IPurchaseRepository
     Task<Purchase?> GetPendingRenewalAsync(Guid studentPackageId, CancellationToken ct = default);
 
     Task<Purchase?> GetByIdAsync(Guid id, CancellationToken ct = default);
+
+    // Compras confirmed ou pending de um pacote feitas por qualquer um dos usuários informados
+    // (a família do aluno) — base da regra de compra única (OncePerStudentGuard).
+    Task<IReadOnlyList<Purchase>> ListConfirmedOrPendingByPackageAndUsersAsync(
+        Guid packageId, IReadOnlyCollection<Guid> userIds, CancellationToken ct = default);
+
+    // Todas as purchases ligadas à mesma cobrança Asaas (um carrinho gera N purchases com o mesmo transactionId).
+    Task<IReadOnlyList<Purchase>> ListByTransactionIdAsync(string transactionId, CancellationToken ct = default);
 }

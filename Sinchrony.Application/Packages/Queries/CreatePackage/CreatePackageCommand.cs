@@ -34,7 +34,8 @@ public record CreatePackageCommand(
     bool? AllowsInstallments = null,
     int? MaxInstallments = null,
     bool? IsSingleClass = null,
-    bool? IsRecurring = null) : IRequest<PackageDto>;
+    bool? IsRecurring = null,
+    bool? OncePerStudent = null) : IRequest<PackageDto>;
 
 public class CreatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -76,6 +77,7 @@ public class CreatePackageCommandHandler(
 
         package.SetSingleClass(request.IsSingleClass ?? false);
         package.SetRecurring(request.IsRecurring ?? false);
+        package.SetOncePerStudent(request.OncePerStudent ?? false);
 
         await packageRepository.AddAsync(package, ct);
 
