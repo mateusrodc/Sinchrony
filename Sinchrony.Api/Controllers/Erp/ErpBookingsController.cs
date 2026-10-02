@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Attendance;
 using Sinchrony.Application.Common;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -17,8 +18,8 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpBookingsController(
     IBookingRepository bookingRepository,
     IWaitlistPromotionService waitlistPromotionService,
-    INoShowPenaltyService noShowPenaltyService,
-    IAttendanceRepository attendanceRepository,
+    IClassRepository classRepository,
+    AttendanceChangeService attendanceChangeService,
     IAuditService auditService) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -111,22 +112,14 @@ public class ErpBookingsController(
         if (booking.Status != Domain.Enums.BookingStatus.confirmed)
             throw DomainException.Validation("INVALID_STATUS", "Only confirmed bookings can be marked as no-show.");
 
-        booking.MarkNoShow();
+        var @class = await classRepository.GetByIdAsync(booking.ClassId, ct)
+            ?? throw DomainException.NotFound("Class not found.");
 
-        // Sincroniza o AttendanceRecord e registra quem marcou a falta (auditoria) — antes só
-        // o Booking era tocado, deixando o registro de presença desalinhado e sem rastro de
-        // quem fez a ação.
-        var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
-        attendance?.UpdateStatus("no_show", UserId);
-        await attendanceRepository.SaveAsync(ct);
-
-        await bookingRepository.SaveAsync(ct);
-
-        // Devolve o crédito se o pacote do aluno tiver NoShowCreditPenalty = false.
-        await noShowPenaltyService.ApplyAsync(booking.StudentId, ct);
-
-        // Idem: falta marcada manualmente pela equipe também libera a vaga pra fila.
-        await waitlistPromotionService.PromoteNextAsync(booking.ClassId, booking.Class?.Name ?? "sua aula", ct);
+        // Guarda de horário, AttendanceRecord + Booking, penalidade de crédito e fila de espera
+        // ficam no serviço central (mesmo caminho do App do professor).
+        await attendanceChangeService.ApplyAsync(
+            @class, [new AttendanceChangeItem(booking, "no_show")],
+            UserId, AttendanceChangeService.SourceErpNoShow, ct);
 
         await auditService.LogAsync(
             "booking.no_show_marked_by_admin", "Booking",

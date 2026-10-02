@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IWaitlistPromotionService, WaitlistPromotionService>();
         services.AddScoped<INoShowPenaltyService, NoShowPenaltyService>();
+        services.AddScoped<Sinchrony.Application.Attendance.AttendanceChangeService>();
         services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IUnitRepository, UnitRepository>();
         services.AddScoped<IUnitContext, UnitContext>();

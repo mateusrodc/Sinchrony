@@ -1,5 +1,5 @@
-﻿using MediatR;
-using Sinchrony.Domain.Entities;
+using MediatR;
+using Sinchrony.Application.Attendance;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Enums;
@@ -10,43 +10,29 @@ public record ConfirmAllAttendanceCommand(Guid ClassId, Guid ConfirmedById) : IR
 public record ConfirmAllResultDto(bool Success, int Total, int Updated, int Created);
 
 public class ConfirmAllAttendanceCommandHandler(
-    IAttendanceRepository attendanceRepository,
     IBookingRepository bookingRepository,
-    IClassRepository classRepository) : IRequestHandler<ConfirmAllAttendanceCommand, ConfirmAllResultDto>
+    IClassRepository classRepository,
+    AttendanceChangeService attendanceChangeService) : IRequestHandler<ConfirmAllAttendanceCommand, ConfirmAllResultDto>
 {
     public async Task<ConfirmAllResultDto> Handle(
         ConfirmAllAttendanceCommand request, CancellationToken ct)
     {
-        _ = await classRepository.GetByIdAsync(request.ClassId, ct)
+        var @class = await classRepository.GetByIdAsync(request.ClassId, ct)
             ?? throw DomainException.NotFound("Class not found.");
 
         var bookings = await bookingRepository.ListByClassAsync(request.ClassId, ct);
         var confirmed = bookings
             .Where(b => b.Status == BookingStatus.confirmed)
+            .Select(b => new AttendanceChangeItem(b, "attended"))
             .ToList();
 
-        var updated = 0;
-        var created = 0;
+        // Sem reservas pendentes não há o que lançar (nem o que recusar por horário).
+        if (confirmed.Count == 0)
+            return new ConfirmAllResultDto(true, 0, 0, 0);
 
-        foreach (var booking in confirmed)
-        {
-            var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
+        var result = await attendanceChangeService.ApplyAsync(
+            @class, confirmed, request.ConfirmedById, AttendanceChangeService.SourceConfirmAll, ct);
 
-            if (attendance is null)
-            {
-                attendance = AttendanceRecord.Create(booking.Id, request.ClassId, booking.StudentId);
-                await attendanceRepository.AddAsync(attendance, ct);
-                created++;
-            }
-            else
-            {
-                updated++;
-            }
-
-            attendance.UpdateStatus("attended", request.ConfirmedById);
-        }
-
-        await attendanceRepository.SaveAsync(ct);
-        return new ConfirmAllResultDto(true, confirmed.Count, updated, created);
+        return new ConfirmAllResultDto(true, confirmed.Count, result.Updated, result.Created);
     }
 }

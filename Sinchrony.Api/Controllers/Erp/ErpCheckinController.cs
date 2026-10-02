@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Attendance;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -13,7 +14,11 @@ namespace Sinchrony.Api.Controllers.Erp;
 [ApiController]
 [Route("api/checkin")]
 [Produces("application/json")]
-public class ErpCheckinController(IAttendanceRepository attendanceRepository) : ControllerBase
+public class ErpCheckinController(
+    IAttendanceRepository attendanceRepository,
+    IBookingRepository bookingRepository,
+    IClassRepository classRepository,
+    AttendanceChangeService attendanceChangeService) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? User.FindFirstValue("sub")!);
@@ -44,8 +49,15 @@ public class ErpCheckinController(IAttendanceRepository attendanceRepository) : 
             ?? await attendanceRepository.GetByBookingAsync(id, ct)
             ?? throw DomainException.NotFound("Checkin record not found.");
 
-        record.Confirm(UserId);
-        await attendanceRepository.SaveAsync(ct);
+        var @class = await classRepository.GetByIdAsync(record.ClassId, ct)
+            ?? throw DomainException.NotFound("Class not found.");
+        var booking = await bookingRepository.GetByIdAsync(record.BookingId, ct)
+            ?? throw DomainException.NotFound("Booking not found.");
+
+        await attendanceChangeService.ApplyAsync(
+            @class, [new AttendanceChangeItem(booking, "attended")],
+            UserId, AttendanceChangeService.SourceErpCheckin, ct);
+
         return Ok(MapCheckin(record));
     }
 

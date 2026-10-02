@@ -15,4 +15,10 @@ public interface INoShowPenaltyService
     /// Persiste sozinho — quem chamar não precisa dar SaveAsync adicional pra este efeito.
     /// </summary>
     Task ApplyAsync(Guid studentId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Desfaz ApplyAsync quando uma falta é revertida: se o pacote devolveu o crédito, retira 1 de
+    /// novo. Devolve false só quando havia crédito a retirar e o aluno não tem saldo.
+    /// </summary>
+    Task<bool> ReverseAsync(Guid studentId, CancellationToken ct = default);
 }

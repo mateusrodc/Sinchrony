@@ -28,4 +28,24 @@ public class NoShowPenaltyService(
         user.AddCredits(1);
         await userRepository.SaveAsync(ct);
     }
+
+    public async Task<bool> ReverseAsync(Guid studentId, CancellationToken ct = default)
+    {
+        var studentPackage = await studentPackageRepository.GetActiveByStudentAsync(studentId, ct);
+        if (PackageRuleResolver.GetNoShowCreditPenalty(studentPackage))
+            return true; // a falta não devolveu crédito, nada a retirar
+
+        var user = await userRepository.GetByIdAsync(studentId, ct);
+        if (user is null || user.Credits < 1)
+        {
+            logger.LogWarning(
+                "NoShowPenaltyService: não foi possível retirar o crédito devolvido do aluno {StudentId} ao desfazer a falta.",
+                studentId);
+            return false;
+        }
+
+        user.DeductCredits(1);
+        await userRepository.SaveAsync(ct);
+        return true;
+    }
 }

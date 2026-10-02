@@ -36,6 +36,7 @@ public class Booking
     public void Cancel() { Status = BookingStatus.cancelled; UpdatedAt = DateTime.UtcNow; }
     public void MarkAttended() { Status = BookingStatus.attended; CheckedIn = true; UpdatedAt = DateTime.UtcNow; }
     public void MarkNoShow() { Status = BookingStatus.no_show; UpdatedAt = DateTime.UtcNow; }
+    public void MarkConfirmed() { Status = BookingStatus.confirmed; CheckedIn = false; UpdatedAt = DateTime.UtcNow; }
     public void SetCheckedIn(bool value)
     {
         CheckedIn = value;

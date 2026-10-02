@@ -125,9 +125,9 @@ public class ClassesController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> UpdateAttendance(
     Guid id, [FromBody] UpdateAttendanceRequest req, CancellationToken ct)
     {
-        await mediator.Send(
+        var result = await mediator.Send(
             new UpdateAttendanceCommand(id, req.studentId, req.status, UserId), ct);
-        return Ok(new { success = true });
+        return Ok(new { success = true, warnings = result.Warnings });
     }
 
     [Authorize(Roles = "teacher,admin")]
@@ -142,7 +142,7 @@ public class ClassesController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(
             new BulkUpdateAttendanceCommand(id, updates, UserId), ct);
 
-        return Ok(new { success = result.Success, updated = result.Updated, created = result.Created });
+        return Ok(new { success = result.Success, updated = result.Updated, created = result.Created, warnings = result.Warnings ?? [] });
     }
 
     [Authorize(Roles = "teacher,admin")]
