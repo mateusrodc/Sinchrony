@@ -19,6 +19,14 @@ public class Class
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
+    // Preenchidos só em ocorrências de série (nulo = aula avulsa). SeriesDate é a data original da
+    // ocorrência e não muda se a aula for remarcada; é ela (e não Date) que impede recriar a mesma
+    // ocorrência ao estender a série. IsException = editada individualmente, fora da edição em grupo.
+    public Guid? SeriesId { get; private set; }
+    public DateOnly? SeriesDate { get; private set; }
+    public bool IsException { get; private set; }
+
+    public ClassSeries? Series { get; private set; }
     public ClassType? ClassType { get; private set; }
     public User? Teacher { get; private set; }
     public Studio? Studio { get; private set; }
@@ -41,6 +49,22 @@ public class Class
             Duration = duration,
             TotalSpots = totalSpots
         };
+
+    public static Class CreateOccurrence(ClassSeries series, DateOnly date, string endTime)
+    {
+        var c = Create(series.Name, series.ClassTypeId, series.TeacherId, series.StudioId,
+            date, series.StartTime, endTime, series.Duration, series.TotalSpots);
+        c.SeriesId = series.Id;
+        c.SeriesDate = date;
+        return c;
+    }
+
+    public void MarkAsException()
+    {
+        if (SeriesId is null || IsException) return;
+        IsException = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
 
     public void Update(string name, Guid classTypeId, Guid teacherId, Guid studioId,
         DateOnly date, string startTime, string endTime, int duration, int totalSpots, ClassStatus status)

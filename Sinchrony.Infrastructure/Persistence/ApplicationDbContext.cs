@@ -10,6 +10,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Studio> Studios => Set<Studio>();
     public DbSet<ClassType> ClassTypes => Set<ClassType>();
     public DbSet<Class> Classes => Set<Class>();
+    public DbSet<ClassSeries> ClassSeries => Set<ClassSeries>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<ClassSession> ClassSessions => Set<ClassSession>();
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();

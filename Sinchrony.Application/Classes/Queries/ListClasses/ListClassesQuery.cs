@@ -6,7 +6,8 @@ namespace Sinchrony.Application.Classes.Queries.ListClasses;
 
 public record ListClassesQuery(
     DateOnly? Date, string? Type, Guid? StudioId,
-    int Page = 1, int PageSize = 20)
+    int Page = 1, int PageSize = 20,
+    DateOnly? From = null, DateOnly? To = null)
     : IRequest<PagedResult<ClassDto>>;
 
 public record ClassDto(
@@ -28,7 +29,9 @@ public record ClassDto(
     int AvailableSpots,
     int EnrolledCount,
     string Status,
-    StudioDto Studio);
+    StudioDto Studio,
+    Guid? SeriesId = null,
+    bool IsException = false);
 
 public record StudioDto(
     Guid Id,
@@ -46,7 +49,7 @@ public class ListClassesQueryHandler(IClassRepository classRepository)
     {
         var (items, total) = await classRepository.ListPagedAsync(
             request.Date, request.Type, request.StudioId,
-            request.Page, request.PageSize, ct);
+            request.Page, request.PageSize, ct, request.From, request.To);
 
         return PagedResult.Create(items.Select(MapToDto), request.Page, request.PageSize, total);
     }
@@ -70,6 +73,7 @@ public class ListClassesQueryHandler(IClassRepository classRepository)
             c.Status.ToString(),
             new StudioDto(
                 c.Studio!.Id, c.Studio.Name, c.Studio.Address,
-                c.Studio.Capacity, c.Studio.OpeningTime, c.Studio.ClosingTime, c.Studio.UnitId));
+                c.Studio.Capacity, c.Studio.OpeningTime, c.Studio.ClosingTime, c.Studio.UnitId),
+            c.SeriesId, c.IsException);
     }
 }

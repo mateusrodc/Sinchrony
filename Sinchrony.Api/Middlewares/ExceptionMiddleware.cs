@@ -21,10 +21,21 @@ public class ExceptionMiddleware(RequestDelegate next)
 
             context.Response.StatusCode = ex.HttpStatus;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            if (ex.Extensions is { Count: > 0 })
             {
-                error = new { code = ex.Code, message = ex.Message }
-            }));
+                // Campos extras (ex.: conflicts) ficam dentro de `error`, ao lado de code/message.
+                var error = new Dictionary<string, object?> { ["code"] = ex.Code, ["message"] = ex.Message };
+                foreach (var (key, value) in ex.Extensions) error[key] = value;
+                await context.Response.WriteAsync(JsonSerializer.Serialize(
+                    new { error }, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+            }
+            else
+            {
+                await context.Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    error = new { code = ex.Code, message = ex.Message }
+                }));
+            }
         }
         catch (ValidationException ex)
         {

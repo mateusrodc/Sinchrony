@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.SwaggerExamples.Classes;
+using Sinchrony.Api.Extensions;
 using Sinchrony.Application.Attendance.Commands.BulkAttendance;
 using Sinchrony.Application.Attendance.Queries.AttendanceSummary;
 using Sinchrony.Application.Attendance.Queries.ListAttendance;
@@ -35,6 +36,8 @@ public class ClassesController(IMediator mediator) : ControllerBase
     [SwaggerResponseExample(200, typeof(ClassListResponseExample))]
     public async Task<IActionResult> List(
     [FromQuery] string? date,
+    [FromQuery] string? from,
+    [FromQuery] string? to,
     [FromQuery] string? type,
     [FromQuery] Guid? studioId,
     [FromQuery] int page = 1,
@@ -42,8 +45,9 @@ public class ClassesController(IMediator mediator) : ControllerBase
     CancellationToken ct = default)
     {
         DateOnly? parsedDate = DateOnly.TryParse(date, out var d) ? d : null;
+        var (fromDate, toDate) = DateParams.ParseRange(from, to);
         var result = await mediator.Send(
-            new ListClassesQuery(parsedDate, type, studioId, page, pageSize), ct);
+            new ListClassesQuery(parsedDate, type, studioId, page, pageSize, fromDate, toDate), ct);
         return Ok(result);
     }
 

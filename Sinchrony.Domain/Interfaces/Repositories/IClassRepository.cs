@@ -5,16 +5,26 @@ namespace Sinchrony.Domain.Interfaces.Repositories;
 public interface IClassRepository
 {
     Task<Class?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<IEnumerable<Class>> ListAsync(DateOnly? date, string? type, Guid? studioId, CancellationToken ct = default);
+    Task<IEnumerable<Class>> ListAsync(DateOnly? date, string? type, Guid? studioId, CancellationToken ct = default,
+        DateOnly? from = null, DateOnly? to = null);
     Task<IEnumerable<Class>> ListTodayAsync(CancellationToken ct = default);
-    Task<IEnumerable<Class>> ListByTeacherAsync(Guid teacherId, DateOnly? date, CancellationToken ct = default);
+    Task<IEnumerable<Class>> ListByTeacherAsync(Guid teacherId, DateOnly? date, CancellationToken ct = default,
+        DateOnly? from = null, DateOnly? to = null);
     Task<int> CountActiveBookingsAsync(Guid classId, CancellationToken ct = default);
     Task AddAsync(Class @class, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
     Task<int> CountActiveBookingsWithLockAsync(Guid classId, CancellationToken ct = default);
     Task<(IEnumerable<Class> Items, int Total)> ListPagedAsync(
     DateOnly? date, string? type, Guid? studioId,
-    int page, int pageSize, CancellationToken ct = default);
+    int page, int pageSize, CancellationToken ct = default,
+    DateOnly? from = null, DateOnly? to = null);
+
+    // Aulas não canceladas no período (inclusivo) que ocupam a sala OU o professor informados —
+    // base da checagem de conflito de horário. Sem rastreamento (só leitura).
+    Task<IReadOnlyList<Class>> ListSchedulingCandidatesAsync(
+        DateOnly from, DateOnly to, Guid studioId, Guid teacherId, CancellationToken ct = default);
+
+    Task AddRangeAsync(IEnumerable<Class> classes, CancellationToken ct = default);
 
     // Usado pelos relatórios ERP (Summary/Occupancy) — filtro por período (from/to) em vez de
     // data única, e teacherId/classTypeId/studioId explícitos (filtro de negócio) combinados com

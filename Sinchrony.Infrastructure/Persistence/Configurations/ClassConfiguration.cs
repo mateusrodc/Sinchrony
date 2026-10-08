@@ -25,6 +25,14 @@ public class ClassConfiguration : IEntityTypeConfiguration<Class>
         builder.HasOne(c => c.Studio).WithMany(s => s.Classes)
             .HasForeignKey(c => c.StudioId).OnDelete(DeleteBehavior.Restrict);
 
+        builder.Property(c => c.IsException).HasDefaultValue(false);
+
         builder.HasIndex(c => new { c.Date, c.StudioId });
+
+        // Uma ocorrência por data original da série, mesmo depois de cancelada ou remarcada:
+        // é isso que impede recriar a data ao estender a série. Aulas avulsas ficam fora (SeriesId nulo).
+        builder.HasIndex(c => new { c.SeriesId, c.SeriesDate })
+            .IsUnique()
+            .HasFilter("\"SeriesId\" IS NOT NULL");
     }
 }

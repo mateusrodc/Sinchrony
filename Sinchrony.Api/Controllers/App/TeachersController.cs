@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Extensions;
 using Sinchrony.Api.SwaggerExamples.Teachers;
 using Sinchrony.Application.Classes.Queries.ListClasses;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -21,10 +22,12 @@ public class TeachersController(IMediator mediator, IClassRepository classReposi
     [HttpGet("classes")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(TeacherClassListResponseExample))]
-    public async Task<IActionResult> MyClasses([FromQuery] string? date, CancellationToken ct)
+    public async Task<IActionResult> MyClasses(
+        [FromQuery] string? date, [FromQuery] string? from, [FromQuery] string? to, CancellationToken ct)
     {
         DateOnly? parsedDate = DateOnly.TryParse(date, out var d) ? d : null;
-        var classes = await classRepository.ListByTeacherAsync(UserId, parsedDate, ct);
+        var (fromDate, toDate) = DateParams.ParseRange(from, to);
+        var classes = await classRepository.ListByTeacherAsync(UserId, parsedDate, ct, fromDate, toDate);
         return Ok(new { data = classes.Select(ListClassesQueryHandler.MapToDto) });
     }
 

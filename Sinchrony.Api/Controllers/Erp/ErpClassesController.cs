@@ -1,6 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Extensions;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Classes.Commands.CreateClass;
+using Sinchrony.Application.Classes.Commands.UpdateClass;
 using Sinchrony.Application.Classes.Queries.ListClasses;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
@@ -18,6 +22,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Route("api/classes")]
 [Produces("application/json")]
 public class ErpClassesController(
+    IMediator mediator,
     IClassRepository classRepository,
     IUnitContext unitContext,
     IAuditService auditService) : ControllerBase
@@ -29,11 +34,13 @@ public class ErpClassesController(
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(ErpClassListResponseExample))]
     public async Task<IActionResult> List(
-    [FromQuery] string? date, [FromQuery] string? type, [FromQuery] Guid? studioId, [FromQuery] string? status,
+    [FromQuery] string? date, [FromQuery] string? from, [FromQuery] string? to,
+    [FromQuery] string? type, [FromQuery] Guid? studioId, [FromQuery] string? status,
     CancellationToken ct)
     {
         DateOnly? parsedDate = DateOnly.TryParse(date, out var d) ? d : null;
-        var classes = await classRepository.ListAsync(parsedDate, type, studioId, ct);
+        var (fromDate, toDate) = DateParams.ParseRange(from, to);
+        var classes = await classRepository.ListAsync(parsedDate, type, studioId, ct, fromDate, toDate);
         // Admin de unidade vê só aulas dos studios da sua unidade
         if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
         {
@@ -60,50 +67,22 @@ public class ErpClassesController(
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateClassRequest req, CancellationToken ct)
     {
-        var date = DateOnly.Parse(req.date);
-        var @class = Class.Create(req.name, req.classTypeId, req.teacherId,
-            req.studioId, date, req.startTime, req.endTime, req.duration, req.totalSpots);
+        var created = await mediator.Send(new CreateClassCommand(
+            AdminId, req.name, req.classTypeId, req.teacherId, req.studioId,
+            req.date, req.startTime, req.endTime, req.duration, req.totalSpots), ct);
 
-        await classRepository.AddAsync(@class, ct);
-        await classRepository.SaveAsync(ct);
-
-        var created = await classRepository.GetByIdAsync(@class.Id, ct);
-
-        await auditService.LogAsync("class.created", "Class", @class.Id, AdminId, $"Name: {@class.Name}", ct: ct);
-
-        return StatusCode(201, ListClassesQueryHandler.MapToDto(created!));
+        return StatusCode(201, ListClassesQueryHandler.MapToDto(created));
     }
 
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateClassRequest req, CancellationToken ct)
     {
-        var @class = await classRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Class not found.");
+        var updated = await mediator.Send(new UpdateClassCommand(
+            AdminId, id, req.name, req.classTypeId, req.teacherId, req.studioId,
+            req.date, req.startTime, req.endTime, req.duration, req.totalSpots, req.status), ct);
 
-        var date = DateOnly.Parse(req.date);
-        var status = Enum.Parse<ClassStatus>(req.status, ignoreCase: true);
-        var previousStatus = @class.Status;
-
-        // O cancelamento por aqui segue a mesma regra do /deactivate: só sem reservas ativas.
-        if (status == ClassStatus.cancelled && previousStatus != ClassStatus.cancelled)
-            @class.EnsureNoActiveBookings();
-
-        @class.Update(req.name, req.classTypeId, req.teacherId, req.studioId,
-            date, req.startTime, req.endTime, req.duration, req.totalSpots, status);
-
-        await classRepository.SaveAsync(ct);
-
-        // Não existe endpoint dedicado de cancelamento de aula — é feito via este PUT com
-        // status "cancelled". Registrado separadamente por ser a mudança mais impactante
-        // (mexe em quem já reservou), o resto do update fica num log só mais genérico.
-        await auditService.LogAsync(
-            previousStatus != status ? "class.status_changed" : "class.updated",
-            "Class", @class.Id, AdminId,
-            previousStatus != status ? $"From: {previousStatus} To: {status}" : $"Name: {@class.Name}",
-            ct: ct);
-
-        return Ok(ListClassesQueryHandler.MapToDto(@class));
+        return Ok(ListClassesQueryHandler.MapToDto(updated));
     }
 
     // "Desativar" aula = status cancelled (o backend só aceita reserva/fila em aula scheduled).
@@ -170,18 +149,20 @@ public class ErpClassesController(
             totalSpots = c.TotalSpots,
             availableSpots = c.TotalSpots - enrolled,
             status = c.Status.ToString(),
-            enrolledCount = enrolled
+            enrolledCount = enrolled,
+            seriesId = c.SeriesId,
+            isException = c.IsException
         };
     }
 }
 
 public record CreateClassRequest(
     string name, Guid classTypeId, Guid teacherId, Guid studioId,
-    string date, string startTime, string endTime,
+    string date, string startTime, string? endTime,
     int duration, int totalSpots,
-    string status = "scheduled"); // campo aceito conforme API_REFERENCE
+    string status = "scheduled"); // campo aceito conforme API_REFERENCE; endTime é ignorado (a API calcula)
 
 public record UpdateClassRequest(
     string name, Guid classTypeId, Guid teacherId, Guid studioId,
-    string date, string startTime, string endTime, int duration, int totalSpots, string status);
+    string date, string startTime, string? endTime, int duration, int totalSpots, string status);
 

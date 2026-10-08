@@ -15,7 +15,8 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
             .Include(c => c.Bookings.Where(b => b.Status != BookingStatus.cancelled))
             .FirstOrDefaultAsync(c => c.Id == id, ct);
 
-    public async Task<IEnumerable<Class>> ListAsync(DateOnly? date, string? type, Guid? studioId, CancellationToken ct = default)
+    public async Task<IEnumerable<Class>> ListAsync(DateOnly? date, string? type, Guid? studioId, CancellationToken ct = default,
+        DateOnly? from = null, DateOnly? to = null)
     {
         var query = db.Classes
             .Include(c => c.ClassType)
@@ -25,6 +26,8 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
             .AsQueryable();
 
         if (date.HasValue) query = query.Where(c => c.Date == date.Value);
+        if (from.HasValue) query = query.Where(c => c.Date >= from.Value);
+        if (to.HasValue) query = query.Where(c => c.Date <= to.Value);
         if (!string.IsNullOrEmpty(type)) query = query.Where(c => c.ClassType!.Name.ToLower() == type.ToLower());
         if (studioId.HasValue) query = query.Where(c => c.StudioId == studioId.Value);
 
@@ -45,16 +48,33 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
     }
 
     public async Task<IEnumerable<Class>> ListByTeacherAsync(
-    Guid teacherId, DateOnly? date, CancellationToken ct = default)
-    => await db.Classes
-        .Include(c => c.ClassType)
-        .Include(c => c.Teacher)
-        .Include(c => c.Studio)
-        .Include(c => c.Bookings.Where(b => b.Status != BookingStatus.cancelled))
-        .Where(c => c.TeacherId == teacherId &&
-            (!date.HasValue || c.Date == date.Value))
-        .OrderBy(c => c.Date).ThenBy(c => c.StartTime)
-        .ToListAsync(ct);
+        Guid teacherId, DateOnly? date, CancellationToken ct = default,
+        DateOnly? from = null, DateOnly? to = null)
+    {
+        var query = db.Classes
+            .Include(c => c.ClassType)
+            .Include(c => c.Teacher)
+            .Include(c => c.Studio)
+            .Include(c => c.Bookings.Where(b => b.Status != BookingStatus.cancelled))
+            .Where(c => c.TeacherId == teacherId);
+
+        if (date.HasValue) query = query.Where(c => c.Date == date.Value);
+        if (from.HasValue) query = query.Where(c => c.Date >= from.Value);
+        if (to.HasValue) query = query.Where(c => c.Date <= to.Value);
+
+        return await query.OrderBy(c => c.Date).ThenBy(c => c.StartTime).ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Class>> ListSchedulingCandidatesAsync(
+        DateOnly from, DateOnly to, Guid studioId, Guid teacherId, CancellationToken ct = default)
+        => await db.Classes.AsNoTracking()
+            .Where(c => c.Date >= from && c.Date <= to
+                && c.Status != ClassStatus.cancelled
+                && (c.StudioId == studioId || c.TeacherId == teacherId))
+            .ToListAsync(ct);
+
+    public async Task AddRangeAsync(IEnumerable<Class> classes, CancellationToken ct = default)
+        => await db.Classes.AddRangeAsync(classes, ct);
 
     public async Task<int> CountActiveBookingsAsync(Guid classId, CancellationToken ct = default)
         => await db.Bookings.CountAsync(b => b.ClassId == classId && b.Status != BookingStatus.cancelled, ct);
@@ -79,7 +99,8 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
     }
     public async Task<(IEnumerable<Class> Items, int Total)> ListPagedAsync(
     DateOnly? date, string? type, Guid? studioId,
-    int page, int pageSize, CancellationToken ct = default)
+    int page, int pageSize, CancellationToken ct = default,
+    DateOnly? from = null, DateOnly? to = null)
     {
         var query = db.Classes
             .Include(c => c.ClassType)
@@ -89,6 +110,8 @@ public class ClassRepository(ApplicationDbContext db) : IClassRepository
             .AsQueryable();
 
         if (date.HasValue) query = query.Where(c => c.Date == date.Value);
+        if (from.HasValue) query = query.Where(c => c.Date >= from.Value);
+        if (to.HasValue) query = query.Where(c => c.Date <= to.Value);
         if (!string.IsNullOrEmpty(type)) query = query.Where(c => c.ClassType!.Name.ToLower() == type.ToLower());
         if (studioId.HasValue) query = query.Where(c => c.StudioId == studioId.Value);
 
