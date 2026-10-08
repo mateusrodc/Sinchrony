@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -13,7 +14,8 @@ public class ForgotPasswordCommandHandler(
     IPasswordResetTokenRepository passwordResetRepository,
     IEmailService emailService,
     ISettingsRepository settingsRepository,
-    IConfiguration configuration) : IRequestHandler<ForgotPasswordCommand>
+    IConfiguration configuration,
+    ILogger<ForgotPasswordCommandHandler> logger) : IRequestHandler<ForgotPasswordCommand>
 {
     public async Task Handle(ForgotPasswordCommand request, CancellationToken ct)
     {
@@ -87,17 +89,20 @@ public class ForgotPasswordCommandHandler(
             </html>
             """;
 
+        // As configurações de SMTP são lidas aqui, ainda dentro da requisição: o Task.Run abaixo termina
+        // depois da resposta, quando o escopo (e o DbContext do settingsRepository) já foi descartado.
+        var settings = await settingsRepository.GetAsync(ct);
+        var to = user.Email;
+
         _ = Task.Run(async () =>
         {
             try
             {
-                var settings = await settingsRepository.GetAsync(CancellationToken.None);
-                await emailService.SendWithSettingsAsync(
-                    user.Email, subject, body, settings, CancellationToken.None);
+                await emailService.SendWithSettingsAsync(to, subject, body, settings, CancellationToken.None);
             }
-            catch
+            catch (Exception ex)
             {
-                // SMTP pode falhar silenciosamente
+                logger.LogError(ex, "Redefinição de senha: falha ao enviar e-mail para {Email}.", to);
             }
         });
     }

@@ -23,7 +23,8 @@ public class ErpTeachersController(
     ISettingsRepository settingsRepository,
     IEmailService emailService,
     IUnitContext unitContext,
-    IAuditService auditService) : ControllerBase
+    IAuditService auditService,
+    ILogger<ErpTeachersController> logger) : ControllerBase
 {
     private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? User.FindFirstValue("sub")!);
@@ -256,11 +257,13 @@ public class ErpTeachersController(
         // Tenta enviar por email em background (pode falhar no Render gratuito)
         var teacherEmail = teacher.Email;
         var teacherName = teacher.Name;
+        // Settings lidas antes do Task.Run: depois da resposta o escopo (DbContext) é descartado e o
+        // `ct` da requisição é cancelado.
+        var settings = await settingsRepository.GetAsync(ct);
         _ = Task.Run(async () =>
         {
             try
             {
-                var settings = await settingsRepository.GetAsync(ct);
                 var body = $"""
                 <h2>Senha Temporária — 4Sinchrony</h2>
                 <p>Olá, {teacherName}!</p>
@@ -272,7 +275,10 @@ public class ErpTeachersController(
                     teacherEmail, "Sua senha temporária — 4Sinchrony", body, settings,
                     CancellationToken.None);
             }
-            catch { /* SMTP pode estar bloqueado no Render gratuito */ }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Senha temporária: falha ao enviar e-mail para {Email}.", teacherEmail);
+            }
         });
 
         // Retorna a senha para o admin poder comunicar manualmente se o email falhar
