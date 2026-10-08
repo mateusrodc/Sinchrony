@@ -8,9 +8,26 @@ public record CardTokenizationResult(string Token, string LastDigits, string Bra
 // que ficou "pending" (antifraude) e cujo webhook de confirmação/recusa nunca chegou.
 public record PaymentStatusResult(string Status, string? FailureReason);
 
+// Dados do aluno enviados ao cliente (Customer) da Asaas. Campos vazios nunca são enviados.
+public record AsaasCustomerData(
+    string Name, string Email, string? Cpf,
+    string? PostalCode = null, string? Address = null, string? AddressNumber = null,
+    string? Complement = null, string? Province = null, string? MobilePhone = null,
+    string? ExternalReference = null)
+{
+    // cpfOverride: CPF informado na compra, que tem precedência sobre o do cadastro.
+    public static AsaasCustomerData From(Entities.User user, string? cpfOverride = null) => new(
+        user.Name, user.Email, cpfOverride ?? user.Cpf,
+        PostalCode: user.Cep, Address: user.Logradouro, AddressNumber: user.Numero,
+        Complement: user.Complemento, Province: user.Bairro, MobilePhone: user.Phone,
+        ExternalReference: user.Id.ToString());
+}
+
 public interface IAsaasService
 {
-    Task<string> GetOrCreateCustomerAsync(string name, string email, string? cpf = null, CancellationToken ct = default);
+    // Busca o cliente por e-mail ou cria. Se já existe e o endereço/celular diferem dos de
+    // `customer`, atualiza (best-effort: falha no update é logada e não bloqueia a cobrança).
+    Task<string> GetOrCreateCustomerAsync(AsaasCustomerData customer, CancellationToken ct = default);
     Task<PixPaymentResult> CreatePixChargeAsync(string customerId, decimal amount, string description, CancellationToken ct = default);
     Task<CardPaymentResult> ChargeCardAsync(string customerId, string cardToken, decimal amount, string description, CancellationToken ct = default);
     Task<CardTokenizationResult> TokenizeCardAsync(

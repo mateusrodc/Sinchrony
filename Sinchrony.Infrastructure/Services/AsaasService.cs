@@ -33,35 +33,117 @@ public class AsaasService(
         }
     }
 
-    public async Task<string> GetOrCreateCustomerAsync(
-        string name, string email, string? cpf = null, CancellationToken ct = default)
+    private static string? Digits(string? value)
     {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        return digits.Length == 0 ? null : digits;
+    }
+
+    private static string? Clean(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    // Campos do cliente Asaas a enviar; só entram os preenchidos no cadastro do aluno.
+    private static Dictionary<string, string> BuildCustomerFields(AsaasCustomerData c)
+    {
+        var fields = new Dictionary<string, string>();
+        void Add(string key, string? value) { if (value is not null) fields[key] = value; }
+
+        var phone = Digits(c.MobilePhone);
+        if (phone is { Length: > 11 } && phone.StartsWith("55")) phone = phone[2..];
+
+        Add("postalCode", Digits(c.PostalCode));
+        Add("address", Clean(c.Address));
+        Add("addressNumber", Clean(c.AddressNumber));
+        Add("complement", Clean(c.Complement));
+        Add("province", Clean(c.Province));
+        Add("mobilePhone", phone);
+        Add("externalReference", Clean(c.ExternalReference));
+        return fields;
+    }
+
+    private static string? ReadString(JsonElement customer, string property)
+        => customer.TryGetProperty(property, out var v) && v.ValueKind == JsonValueKind.String
+            ? v.GetString()
+            : null;
+
+    // Compara só os campos que o aluno tem preenchidos; devolve os que diferem ou estão em branco na Asaas.
+    private static Dictionary<string, string> DiffCustomerFields(
+        JsonElement existing, Dictionary<string, string> desired)
+    {
+        var diff = new Dictionary<string, string>();
+        foreach (var (key, value) in desired)
+        {
+            var current = ReadString(existing, key);
+            var same = key is "postalCode" or "mobilePhone"
+                ? Digits(current) == value
+                : string.Equals(Clean(current), value, StringComparison.OrdinalIgnoreCase);
+            if (!same) diff[key] = value;
+        }
+        return diff;
+    }
+
+    private async Task TryUpdateCustomerAsync(
+        string customerId, Dictionary<string, string> fields, CancellationToken ct)
+    {
+        try
+        {
+            var resp = await httpClient.PutAsJsonAsync($"{BaseUrl}/customers/{customerId}", fields, ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var content = await resp.Content.ReadAsStringAsync(ct);
+                logger.LogWarning(
+                    "Asaas: failed to update customer {CustomerId}. Status: {Status}, Body: {Body}",
+                    customerId, resp.StatusCode, content);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Asaas: failed to update customer {CustomerId}", customerId);
+        }
+    }
+
+    public async Task<string> GetOrCreateCustomerAsync(
+        AsaasCustomerData customer, CancellationToken ct = default)
+    {
+        var fields = BuildCustomerFields(customer);
+
         try
         {
             // Busca cliente existente
             var resp = await httpClient.GetAsync(
-                $"{BaseUrl}/customers?email={Uri.EscapeDataString(email)}&limit=1", ct);
+                $"{BaseUrl}/customers?email={Uri.EscapeDataString(customer.Email)}&limit=1", ct);
 
             if (resp.IsSuccessStatusCode)
             {
                 var json = await resp.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
                 var data = json.GetProperty("data");
                 if (data.GetArrayLength() > 0)
-                    return data[0].GetProperty("id").GetString()!;
+                {
+                    var existing = data[0];
+                    var customerId = existing.GetProperty("id").GetString()!;
+
+                    var diff = DiffCustomerFields(existing, fields);
+                    if (diff.Count > 0)
+                        await TryUpdateCustomerAsync(customerId, diff, ct);
+
+                    return customerId;
+                }
             }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Asaas: failed to search customer by email {Email}", email);
+            logger.LogWarning(ex, "Asaas: failed to search customer by email {Email}", customer.Email);
         }
 
         // Cria novo cliente
-        var body = new
+        var body = new Dictionary<string, string>(fields)
         {
-            name,
-            email,
-            cpfCnpj = cpf
+            ["name"] = customer.Name,
+            ["email"] = customer.Email
         };
+        if (!string.IsNullOrWhiteSpace(customer.Cpf))
+            body["cpfCnpj"] = customer.Cpf;
 
         var createResp = await httpClient.PostAsJsonAsync($"{BaseUrl}/customers", body, ct);
         var content = await createResp.Content.ReadAsStringAsync(ct);

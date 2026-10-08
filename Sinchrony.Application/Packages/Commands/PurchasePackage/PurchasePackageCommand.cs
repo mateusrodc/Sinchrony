@@ -125,7 +125,7 @@ public class PurchasePackageCommandHandler(
             // Processa pagamento via Asaas
             var cpf = request.Cpf ?? user.Cpf;
             var customerId = await asaasService.GetOrCreateCustomerAsync(
-                user.Name, user.Email, cpf, ct);
+                AsaasCustomerData.From(user, cpf), ct);
 
             // Aplica estratégia e cria StudentPackage
             var purchaseService = new PurchasePackageService(

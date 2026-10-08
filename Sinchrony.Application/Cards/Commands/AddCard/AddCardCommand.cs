@@ -27,7 +27,7 @@ public class AddCardCommandHandler(
             throw DomainException.Validation("MISSING_ADDRESS",
                 "Complete seu endereço (CEP e número) antes de cadastrar um cartão.");
 
-        var customerId = await asaasService.GetOrCreateCustomerAsync(user.Name, user.Email, user.Cpf, ct: ct);
+        var customerId = await asaasService.GetOrCreateCustomerAsync(AsaasCustomerData.From(user), ct);
 
         var tokenResult = await asaasService.TokenizeCardAsync(
         request.Number, request.HolderName,

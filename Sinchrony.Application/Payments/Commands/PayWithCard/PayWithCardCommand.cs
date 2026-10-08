@@ -85,7 +85,7 @@ public class PayWithCardCommandHandler(
             await oncePerStudentGuard.CheckAsync(user.Id, packages, PurchaseOrigin.AppCard, ct);
 
             var customerId = await asaasService.GetOrCreateCustomerAsync(
-                user.Name, user.Email, user.Cpf, ct);
+                AsaasCustomerData.From(user), ct);
 
             var result = await asaasService.ChargeCardAsync(
                 customerId, request.CardToken, expectedAmount,

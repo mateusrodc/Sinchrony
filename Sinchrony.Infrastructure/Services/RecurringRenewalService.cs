@@ -66,7 +66,7 @@ public class RecurringRenewalService(
             return;
         }
 
-        var customerId = await asaasService.GetOrCreateCustomerAsync(user.Name, user.Email, user.Cpf, ct);
+        var customerId = await asaasService.GetOrCreateCustomerAsync(AsaasCustomerData.From(user), ct);
 
         string transactionId;
         string status;

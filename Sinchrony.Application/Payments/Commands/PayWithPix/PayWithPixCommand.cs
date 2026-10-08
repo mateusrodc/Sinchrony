@@ -88,7 +88,7 @@ public class PayWithPixCommandHandler(
             var cpf = request.Cpf ?? user.Cpf;
 
             var customerId = await asaasService.GetOrCreateCustomerAsync(
-                user.Name, user.Email, cpf, ct);
+                AsaasCustomerData.From(user, cpf), ct);
 
             var result = await asaasService.CreatePixChargeAsync(
                 customerId, expectedAmount, "4Sinchrony - Pacote de aulas", ct);
