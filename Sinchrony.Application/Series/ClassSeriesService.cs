@@ -57,6 +57,9 @@ public class ClassSeriesService(
                 return new SeriesCreateResult(new SeriesCreatedDto(ClassSeriesDto.From(existing), count), false);
             }
 
+            // Serializa criações do mesmo professor: duas requisições distintas não passam juntas pela checagem.
+            await unitOfWork.AcquireAdvisoryLockAsync(ClassPlanning.TeacherLockKey(input.TeacherId), ct);
+
             var plan = await PlanAsync(input, ct);
             ThrowIfConflicts(plan);
 
@@ -191,7 +194,8 @@ public class ClassSeriesService(
                     candidates = await classRepository.ListSchedulingCandidatesAsync(min, max, newStudio, newTeacher, ct);
                     candidatesCache[key] = candidates;
                 }
-                if (ClassConflictChecker.Find(c.Date, newStart, newEnd, newStudio, newTeacher, candidates, c.Id).Count > 0)
+                if (ClassConflictChecker.Blocking(
+                        ClassConflictChecker.Find(c.Date, newStart, newEnd, newStudio, newTeacher, candidates, c.Id)).Count > 0)
                     reason = SkipReason.Conflict;
             }
 
@@ -262,6 +266,33 @@ public class ClassSeriesService(
     public async Task<SeriesExtendResult> ExtendAsync(
         Guid id, string endDate, IReadOnlyList<string>? excludedDates, bool dryRun, Guid adminId, CancellationToken ct)
     {
+        if (dryRun) return await ExtendCoreAsync(id, endDate, excludedDates, true, ct);
+
+        SeriesExtendResult result;
+        await unitOfWork.BeginTransactionAsync(ct);
+        try
+        {
+            // Duas extensões simultâneas da mesma série: a segunda espera, relê o fim atual e recebe o
+            // 422 limpo ("endDate deve ser posterior ao fim atual") em vez de estourar o índice único.
+            await unitOfWork.AcquireAdvisoryLockAsync($"class-series-extend:{id}", ct);
+            result = await ExtendCoreAsync(id, endDate, excludedDates, false, ct);
+            await unitOfWork.CommitAsync(ct);
+        }
+        catch
+        {
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
+
+        await auditService.LogAsync("class_series.extended", "ClassSeries", id, adminId,
+            $"EndDate: {result.Created!.Series.EndDate} Occurrences: {result.Created.Created}", ct: ct);
+
+        return result;
+    }
+
+    private async Task<SeriesExtendResult> ExtendCoreAsync(
+        Guid id, string endDate, IReadOnlyList<string>? excludedDates, bool dryRun, CancellationToken ct)
+    {
         var series = await seriesRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Class series not found.");
         if (!planning.CanManage(series.Studio))
@@ -286,6 +317,10 @@ public class ClassSeriesService(
         var dates = ClassSchedule.GenerateDates(series.DaysOfWeek, first, newEnd)
             .Where(d => !taken.Contains(d)).ToList();
 
+        // Gravando: serializa com outras criações do mesmo professor antes de checar conflito.
+        if (!dryRun)
+            await unitOfWork.AcquireAdvisoryLockAsync(ClassPlanning.TeacherLockKey(series.TeacherId), ct);
+
         var plan = await BuildPlanAsync(dates, excluded, series.StudioId, series.TeacherId,
             series.StartTime, series.Duration, ct);
 
@@ -301,9 +336,6 @@ public class ClassSeriesService(
         await classRepository.AddRangeAsync(occurrences, ct);
         series.ExtendTo(newEnd);
         await seriesRepository.SaveAsync(ct);
-
-        await auditService.LogAsync("class_series.extended", "ClassSeries", series.Id, adminId,
-            $"EndDate: {Fmt(newEnd)} Occurrences: {occurrences.Count}", ct: ct);
 
         return new SeriesExtendResult(null, new SeriesCreatedDto(ClassSeriesDto.From(series), occurrences.Count));
     }
@@ -367,17 +399,20 @@ public class ClassSeriesService(
     private static SeriesPreviewDto ToPreview(IReadOnlyList<Planned> plan)
         => new(
             plan.Count(p => !p.Excluded),
-            plan.Count(p => !p.Excluded && p.Conflicts.Count > 0),
+            plan.Count(p => !p.Excluded && HasBlocking(p)),
+            plan.Count(p => !p.Excluded && !HasBlocking(p) && p.Conflicts.Count > 0),
             plan.Select(p => new SeriesPreviewOccurrenceDto(Fmt(p.Date), (int)p.Date.DayOfWeek, p.Excluded, p.Conflicts))
                 .ToList());
 
     private static void ThrowIfConflicts(IReadOnlyList<Planned> plan)
     {
-        if (!plan.Any(p => !p.Excluded && p.Conflicts.Count > 0)) return;
+        if (!plan.Any(p => !p.Excluded && HasBlocking(p))) return;
         throw DomainException.Conflict("SERIES_HAS_CONFLICTS",
-            "Algumas datas têm conflito de sala ou professor. Exclua essas datas e envie novamente.",
+            "O professor já tem aula em algumas datas. Exclua essas datas e envie novamente.",
             new Dictionary<string, object?> { ["occurrences"] = ToPreview(plan).Occurrences });
     }
+
+    private static bool HasBlocking(Planned p) => p.Conflicts.Any(c => c.Type == ClassConflictChecker.TeacherType);
 
     private static string Fmt(DateOnly d) => d.ToString("yyyy-MM-dd");
 

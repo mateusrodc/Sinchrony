@@ -14,6 +14,7 @@ public class ClassPlanning(
     IUserRepository userRepository,
     IClassRepository classRepository,
     IUnitContext unitContext,
+    IUnitOfWork unitOfWork,
     TimeProvider clock)
 {
     public DateOnly Today => BrasiliaTime.ToDate(clock.GetUtcNow().UtcDateTime);
@@ -40,16 +41,40 @@ public class ClassPlanning(
             ?? throw DomainException.NotFound("Teacher not found.");
     }
 
-    public async Task<List<ClassConflictDto>> FindConflictsAsync(
+    public async Task<List<ClassConflictDto>> FindBlockingConflictsAsync(
         DateOnly date, string startTime, string endTime, Guid studioId, Guid teacherId,
         Guid? ignoreClassId, CancellationToken ct)
     {
         var candidates = await classRepository.ListSchedulingCandidatesAsync(date, date, studioId, teacherId, ct);
-        return ClassConflictChecker.Find(date, startTime, endTime, studioId, teacherId, candidates, ignoreClassId);
+        return ClassConflictChecker.Blocking(
+            ClassConflictChecker.Find(date, startTime, endTime, studioId, teacherId, candidates, ignoreClassId));
+    }
+
+    // Chave da trava de agenda do professor: serializa criações/edições concorrentes do mesmo professor,
+    // que de outro modo passariam juntas pela checagem de conflito.
+    public static string TeacherLockKey(Guid teacherId) => $"class-schedule-teacher:{teacherId}";
+
+    // Roda `work` numa transação com a trava do professor. Não usar dentro de transação já aberta
+    // (a série abre a sua e pega a trava direto).
+    public async Task<T> WithTeacherLockAsync<T>(Guid teacherId, Func<Task<T>> work, CancellationToken ct)
+    {
+        await unitOfWork.BeginTransactionAsync(ct);
+        try
+        {
+            await unitOfWork.AcquireAdvisoryLockAsync(TeacherLockKey(teacherId), ct);
+            var result = await work();
+            await unitOfWork.CommitAsync(ct);
+            return result;
+        }
+        catch
+        {
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public static DomainException ConflictError(IReadOnlyList<ClassConflictDto> conflicts)
         => DomainException.Conflict("CLASS_CONFLICT",
-            "Já existe uma aula nesse horário na mesma sala ou com o mesmo professor.",
+            "O professor já tem uma aula nesse horário.",
             new Dictionary<string, object?> { ["conflicts"] = conflicts });
 }

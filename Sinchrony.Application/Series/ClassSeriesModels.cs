@@ -29,7 +29,7 @@ public record ClassSeriesDto(
 
 public record SeriesPreviewOccurrenceDto(string Date, int Weekday, bool Excluded, IReadOnlyList<ClassConflictDto> Conflicts);
 
-public record SeriesPreviewDto(int Total, int ConflictsCount, IReadOnlyList<SeriesPreviewOccurrenceDto> Occurrences);
+public record SeriesPreviewDto(int Total, int ConflictsCount, int WarningsCount, IReadOnlyList<SeriesPreviewOccurrenceDto> Occurrences);
 
 public record SeriesCreatedDto(ClassSeriesDto Series, int Created);
 

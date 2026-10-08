@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.Extensions;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Classes.Commands.ActivateClass;
 using Sinchrony.Application.Classes.Commands.CreateClass;
 using Sinchrony.Application.Classes.Commands.UpdateClass;
 using Sinchrony.Application.Classes.Queries.ListClasses;
@@ -109,17 +110,7 @@ public class ErpClassesController(
     [HttpPatch("{id}/activate")]
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
     {
-        var @class = await classRepository.GetByIdAsync(id, ct)
-            ?? throw DomainException.NotFound("Class not found.");
-
-        if (!CanManage(@class)) return Forbid();
-
-        // Datas de aula são horário local (UTC-3); usar UTC puro bloquearia aulas de hoje à noite.
-        @class.Reactivate(DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3)));
-        await classRepository.SaveAsync(ct);
-
-        await auditService.LogAsync("class.status_changed", "Class", @class.Id, AdminId,
-            $"From: {ClassStatus.cancelled} To: {ClassStatus.scheduled}", ct: ct);
+        var @class = await mediator.Send(new ActivateClassCommand(AdminId, id), ct);
 
         return Ok(new { data = new { id = @class.Id, name = @class.Name, active = true, status = @class.Status.ToString() } });
     }

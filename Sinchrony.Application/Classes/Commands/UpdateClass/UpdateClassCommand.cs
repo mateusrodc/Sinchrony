@@ -58,28 +58,42 @@ public class UpdateClassCommandHandler(
 
         var scheduleChanged = date != @class.Date || r.StartTime != @class.StartTime
             || r.Duration != @class.Duration || r.StudioId != @class.StudioId || r.TeacherId != @class.TeacherId;
+        // Só o que afeta a agenda do professor pode gerar conflito bloqueante (trocar só a sala não).
+        var teacherSlotChanged = date != @class.Date || r.StartTime != @class.StartTime
+            || r.Duration != @class.Duration || r.TeacherId != @class.TeacherId;
         var contentChanged = scheduleChanged || r.Name != @class.Name
             || r.ClassTypeId != @class.ClassTypeId || r.TotalSpots != @class.TotalSpots;
 
-        // Só barra conflito novo: aula que já estava em conflito no banco segue editável (nome, vagas…)
-        // enquanto sala/professor/horário não mudam. Reativar via PUT também ocupa o horário de novo.
+        // Só barra conflito novo de professor (sala não bloqueia): aula que já estava em conflito no
+        // banco segue editável (nome, vagas…) enquanto professor/horário não mudam. Reativar via PUT
+        // também ocupa o horário de novo.
         var occupiesSlot = status != ClassStatus.cancelled;
         var reactivating = previousStatus == ClassStatus.cancelled && occupiesSlot;
-        if (occupiesSlot && (scheduleChanged || reactivating))
+        var mustCheckConflicts = occupiesSlot && (teacherSlotChanged || reactivating);
+
+        async Task<bool> ApplyAsync()
         {
-            var conflicts = await planning.FindConflictsAsync(
-                date, r.StartTime, endTime, r.StudioId, r.TeacherId, @class.Id, ct);
-            if (conflicts.Count > 0) throw ClassPlanning.ConflictError(conflicts);
+            if (mustCheckConflicts)
+            {
+                var conflicts = await planning.FindBlockingConflictsAsync(
+                    date, r.StartTime, endTime, r.StudioId, r.TeacherId, @class.Id, ct);
+                if (conflicts.Count > 0) throw ClassPlanning.ConflictError(conflicts);
+            }
+
+            @class.Update(r.Name, r.ClassTypeId, r.TeacherId, r.StudioId,
+                date, r.StartTime, endTime, r.Duration, r.TotalSpots, status);
+
+            // Edição individual de ocorrência de série: sai da edição em grupo (status sozinho não conta,
+            // igual ao /deactivate e /activate).
+            if (contentChanged) @class.MarkAsException();
+
+            await classRepository.SaveAsync(ct);
+            return true;
         }
 
-        @class.Update(r.Name, r.ClassTypeId, r.TeacherId, r.StudioId,
-            date, r.StartTime, endTime, r.Duration, r.TotalSpots, status);
-
-        // Edição individual de ocorrência de série: sai da edição em grupo (status sozinho não conta,
-        // igual ao /deactivate e /activate).
-        if (contentChanged) @class.MarkAsException();
-
-        await classRepository.SaveAsync(ct);
+        // A checagem + gravação rodam sob a trava do professor para não passarem duas edições juntas.
+        if (mustCheckConflicts) await planning.WithTeacherLockAsync(r.TeacherId, ApplyAsync, ct);
+        else await ApplyAsync();
 
         // Não existe endpoint dedicado de cancelamento de aula — é feito via este PUT com
         // status "cancelled". Registrado separadamente por ser a mudança mais impactante

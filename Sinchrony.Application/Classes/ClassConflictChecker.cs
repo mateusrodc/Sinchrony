@@ -8,6 +8,14 @@ public record ClassConflictDto(string Type, Guid ClassId, string ClassName, stri
 
 public static class ClassConflictChecker
 {
+    public const string TeacherType = "teacher";
+    public const string StudioType = "studio";
+
+    // Só conflito de professor bloqueia. Sala é o estúdio inteiro (várias modalidades ao mesmo tempo),
+    // então sobreposição de sala é apenas aviso. Se um dia houver salas reais, a mudança é aqui.
+    public static List<ClassConflictDto> Blocking(IEnumerable<ClassConflictDto> conflicts)
+        => conflicts.Where(c => c.Type == TeacherType).ToList();
+
     // `candidates` = aulas não canceladas (ClassRepository.ListSchedulingCandidatesAsync). Uma mesma
     // aula pode conflitar por sala e por professor ao mesmo tempo: aparece duas vezes.
     public static List<ClassConflictDto> Find(
@@ -20,8 +28,8 @@ public static class ClassConflictChecker
             if (c.Date != date || c.Id == ignoreClassId) continue;
             if (!ClassSchedule.Overlaps(startTime, endTime, c.StartTime, c.EndTime)) continue;
 
-            if (c.StudioId == studioId) result.Add(Map("studio", c));
-            if (c.TeacherId == teacherId) result.Add(Map("teacher", c));
+            if (c.StudioId == studioId) result.Add(Map(StudioType, c));
+            if (c.TeacherId == teacherId) result.Add(Map(TeacherType, c));
         }
         return result;
     }

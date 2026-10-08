@@ -110,14 +110,15 @@ public class ClassSeriesCreationTests
     }
 
     [Fact]
-    public async Task Preview_MarksStudioConflict_AndListsExcludedDates()
+    public async Task Preview_StudioOverlap_IsWarningOnly_AndListsExcludedDates()
     {
         _f.AddClass(new DateOnly(2026, 10, 9), "14:30", "15:15", studioId: _f.Studio.Id);
 
         var preview = await _f.Service.PreviewAsync(_f.Input(excluded: ["2026-11-02"]), default);
 
         preview.Total.Should().Be(23);
-        preview.ConflictsCount.Should().Be(1);
+        preview.ConflictsCount.Should().Be(0);
+        preview.WarningsCount.Should().Be(1);
         preview.Occurrences.Should().HaveCount(24);
         var conflicted = preview.Occurrences.Single(o => o.Date == "2026-10-09");
         conflicted.Weekday.Should().Be(5);
@@ -129,7 +130,7 @@ public class ClassSeriesCreationTests
     [Fact]
     public async Task Create_WithConflict_Returns409AndSavesNothing_ThenSucceedsWhenExcluded()
     {
-        _f.AddClass(new DateOnly(2026, 10, 9), "14:30", "15:15", studioId: _f.Studio.Id);
+        _f.AddClass(new DateOnly(2026, 10, 9), "14:30", "15:15", teacherId: _f.Teacher.Id, studioId: _f.Studio.Id);
 
         var act = () => _f.CreateAsync();
 
@@ -322,7 +323,7 @@ public class ClassSeriesEditTests
         var later = new ClassSeriesService(
             new ClassPlanning(new Infrastructure.Persistence.Repositories.StudioRepository(_f.Db),
                 new Infrastructure.Persistence.Repositories.ClassTypeRepository(_f.Db),
-                new Infrastructure.Persistence.Repositories.UserRepository(_f.Db), _f.Classes, _f.UnitContext.Object,
+                new Infrastructure.Persistence.Repositories.UserRepository(_f.Db), _f.Classes, _f.UnitContext.Object, _f.UnitOfWork.Object,
                 new FixedClock(new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero))),
             _f.SeriesRepo, _f.Classes, _f.UnitOfWork.Object, _f.Audit.Object);
 
@@ -510,7 +511,7 @@ public class ClassSeriesEditTests
     public async Task Extend_WithConflict_Returns409()
     {
         var (series, _) = await CreateOctoberAsync();
-        _f.AddClass(new DateOnly(2026, 11, 2), "15:00", "15:45", studioId: _f.Studio.Id);
+        _f.AddClass(new DateOnly(2026, 11, 2), "15:00", "15:45", teacherId: _f.Teacher.Id, studioId: _f.Studio.Id);
 
         var act = () => _f.Service.ExtendAsync(series.Id, "2026-11-15", null, false, _f.AdminId, default);
 
@@ -599,16 +600,16 @@ public class SingleClassRulesTests
     }
 
     [Fact]
-    public async Task Create_StudioConflict_Returns409WithConflictList()
+    public async Task Create_TeacherConflict_Returns409WithOnlyBlockingConflicts()
     {
-        _f.AddClass(new DateOnly(2026, 10, 20), "10:30", "11:30", studioId: _f.Studio.Id);
+        _f.AddClass(new DateOnly(2026, 10, 20), "10:30", "11:30", teacherId: _f.Teacher.Id, studioId: _f.OtherStudio.Id);
 
         var act = () => CreateHandler().Handle(Create(), default);
 
         var ex = (await act.Should().ThrowAsync<DomainException>()).Which;
         ex.Code.Should().Be("CLASS_CONFLICT");
         var conflicts = (IEnumerable<ClassConflictDto>)ex.Extensions!["conflicts"]!;
-        conflicts.Should().ContainSingle(c => c.Type == "studio" && c.StartTime == "10:30" && c.Date == "2026-10-20");
+        conflicts.Should().ContainSingle(c => c.Type == "teacher" && c.StartTime == "10:30" && c.Date == "2026-10-20");
     }
 
     [Fact]
@@ -670,7 +671,7 @@ public class SingleClassRulesTests
     public async Task Update_NewConflict_Returns409()
     {
         var c = _f.AddClass(new DateOnly(2026, 10, 20), "10:00", "10:45", studioId: _f.Studio.Id, teacherId: _f.Teacher.Id);
-        _f.AddClass(new DateOnly(2026, 10, 20), "12:00", "12:45", studioId: _f.Studio.Id);
+        _f.AddClass(new DateOnly(2026, 10, 20), "12:00", "12:45", studioId: _f.Studio.Id, teacherId: _f.Teacher.Id);
 
         var act = () => UpdateHandler().Handle(Update(c, x => x with { StartTime = "12:30" }), default);
 

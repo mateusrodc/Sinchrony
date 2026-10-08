@@ -44,15 +44,19 @@ public class CreateClassCommandHandler(
 
         var endTime = ClassSchedule.ComputeEndTime(r.StartTime, r.Duration);
 
-        var conflicts = await planning.FindConflictsAsync(
-            date, r.StartTime, endTime, r.StudioId, r.TeacherId, null, ct);
-        if (conflicts.Count > 0) throw ClassPlanning.ConflictError(conflicts);
+        var @class = await planning.WithTeacherLockAsync(r.TeacherId, async () =>
+        {
+            var conflicts = await planning.FindBlockingConflictsAsync(
+                date, r.StartTime, endTime, r.StudioId, r.TeacherId, null, ct);
+            if (conflicts.Count > 0) throw ClassPlanning.ConflictError(conflicts);
 
-        var @class = Class.Create(r.Name, r.ClassTypeId, r.TeacherId, r.StudioId,
-            date, r.StartTime, endTime, r.Duration, r.TotalSpots);
+            var created = Class.Create(r.Name, r.ClassTypeId, r.TeacherId, r.StudioId,
+                date, r.StartTime, endTime, r.Duration, r.TotalSpots);
 
-        await classRepository.AddAsync(@class, ct);
-        await classRepository.SaveAsync(ct);
+            await classRepository.AddAsync(created, ct);
+            await classRepository.SaveAsync(ct);
+            return created;
+        }, ct);
 
         await auditService.LogAsync("class.created", "Class", @class.Id, r.AdminId, $"Name: {@class.Name}", ct: ct);
 

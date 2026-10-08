@@ -63,7 +63,7 @@ public sealed class SeriesFixture
 
     public ClassPlanning NewPlanning()
         => new(new StudioRepository(Db), new ClassTypeRepository(Db), new UserRepository(Db), Classes,
-            UnitContext.Object, new FixedClock(new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero)));
+            UnitContext.Object, UnitOfWork.Object, new FixedClock(new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero)));
 
     // Segunda/quarta/sexta 14:45 (45 min), de 06/10 a 30/11/2026 = 24 aulas.
     public ClassSeriesInput Input(
