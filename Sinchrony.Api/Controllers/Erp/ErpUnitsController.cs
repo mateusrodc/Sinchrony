@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
@@ -120,6 +121,7 @@ public class ErpUnitsController(
     }
 
     [HttpPost]
+    [RequirePermission("unit", "create")]
     public async Task<IActionResult> Create([FromBody] UnitRequest req, CancellationToken ct)
     {
         if (!unitContext.IsGlobalAdmin) return Forbid();
@@ -137,6 +139,7 @@ public class ErpUnitsController(
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("unit", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UnitRequest req, CancellationToken ct)
     {
         if (!unitContext.IsGlobalAdmin && unitContext.UnitId != id) return Forbid();
@@ -155,9 +158,11 @@ public class ErpUnitsController(
     // Só admin global: a unidade está no topo da hierarquia multi-unidade e um admin de unidade
     // não deve poder desativar a própria unidade.
     [HttpPatch("{id}/activate")]
+    [RequirePermission("unit", "edit")]
     public Task<IActionResult> Activate(Guid id, CancellationToken ct) => SetActive(id, true, ct);
 
     [HttpPatch("{id}/deactivate")]
+    [RequirePermission("unit", "edit")]
     public Task<IActionResult> Deactivate(Guid id, CancellationToken ct) => SetActive(id, false, ct);
 
     private async Task<IActionResult> SetActive(Guid id, bool active, CancellationToken ct)

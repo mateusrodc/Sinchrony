@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -40,6 +41,7 @@ public class ErpPermissionsController(
     }
 
     [HttpPut("users/{id}/permissions")]
+    [RequirePermission("teacher", "edit")]
     [ProducesResponseType(typeof(object), 200)]
     public async Task<IActionResult> ReplaceUserPermissions(
         Guid id, [FromBody] ReplacePermissionsRequest req, CancellationToken ct)
@@ -63,6 +65,17 @@ public class ErpPermissionsController(
         // Guarda de segurança: não deixar ninguém se trancar fora acidentalmente removendo o
         // próprio acesso total, nem removendo o último admin com acesso total do sistema.
         var currentIds = (await permissionRepository.ListByUserAsync(id, ct)).Select(p => p.Id).ToHashSet();
+
+        // Sem escalada: quem edita só concede ou retira permissões que ele mesmo tem (senão
+        // "Professor → Editar" bastaria para alguém se dar acesso total).
+        var callerIds = (await permissionRepository.ListByUserAsync(unitContext.UserId!.Value, ct))
+            .Select(p => p.Id).ToHashSet();
+        var changedIds = new HashSet<Guid>(currentIds);
+        changedIds.SymmetricExceptWith(requestedIds);
+        if (!changedIds.IsSubsetOf(callerIds))
+            throw new DomainException("PERMISSION_DENIED",
+                "Você só pode conceder ou remover permissões que você mesmo tem.", 403);
+
         var hadFullAccess = currentIds.Count == catalog.Count;
         var willHaveFullAccess = requestedIds.Count == catalog.Count;
 

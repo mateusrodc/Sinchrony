@@ -19,19 +19,31 @@ public class ClassPlanning(
 {
     public DateOnly Today => BrasiliaTime.ToDate(clock.GetUtcNow().UtcDateTime);
 
-    // Falha fechado: admin que não é global precisa ter unidade e a sala precisa ser dela.
-    public bool CanManage(Studio? studio)
-        => unitContext.IsGlobalAdmin
-           || (unitContext.UnitId.HasValue && studio?.UnitId == unitContext.UnitId);
+    // Falha fechado: admin que não é global precisa ter unidade (User.UnitId ou "Unidades (filiais)"
+    // do cadastro) e a sala precisa ser de uma delas.
+    public async Task EnsureCanManageAsync(Studio? studio, CancellationToken ct)
+    {
+        if (unitContext.IsGlobalAdmin) return;
+
+        var unitIds = await unitContext.GetManagedUnitIdsAsync(ct);
+        if (unitIds.Count == 0)
+            throw NoUnitError();
+        if (studio?.UnitId is not { } unitId || !unitIds.Contains(unitId))
+            throw DomainException.Forbidden("Você não tem permissão para gerenciar esta unidade.");
+    }
 
     public async Task<Studio> RequireManageableStudioAsync(Guid studioId, CancellationToken ct)
     {
         var studio = await studioRepository.GetByIdAsync(studioId, ct)
             ?? throw DomainException.NotFound("Studio not found.");
-        if (!CanManage(studio))
-            throw DomainException.Forbidden("Você não tem permissão para gerenciar esta unidade.");
+        await EnsureCanManageAsync(studio, ct);
         return studio;
     }
+
+    public static DomainException NoUnitError()
+        => new("NO_UNIT_ASSIGNED",
+            "Seu usuário não está vinculado a nenhuma unidade. Peça ao administrador para marcar a unidade no seu cadastro.",
+            403);
 
     public async Task RequireReferencesAsync(Guid classTypeId, Guid teacherId, CancellationToken ct)
     {

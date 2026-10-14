@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
@@ -67,6 +68,7 @@ public class ErpStudiosController(
     }
 
     [HttpPost]
+    [RequirePermission("studio", "create")]
     public async Task<IActionResult> Create([FromBody] CreateStudioRequest req, CancellationToken ct)
     {
         var studio = Studio.Create(req.name, req.address, req.capacity,
@@ -86,6 +88,7 @@ public class ErpStudiosController(
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("studio", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateStudioRequest req, CancellationToken ct)
     {
         var studio = await studioRepository.GetByIdAsync(id, ct)
@@ -109,6 +112,7 @@ public class ErpStudiosController(
     }
 
     [HttpPatch("{id}/activate")]
+    [RequirePermission("studio", "edit")]
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
     {
         var studio = await studioRepository.GetByIdAsync(id, ct)
@@ -126,6 +130,7 @@ public class ErpStudiosController(
     }
 
     [HttpPatch("{id}/deactivate")]
+    [RequirePermission("studio", "edit")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
         var studio = await studioRepository.GetByIdAsync(id, ct)

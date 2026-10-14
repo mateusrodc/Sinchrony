@@ -49,6 +49,7 @@ public sealed class SeriesFixture
         Db.SaveChanges();
 
         UnitContext.SetupGet(u => u.IsGlobalAdmin).Returns(true);
+        UnitContext.Setup(u => u.GetManagedUnitIdsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<Guid>());
         Audit.Setup(a => a.LogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         UnitOfWork.Setup(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);

@@ -15,4 +15,8 @@ public interface IPermissionRepository
     // "tem acesso total" sem precisar comparar conjunto item a item (seguro porque
     // UserPermission tem índice único em (UserId, PermissionId), não há duplicata).
     Task<IEnumerable<Guid>> ListUserIdsWithFullAccessAsync(int catalogSize, CancellationToken ct = default);
+
+    // "Acesso total por padrão": concede o catálogo inteiro (GrantedByUserId = null, concessão
+    // automática) só se o usuário ainda não tem nenhuma permissão gravada. Não salva — quem chama salva.
+    Task GrantFullCatalogIfNoneAsync(Guid userId, CancellationToken ct = default);
 }

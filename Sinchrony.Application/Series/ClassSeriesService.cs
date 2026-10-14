@@ -50,8 +50,7 @@ public class ClassSeriesService(
             var existing = await seriesRepository.GetByRequestIdAsync(requestId, ct);
             if (existing is not null)
             {
-                if (!planning.CanManage(existing.Studio))
-                    throw DomainException.Forbidden("Você não tem permissão para gerenciar esta unidade.");
+                await planning.EnsureCanManageAsync(existing.Studio, ct);
                 var count = await seriesRepository.CountOccurrencesAsync(existing.Id, ct);
                 await unitOfWork.CommitAsync(ct);
                 return new SeriesCreateResult(new SeriesCreatedDto(ClassSeriesDto.From(existing), count), false);
@@ -100,8 +99,7 @@ public class ClassSeriesService(
 
         if (isAdmin)
         {
-            if (!planning.CanManage(series.Studio))
-                throw DomainException.Forbidden("Você não tem permissão para gerenciar esta unidade.");
+            await planning.EnsureCanManageAsync(series.Studio, ct);
         }
         else if (series.TeacherId != callerId && series.Occurrences.All(c => c.TeacherId != callerId))
         {
@@ -125,8 +123,7 @@ public class ClassSeriesService(
     {
         var series = await seriesRepository.GetWithOccurrencesAsync(id, ct)
             ?? throw DomainException.NotFound("Class series not found.");
-        if (!planning.CanManage(series.Studio))
-            throw DomainException.Forbidden("Você não tem permissão para gerenciar esta unidade.");
+        await planning.EnsureCanManageAsync(series.Studio, ct);
         if (series.Status == ClassSeriesStatus.cancelled)
             throw DomainException.Conflict("SERIES_CANCELLED", "A série está cancelada.");
 
@@ -225,8 +222,7 @@ public class ClassSeriesService(
     {
         var series = await seriesRepository.GetWithOccurrencesAsync(id, ct)
             ?? throw DomainException.NotFound("Class series not found.");
-        if (!planning.CanManage(series.Studio))
-            throw DomainException.Forbidden("Você não tem permissão para gerenciar esta unidade.");
+        await planning.EnsureCanManageAsync(series.Studio, ct);
 
         var today = planning.Today;
         var skipped = new List<SeriesSkippedDto>();
@@ -295,8 +291,7 @@ public class ClassSeriesService(
     {
         var series = await seriesRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Class series not found.");
-        if (!planning.CanManage(series.Studio))
-            throw DomainException.Forbidden("Você não tem permissão para gerenciar esta unidade.");
+        await planning.EnsureCanManageAsync(series.Studio, ct);
         if (series.Status == ClassSeriesStatus.cancelled)
             throw DomainException.Conflict("SERIES_CANCELLED", "A série está cancelada.");
 

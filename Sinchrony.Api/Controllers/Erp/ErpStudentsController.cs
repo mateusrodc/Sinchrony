@@ -193,6 +193,7 @@ public class ErpStudentsController(
     }
 
     [HttpPost]
+    [RequirePermission("student", "create")]
     public async Task<IActionResult> Create([FromBody] CreateStudentRequest req, CancellationToken ct)
     {
         var existing = await userRepository.GetByEmailAsync(req.email, ct);
@@ -246,6 +247,7 @@ public class ErpStudentsController(
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("student", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateStudentRequest req, CancellationToken ct)
     {
         var student = await userRepository.GetByIdAsync(id, ct)
@@ -324,6 +326,7 @@ public class ErpStudentsController(
         return Ok(MapStudent(student, includeNotes: await CanViewNotesAsync(ct)));
     }
     [HttpPatch("{id}/deactivate")]
+    [RequirePermission("student", "edit")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
         var student = await userRepository.GetByIdAsync(id, ct)
@@ -338,6 +341,7 @@ public class ErpStudentsController(
     }
 
     [HttpPatch("{id}/reactivate")]
+    [RequirePermission("student", "edit")]
     public async Task<IActionResult> Reactivate(Guid id, CancellationToken ct)
     {
         var student = await userRepository.GetByIdAsync(id, ct)
@@ -354,6 +358,7 @@ public class ErpStudentsController(
     ?? User.FindFirstValue("sub")!);
 
     [HttpPost("{studentId}/packages")]
+    [RequirePermission("student", "edit")]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> AssignPackage(
         Guid studentId,
@@ -448,6 +453,7 @@ public class ErpStudentsController(
     private static readonly string[] CounterPaymentMethods = ["pix", "card", "cash", "courtesy"];
 
     [HttpDelete("{studentId}/packages/{studentPackageId}")]
+    [RequirePermission("student", "edit")]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> RemovePackage(
     Guid studentId,

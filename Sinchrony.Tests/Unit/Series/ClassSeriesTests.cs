@@ -1,6 +1,7 @@
 using FluentAssertions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Sinchrony.Application.Classes;
 using Sinchrony.Application.Classes.Commands.CreateClass;
 using Sinchrony.Application.Classes.Commands.UpdateClass;
@@ -241,7 +242,7 @@ public class ClassSeriesCreationTests
     public async Task Create_OtherUnitStudio_IsForbidden()
     {
         _f.UnitContext.SetupGet(u => u.IsGlobalAdmin).Returns(false);
-        _f.UnitContext.SetupGet(u => u.UnitId).Returns(Guid.NewGuid());
+        _f.UnitContext.Setup(u => u.GetManagedUnitIdsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Guid.NewGuid()]);
 
         var act = () => _f.CreateAsync();
 
@@ -642,11 +643,38 @@ public class SingleClassRulesTests
     public async Task Create_OtherUnitStudio_IsForbidden()
     {
         _f.UnitContext.SetupGet(u => u.IsGlobalAdmin).Returns(false);
-        _f.UnitContext.SetupGet(u => u.UnitId).Returns(Guid.NewGuid());
+        _f.UnitContext.Setup(u => u.GetManagedUnitIdsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Guid.NewGuid()]);
 
         var act = () => CreateHandler().Handle(Create(), default);
 
         (await act.Should().ThrowAsync<DomainException>()).Which.HttpStatus.Should().Be(403);
+    }
+
+    [Fact]
+    public async Task Create_NonGlobalAdmin_WithUnitFromRegistration_CanManageItsStudio()
+    {
+        // Secretária cadastrada pelo ERP: sem User.UnitId, unidade só em "Unidades (filiais)".
+        var unitId = Guid.NewGuid();
+        _f.Studio.SetUnit(unitId);
+        await _f.Db.SaveChangesAsync();
+        _f.UnitContext.SetupGet(u => u.IsGlobalAdmin).Returns(false);
+        _f.UnitContext.Setup(u => u.GetManagedUnitIdsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([unitId]);
+
+        var created = await CreateHandler().Handle(Create(), default);
+
+        created.StudioId.Should().Be(_f.Studio.Id);
+    }
+
+    [Fact]
+    public async Task Create_NonGlobalAdmin_WithoutAnyUnit_GetsNoUnitError()
+    {
+        _f.UnitContext.SetupGet(u => u.IsGlobalAdmin).Returns(false);
+
+        var act = () => CreateHandler().Handle(Create(), default);
+
+        var ex = (await act.Should().ThrowAsync<DomainException>()).Which;
+        ex.HttpStatus.Should().Be(403);
+        ex.Code.Should().Be("NO_UNIT_ASSIGNED");
     }
 
     private UpdateClassCommand Update(Class c, Func<UpdateClassCommand, UpdateClassCommand>? tweak = null)

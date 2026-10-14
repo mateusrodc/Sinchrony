@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.Extensions;
 using Sinchrony.Application.Series;
 using System.Security.Claims;
@@ -25,6 +26,7 @@ public class ErpClassSeriesController(ClassSeriesService service) : ControllerBa
 
     [Authorize(Roles = "admin")]
     [HttpPost]
+    [RequirePermission("class", "create")]
     public async Task<IActionResult> Create([FromBody] CreateClassSeriesRequest req, CancellationToken ct)
     {
         var result = await service.CreateAsync(req.ToInput(), req.requestId, UserId, ct);
@@ -42,6 +44,7 @@ public class ErpClassSeriesController(ClassSeriesService service) : ControllerBa
     // "Esta e as próximas": from = SeriesDate da aula escolhida. "Toda a série": from = hoje.
     [Authorize(Roles = "admin")]
     [HttpPut("{id:guid}/occurrences")]
+    [RequirePermission("class", "edit")]
     public async Task<IActionResult> UpdateOccurrences(
         Guid id, [FromQuery] string? from, [FromBody] UpdateClassSeriesRequest req, CancellationToken ct)
     {
@@ -55,6 +58,7 @@ public class ErpClassSeriesController(ClassSeriesService service) : ControllerBa
 
     [Authorize(Roles = "admin")]
     [HttpPost("{id:guid}/cancel")]
+    [RequirePermission("class", "delete")]
     public async Task<IActionResult> Cancel(Guid id, [FromQuery] string? from, CancellationToken ct)
     {
         var result = await service.CancelAsync(id, DateParams.Require(from, "from"), UserId, ct);
@@ -63,6 +67,7 @@ public class ErpClassSeriesController(ClassSeriesService service) : ControllerBa
 
     [Authorize(Roles = "admin")]
     [HttpPost("{id:guid}/extend")]
+    [RequirePermission("class", "edit")]
     public async Task<IActionResult> Extend(Guid id, [FromBody] ExtendClassSeriesRequest req, CancellationToken ct)
     {
         var result = await service.ExtendAsync(id, req.endDate, req.excludedDates, req.dryRun, UserId, ct);

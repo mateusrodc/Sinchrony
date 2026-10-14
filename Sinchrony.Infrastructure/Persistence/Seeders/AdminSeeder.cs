@@ -27,6 +27,9 @@ public class AdminSeeder(
         admin.SetGlobalAdmin(true);
 
         await db.Users.AddAsync(admin, ct);
+        // Acesso total: as rotas de escrita conferem permissão por módulo.
+        foreach (var permissionId in await db.Permissions.Select(p => p.Id).ToListAsync(ct))
+            db.UserPermissions.Add(UserPermission.Grant(admin.Id, permissionId, null));
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("AdminSeeder: admin {Email} created successfully.", email);

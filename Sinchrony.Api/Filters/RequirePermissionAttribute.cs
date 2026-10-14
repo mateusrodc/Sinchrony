@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace Sinchrony.Api.Filters;
 
-// Camada ADICIONAL de permissão granular, só usada em endpoints novos — roda depois do
+// Camada ADICIONAL de permissão granular nas rotas de escrita do admin — roda depois do
 // [Authorize(Roles=...)] de sempre (que já garante usuário autenticado antes deste filtro
 // executar). Implementado como IAsyncActionFilter, não IAuthorizationHandler: não existe
 // nenhuma infra de Policy/AddAuthorization no projeto hoje, e um IAuthorizationHandler
@@ -19,6 +19,14 @@ public class RequirePermissionAttribute(string resource, string action) : Attrib
 {
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        // Permissão por módulo é do admin (a tela de permissões só existe para ele). Professor em
+        // rota compartilhada ("admin,teacher") continua regido só pelo papel.
+        if (!context.HttpContext.User.IsInRole("admin"))
+        {
+            await next();
+            return;
+        }
+
         var permissionService = context.HttpContext.RequestServices.GetRequiredService<IPermissionService>();
 
         var userIdClaim = context.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)

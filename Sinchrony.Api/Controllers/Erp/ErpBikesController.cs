@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
@@ -51,6 +52,7 @@ public class ErpBikesController(
     }
 
     [HttpPost("api/studios/{studioId}/bikes")]
+    [RequirePermission("bike", "create")]
     public async Task<IActionResult> Create(Guid studioId, [FromBody] CreateBikeRequest req, CancellationToken ct)
     {
         var bike = Bike.Create(studioId, req.number);
@@ -60,6 +62,7 @@ public class ErpBikesController(
     }
 
     [HttpPut("api/bikes/{id}")]
+    [RequirePermission("bike", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateBikeRequest req, CancellationToken ct)
     {
         var bike = await bikeRepository.GetByIdAsync(id, ct)
@@ -76,6 +79,7 @@ public class ErpBikesController(
     }
 
     [HttpDelete("api/bikes/{id}")]
+    [RequirePermission("bike", "delete")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var bike = await bikeRepository.GetByIdAsync(id, ct)

@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Application.Packages.Commands.CreatePackage;
 using Sinchrony.Application.Packages.Commands.TogglePackage;
@@ -54,6 +55,7 @@ public class ErpPackagesController(
     }
 
     [HttpPost]
+    [RequirePermission("package", "create")]
     public async Task<IActionResult> Create([FromBody] CreatePackageRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new CreatePackageCommand(
@@ -90,6 +92,7 @@ public class ErpPackagesController(
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("package", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePackageRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new UpdatePackageCommand(
@@ -124,6 +127,7 @@ public class ErpPackagesController(
     }
 
     [HttpPatch("{id}/toggle")]
+    [RequirePermission("package", "edit")]
     public async Task<IActionResult> Toggle(Guid id, CancellationToken ct)
     {
         var result = await mediator.Send(new TogglePackageCommand(id), ct);

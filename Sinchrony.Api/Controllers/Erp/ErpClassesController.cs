@@ -1,8 +1,10 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.Extensions;
 using Sinchrony.Api.SwaggerExamples.Erp;
+using Sinchrony.Application.Classes;
 using Sinchrony.Application.Classes.Commands.ActivateClass;
 using Sinchrony.Application.Classes.Commands.CreateClass;
 using Sinchrony.Application.Classes.Commands.UpdateClass;
@@ -26,6 +28,7 @@ public class ErpClassesController(
     IMediator mediator,
     IClassRepository classRepository,
     IUnitContext unitContext,
+    ClassPlanning planning,
     IAuditService auditService) : ControllerBase
 {
     private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -66,6 +69,7 @@ public class ErpClassesController(
 
     [Authorize(Roles = "admin")]
     [HttpPost]
+    [RequirePermission("class", "create")]
     public async Task<IActionResult> Create([FromBody] CreateClassRequest req, CancellationToken ct)
     {
         var created = await mediator.Send(new CreateClassCommand(
@@ -77,6 +81,7 @@ public class ErpClassesController(
 
     [Authorize(Roles = "admin")]
     [HttpPut("{id}")]
+    [RequirePermission("class", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateClassRequest req, CancellationToken ct)
     {
         var updated = await mediator.Send(new UpdateClassCommand(
@@ -90,12 +95,13 @@ public class ErpClassesController(
     // Só é permitido sem reservas ativas; com reservas o admin cancela as reservas antes.
     [Authorize(Roles = "admin")]
     [HttpPatch("{id}/deactivate")]
+    [RequirePermission("class", "edit")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
         var @class = await classRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Class not found.");
 
-        if (!CanManage(@class)) return Forbid();
+        await planning.EnsureCanManageAsync(@class.Studio, ct);
 
         @class.Deactivate();
         await classRepository.SaveAsync(ct);
@@ -108,17 +114,13 @@ public class ErpClassesController(
 
     [Authorize(Roles = "admin")]
     [HttpPatch("{id}/activate")]
+    [RequirePermission("class", "edit")]
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
     {
         var @class = await mediator.Send(new ActivateClassCommand(AdminId, id), ct);
 
         return Ok(new { data = new { id = @class.Id, name = @class.Name, active = true, status = @class.Status.ToString() } });
     }
-
-    // Falha fechado: admin que não é global precisa ter unidade e a aula precisa ser do studio dela.
-    private bool CanManage(Class @class)
-        => unitContext.IsGlobalAdmin
-           || (unitContext.UnitId.HasValue && @class.Studio?.UnitId == unitContext.UnitId);
 
     private static object MapErpClass(Domain.Entities.Class c)
     {

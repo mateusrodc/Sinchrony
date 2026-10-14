@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
@@ -19,6 +20,8 @@ namespace Sinchrony.Api.Controllers.Erp;
 public class ErpTeachersController(
     IUserRepository userRepository,
     ITeacherUnitRepository teacherUnitRepository,
+    IPermissionRepository permissionRepository,
+    IPermissionService permissionService,
     IPasswordService passwordService,
     ISettingsRepository settingsRepository,
     IEmailService emailService,
@@ -103,6 +106,7 @@ public class ErpTeachersController(
     }
 
     [HttpPost]
+    [RequirePermission("teacher", "create")]
     public async Task<IActionResult> Create([FromBody] CreateTeacherRequest req, CancellationToken ct)
     {
         var existing = await userRepository.GetByEmailAsync(req.email, ct);
@@ -132,6 +136,9 @@ public class ErpTeachersController(
         if (!req.active) teacher.Deactivate();
 
         await userRepository.AddAsync(teacher, ct);
+        // Admin novo nasce com acesso total; a tela de permissões restringe depois.
+        if (role == Role.admin)
+            await permissionRepository.GrantFullCatalogIfNoneAsync(teacher.Id, ct);
         await userRepository.SaveAsync(ct);
 
         // Vincula às unidades
@@ -155,6 +162,7 @@ public class ErpTeachersController(
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("teacher", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTeacherRequest req, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
@@ -182,6 +190,11 @@ public class ErpTeachersController(
                 "teacher.role_changed", "User", teacher.Id, AdminId,
                 $"From: {previousRole} To: {teacher.Role}", ct: ct);
 
+        // Promovido a admin: mesmo padrão da criação (acesso total se ainda não tem nenhuma permissão).
+        var promotedToAdmin = teacher.Role == Role.admin && previousRole != Role.admin;
+        if (promotedToAdmin)
+            await permissionRepository.GrantFullCatalogIfNoneAsync(teacher.Id, ct);
+
         teacher.UpdateProfile(req.name, req.email, req.phone, teacher.Avatar);
         teacher.UpdateSpecialties(req.specialties);
         teacher.UpdateCargo(req.cargo);
@@ -192,6 +205,8 @@ public class ErpTeachersController(
         else if (req.active == true) teacher.Reactivate();
 
         await userRepository.SaveAsync(ct);
+        if (promotedToAdmin)
+            await permissionService.InvalidateUserCacheAsync(teacher.Id, ct);
 
         // Atualiza unidades se enviado
         if (req.unitIds is not null)
@@ -209,6 +224,7 @@ public class ErpTeachersController(
         return Ok(MapTeacher(updated));
     }
     [HttpPatch("{id}/deactivate")]
+    [RequirePermission("teacher", "edit")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
@@ -224,6 +240,7 @@ public class ErpTeachersController(
     }
 
     [HttpPatch("{id}/activate")]
+    [RequirePermission("teacher", "edit")]
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);
@@ -238,6 +255,7 @@ public class ErpTeachersController(
         return Ok(new { success = true, active = true });
     }
     [HttpPost("{id}/send-password")]
+    [RequirePermission("teacher", "edit")]
     public async Task<IActionResult> SendPassword(Guid id, CancellationToken ct)
     {
         var teacher = await userRepository.GetByIdAsync(id, ct);

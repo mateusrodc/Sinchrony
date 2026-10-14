@@ -42,4 +42,13 @@ public class PermissionRepository(ApplicationDbContext db) : IPermissionReposito
             .Where(g => g.Count() == catalogSize)
             .Select(g => g.Key)
             .ToListAsync(ct);
+
+    public async Task GrantFullCatalogIfNoneAsync(Guid userId, CancellationToken ct = default)
+    {
+        if (await db.UserPermissions.AnyAsync(up => up.UserId == userId, ct)) return;
+
+        var catalogIds = await db.Permissions.Select(p => p.Id).ToListAsync(ct);
+        foreach (var permissionId in catalogIds)
+            db.UserPermissions.Add(UserPermission.Grant(userId, permissionId, null));
+    }
 }

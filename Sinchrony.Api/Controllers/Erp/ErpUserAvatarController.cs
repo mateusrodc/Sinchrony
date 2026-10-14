@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Api.Controllers.App;
+using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -18,6 +19,7 @@ public class ErpUserAvatarController(
     IStorageService storageService,
     IUserRepository userRepository,
     IUnitContext unitContext,
+    IPermissionService permissionService,
     IAuditService auditService) : ControllerBase
 {
     private Guid AdminId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -35,10 +37,21 @@ public class ErpUserAvatarController(
         var target = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("User not found.");
 
-        // Admin que não é global só altera usuário da própria unidade (mesma regra das outras rotas).
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && target.UnitId != unitContext.UnitId)
-            return Forbid();
+        // Foto de aluno é edição de aluno; de professor/admin, edição de usuário (recurso teacher).
+        var resource = target.Role == Role.student ? "student" : "teacher";
+        if (!await permissionService.HasPermissionAsync(AdminId, resource, "edit", ct))
+            throw new DomainException("PERMISSION_DENIED",
+                "Você não tem permissão para executar esta ação.", 403);
+
+        // Admin que não é global só altera usuário das suas unidades (User.UnitId ou "Unidades
+        // (filiais)" do cadastro, dos dois lados). Sem unidade nenhuma segue a regra das outras rotas.
+        if (!unitContext.IsGlobalAdmin)
+        {
+            var managed = await unitContext.GetManagedUnitIdsAsync(ct);
+            var targetUnits = target.TeacherUnits.Select(tu => (Guid?)tu.UnitId).Append(target.UnitId);
+            if (managed.Count > 0 && !targetUnits.Any(u => u.HasValue && managed.Contains(u.Value)))
+                return Forbid();
+        }
 
         // Remove a foto anterior do usuário alvo (não a de quem está logado).
         if (!string.IsNullOrEmpty(target.Avatar))

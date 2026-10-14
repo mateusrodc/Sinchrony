@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
@@ -50,6 +51,7 @@ public class ErpBenefitsController(
     }
 
     [HttpPost]
+    [RequirePermission("benefit", "create")]
     public async Task<IActionResult> Create([FromBody] BenefitRequest req, CancellationToken ct)
     {
         var benefit = Benefit.Create(req.name, req.description, req.icon);
@@ -62,6 +64,7 @@ public class ErpBenefitsController(
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("benefit", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] BenefitRequest req, CancellationToken ct)
     {
         var benefit = await benefitRepository.GetByIdAsync(id, ct)

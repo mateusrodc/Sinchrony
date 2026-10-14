@@ -41,8 +41,7 @@ public class UpdateClassCommandHandler(
         var @class = await classRepository.GetByIdAsync(r.ClassId, ct)
             ?? throw DomainException.NotFound("Class not found.");
 
-        if (!planning.CanManage(@class.Studio))
-            throw DomainException.Forbidden("Você não tem permissão para gerenciar esta unidade.");
+        await planning.EnsureCanManageAsync(@class.Studio, ct);
         if (r.StudioId != @class.StudioId)
             await planning.RequireManageableStudioAsync(r.StudioId, ct);
         await planning.RequireReferencesAsync(r.ClassTypeId, r.TeacherId, ct);

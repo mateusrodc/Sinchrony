@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
@@ -62,6 +63,7 @@ public class ErpPackageTypesController(
     }
 
     [HttpPost]
+    [RequirePermission("package_type", "create")]
     public async Task<IActionResult> Create([FromBody] PackageTypeRequest req, CancellationToken ct)
     {
         var pt = PackageType.Create(req.name ?? string.Empty, req.isFamily ?? false, req.rank);
@@ -81,6 +83,7 @@ public class ErpPackageTypesController(
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("package_type", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] PackageTypeRequest req, CancellationToken ct)
     {
         var pt = await packageTypeRepository.GetByIdAsync(id, ct)
@@ -108,9 +111,11 @@ public class ErpPackageTypesController(
     }
 
     [HttpPatch("{id}/activate")]
+    [RequirePermission("package_type", "edit")]
     public Task<IActionResult> Activate(Guid id, CancellationToken ct) => SetActive(id, true, ct);
 
     [HttpPatch("{id}/deactivate")]
+    [RequirePermission("package_type", "edit")]
     public Task<IActionResult> Deactivate(Guid id, CancellationToken ct) => SetActive(id, false, ct);
 
     // Não bloqueia a desativação se houver pacotes vinculados: o flag não é consumido pelo backend,

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Filters;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
@@ -51,6 +52,7 @@ public class ErpClassTypesController(
     }
 
     [HttpPost]
+    [RequirePermission("class_type", "create")]
     public async Task<IActionResult> Create([FromBody] ClassTypeRequest req, CancellationToken ct)
     {
         var classType = ClassType.Create(req.name);
@@ -65,6 +67,7 @@ public class ErpClassTypesController(
     }
 
     [HttpPut("{id}")]
+    [RequirePermission("class_type", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] ClassTypeRequest req, CancellationToken ct)
     {
         var classType = await classTypeRepository.GetByIdAsync(id, ct)
@@ -79,9 +82,11 @@ public class ErpClassTypesController(
     }
 
     [HttpPatch("{id}/activate")]
+    [RequirePermission("class_type", "edit")]
     public Task<IActionResult> Activate(Guid id, CancellationToken ct) => SetActive(id, true, ct);
 
     [HttpPatch("{id}/deactivate")]
+    [RequirePermission("class_type", "edit")]
     public Task<IActionResult> Deactivate(Guid id, CancellationToken ct) => SetActive(id, false, ct);
 
     private async Task<IActionResult> SetActive(Guid id, bool active, CancellationToken ct)
