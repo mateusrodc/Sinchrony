@@ -18,6 +18,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Route("api/teachers")]
 [Produces("application/json")]
 public class ErpTeachersController(
+    IUnitRepository unitRepository,
     IUserRepository userRepository,
     ITeacherUnitRepository teacherUnitRepository,
     IPermissionRepository permissionRepository,
@@ -94,7 +95,7 @@ public class ErpTeachersController(
         else if (scope is not null)
         {
             teachers = teachers.Where(t =>
-                t.UnitId.HasValue && scope.Contains(t.UnitId.Value) ||
+                t.UnitId == null || scope.Contains(t.UnitId.Value) ||
                 t.TeacherUnits.Any(tu => scope.Contains(tu.UnitId)));
         }
 
@@ -151,7 +152,8 @@ public class ErpTeachersController(
 
         // Vincula às unidades
         var unitIds = req.unitIds ?? [];
-        if (!unitIds.Any() && await unitContext.ResolveDefaultUnitIdAsync(ct) is { } defaultUnitId)
+        if (!unitIds.Any() && (await unitContext.ResolveDefaultUnitIdAsync(ct)
+                ?? await unitRepository.GetSoleActiveUnitIdAsync(ct)) is { } defaultUnitId)
             unitIds = [defaultUnitId];
 
         if (unitIds.Any())

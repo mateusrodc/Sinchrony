@@ -93,13 +93,15 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
 
     public async Task<IEnumerable<User>> ListStudentsByUnitsAsync(IReadOnlyCollection<Guid> unitIds, CancellationToken ct = default)
         => await db.Users
-            .Where(u => u.Role == Role.student && u.UnitId != null && unitIds.Contains(u.UnitId.Value))
+            .Where(u => u.Role == Role.student && (u.UnitId == null || unitIds.Contains(u.UnitId.Value)))
             .OrderBy(u => u.Name)
             .ToListAsync(ct);
 
     public async Task<IEnumerable<User>> ListTeachersByUnitsAsync(IReadOnlyCollection<Guid> unitIds, CancellationToken ct = default)
         => await db.Users
-            .Where(u => u.Role == Role.teacher && u.UnitId != null && unitIds.Contains(u.UnitId.Value))
+            .Where(u => u.Role == Role.teacher &&
+                (u.UnitId == null || unitIds.Contains(u.UnitId.Value) ||
+                 u.TeacherUnits.Any(tu => unitIds.Contains(tu.UnitId))))
             .OrderBy(u => u.Name)
             .ToListAsync(ct);
 
@@ -158,7 +160,7 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
             .Where(u => u.Role == Role.student && u.BirthDate != null && u.BirthDate.Value.Month == month);
 
         if (unitIds is not null)
-            query = query.Where(u => u.UnitId != null && unitIds.Contains(u.UnitId.Value));
+            query = query.Where(u => u.UnitId == null || unitIds.Contains(u.UnitId.Value));
 
         return await query
             .OrderBy(u => u.BirthDate!.Value.Day)

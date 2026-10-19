@@ -21,6 +21,7 @@ namespace Sinchrony.Api.Controllers.Erp;
 [Produces("application/json")]
 public class ErpStudentsController(
     IUserRepository userRepository,
+    IUnitRepository unitRepository,
     IPasswordService passwordService,
     IUnitContext unitContext,
     IStudentPackageRepository studentPackageRepository,
@@ -230,7 +231,8 @@ public class ErpStudentsController(
 
         // Vincula à unidade do admin ou à unidade informada
         await unitContext.EnsureCanAccessUnitAsync(req.unitId, ct);
-        var unitId = req.unitId ?? await unitContext.ResolveDefaultUnitIdAsync(ct);
+        var unitId = req.unitId ?? await unitContext.ResolveDefaultUnitIdAsync(ct)
+            ?? await unitRepository.GetSoleActiveUnitIdAsync(ct);
         if (unitId.HasValue)
             student.SetUnit(unitId.Value);
 

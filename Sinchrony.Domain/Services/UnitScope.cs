@@ -44,3 +44,15 @@ public static class UnitScope
         return managed.Count == 1 ? managed[0] : null;
     }
 }
+
+// Autocadastro (App/Google) não tem admin nem unidade escolhida: enquanto existir uma única unidade
+// ativa, o cadastro novo pertence a ela — senão ficaria sem unidade e invisível para admins de unidade.
+public static class SoleUnit
+{
+    public static async Task<Guid?> GetSoleActiveUnitIdAsync(
+        this Interfaces.Repositories.IUnitRepository units, CancellationToken ct = default)
+    {
+        var active = (await units.ListAsync(ct)).Where(u => u.Active).Take(2).ToList();
+        return active.Count == 1 ? active[0].Id : null;
+    }
+}

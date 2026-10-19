@@ -49,7 +49,7 @@ public class ErpStudiosController(
         // Admin de unidade vê só os studios da sua unidade
         var scope = await unitContext.GetScopeAsync(ct);
         if (scope is not null)
-            studios = studios.Where(s => s.UnitId.HasValue && scope.Contains(s.UnitId.Value));
+            studios = studios.Where(s => s.UnitId == null || scope.Contains(s.UnitId.Value));
 
         return Ok(new { data = studios.Select(MapStudio) });
     }

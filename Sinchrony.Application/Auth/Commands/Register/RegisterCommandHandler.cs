@@ -13,6 +13,7 @@ public class RegisterCommandHandler(
     IUserRepository userRepository,
     IPasswordService passwordService,
     ITokenService tokenService,
+    IUnitRepository unitRepository,
     ITermsAcceptanceRepository termsAcceptanceRepository,
     IAuditService auditService) : IRequestHandler<RegisterCommand, AuthResponseDto>
 {
@@ -40,8 +41,10 @@ public class RegisterCommandHandler(
         var hash = passwordService.HashPassword(request.Password);
         var user = User.Create(request.Name, request.Email, request.Phone, hash, Role.student, request.Cpf);
 
-        if (request.UnitId.HasValue)
-            user.SetUnit(request.UnitId.Value);
+        // Sem unidade no pedido (o App não envia): usa a única unidade ativa, se houver só uma.
+        var unitId = request.UnitId ?? await unitRepository.GetSoleActiveUnitIdAsync(ct);
+        if (unitId.HasValue)
+            user.SetUnit(unitId.Value);
 
         user.UpdateAddress(request.Cep, request.Logradouro, request.Numero,
             request.Complemento, request.Bairro, request.Cidade, request.Estado);

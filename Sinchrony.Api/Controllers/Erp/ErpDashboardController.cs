@@ -59,7 +59,7 @@ public class ErpDashboardController(
         if (scope is not null)
         {
             var unitStudioIds = studios
-                .Where(s => s.UnitId.HasValue && scope.Contains(s.UnitId.Value))
+                .Where(s => s.UnitId == null || scope.Contains(s.UnitId.Value))
                 .Select(s => s.Id).ToHashSet();
 
             classes = classes.Where(c => unitStudioIds.Contains(c.StudioId));

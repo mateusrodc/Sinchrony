@@ -33,7 +33,7 @@ public class ErpReportsController(
             return null;
 
         var studios = await studioRepository.ListAsync(ct);
-        return studios.Where(s => s.UnitId.HasValue && scope.Contains(s.UnitId.Value)).Select(s => s.Id).ToHashSet();
+        return studios.Where(s => s.UnitId == null || scope.Contains(s.UnitId.Value)).Select(s => s.Id).ToHashSet();
     }
 
     [HttpGet("summary")]

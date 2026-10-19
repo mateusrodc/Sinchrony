@@ -99,7 +99,7 @@ public class ErpCheckinController(
 
         var scope = await unitContext.GetScopeAsync(ct);
         if (scope is not null)
-            classes = classes.Where(c => c.Studio?.UnitId is { } unitId && scope.Contains(unitId));
+            classes = classes.Where(c => c.Studio?.UnitId is not { } unitId || scope.Contains(unitId));
 
         return Ok(new
         {

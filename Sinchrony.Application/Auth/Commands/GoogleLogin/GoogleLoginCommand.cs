@@ -4,6 +4,7 @@ using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Services;
 using Sinchrony.Domain.Interfaces.Services;
 
 namespace Sinchrony.Application.Auth.Commands.GoogleLogin;
@@ -15,6 +16,7 @@ public class GoogleLoginCommandHandler(
     IUserRepository userRepository,
     ITokenService tokenService,
     IPasswordService passwordService,
+    IUnitRepository unitRepository,
     IAuditService auditService) : IRequestHandler<GoogleLoginCommand, AuthResponseDto>
 {
     public async Task<AuthResponseDto> Handle(GoogleLoginCommand request, CancellationToken ct)
@@ -42,6 +44,10 @@ public class GoogleLoginCommandHandler(
                     googleUser.Name, googleUser.Email,
                     googleUser.GoogleId, googleUser.Picture);
                 user.ChangePassword(randomHash);
+
+                // Autocadastro sem unidade escolhida: usa a única unidade ativa, se houver só uma.
+                if (await unitRepository.GetSoleActiveUnitIdAsync(ct) is { } soleUnitId)
+                    user.SetUnit(soleUnitId);
 
                 await userRepository.AddAsync(user, ct);
                 await userRepository.SaveAsync(ct);

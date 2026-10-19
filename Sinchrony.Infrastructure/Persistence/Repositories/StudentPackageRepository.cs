@@ -113,7 +113,7 @@ public class StudentPackageRepository(ApplicationDbContext db) : IStudentPackage
             .Where(sp => sp.PaymentStatus != null || sp.AsaasSubscriptionId != null);
 
         if (filter.UnitIds is not null)
-            baseQuery = baseQuery.Where(sp => sp.Student!.UnitId != null && filter.UnitIds.Contains(sp.Student.UnitId.Value));
+            baseQuery = baseQuery.Where(sp => sp.Student!.UnitId == null || filter.UnitIds.Contains(sp.Student.UnitId.Value));
         if (filter.DueFrom.HasValue)
         {
             // nextDueDate = EndDate em horário de Brasília (UTC-3) — desloca o filtro em vez do

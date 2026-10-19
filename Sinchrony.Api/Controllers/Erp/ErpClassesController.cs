@@ -49,7 +49,7 @@ public class ErpClassesController(
         // Admin de unidade vê só aulas dos studios da sua unidade
         var scope = await unitContext.GetScopeAsync(ct);
         if (scope is not null)
-            classes = classes.Where(c => c.Studio?.UnitId is { } unitId && scope.Contains(unitId));
+            classes = classes.Where(c => c.Studio?.UnitId is not { } unitId || scope.Contains(unitId));
 
         if (!string.IsNullOrEmpty(status))
             classes = classes.Where(c => c.Status.ToString() == status);
