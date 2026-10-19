@@ -19,6 +19,7 @@ public class ErpBookingsController(
     IBookingRepository bookingRepository,
     IWaitlistPromotionService waitlistPromotionService,
     IClassRepository classRepository,
+    IAttendanceRepository attendanceRepository,
     AttendanceChangeService attendanceChangeService,
     IAuditService auditService) : ControllerBase
 {
@@ -87,6 +88,11 @@ public class ErpBookingsController(
             throw DomainException.Validation("ALREADY_ATTENDED", "Cannot cancel attended booking.");
 
         booking.Cancel();
+
+        // Mantém o registro de presença em sincronia (igual ao cancelamento feito pelo aluno).
+        var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
+        attendance?.UpdateStatus("cancelled");
+
         await bookingRepository.SaveAsync(ct);
 
         // Libera a vaga pro próximo da lista de espera, se houver — antes só o cancelamento

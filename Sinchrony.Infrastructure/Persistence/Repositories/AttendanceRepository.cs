@@ -21,6 +21,7 @@ public class AttendanceRepository(ApplicationDbContext db) : IAttendanceReposito
     public async Task<IEnumerable<AttendanceRecord>> ListByClassAsync(Guid classId, CancellationToken ct = default)
         => await db.AttendanceRecords
             .Include(r => r.Student)
+            .Include(r => r.Class)
             .Include(r => r.Booking)
             .Where(r => r.ClassId == classId)
             .ToListAsync(ct);
@@ -31,15 +32,23 @@ public class AttendanceRepository(ApplicationDbContext db) : IAttendanceReposito
     public async Task SaveAsync(CancellationToken ct = default)
         => await db.SaveChangesAsync(ct);
 
-    public async Task<IEnumerable<AttendanceRecord>> ListAllAsync(CancellationToken ct = default)
-    => await db.AttendanceRecords
+    public async Task<IEnumerable<AttendanceRecord>> ListAllAsync(
+        CancellationToken ct = default, DateOnly? from = null, DateOnly? to = null)
+    {
+        var query = db.AttendanceRecords
         .Include(r => r.Student)
         .Include(r => r.ConfirmedBy)
         .Include(r => r.Booking)
         .Include(r => r.Class)
             .ThenInclude(c => c!.ClassType)
-        .OrderByDescending(r => r.CreatedAt)
-        .ToListAsync(ct);
+            .AsQueryable();
+
+        // Período pela data da aula, a mesma que o campo date devolve.
+        if (from.HasValue) query = query.Where(r => r.Class != null && r.Class.Date >= from.Value);
+        if (to.HasValue) query = query.Where(r => r.Class != null && r.Class.Date <= to.Value);
+
+        return await query.OrderByDescending(r => r.CreatedAt).ToListAsync(ct);
+    }
 
     public async Task<AttendanceRecord?> GetByBookingAsync(
     Guid bookingId, CancellationToken ct = default)

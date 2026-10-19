@@ -51,6 +51,9 @@ public class AttendanceRecord
         }
     }
 
+    // Remarcação: o registro acompanha a reserva para a aula nova (senão fica listado na antiga).
+    public void MoveToClass(Guid classId) => ClassId = classId;
+
     public void MarkNoShow() => Status = BookingStatus.no_show;
     public void MarkConfirmed() => Status = BookingStatus.confirmed;
 }

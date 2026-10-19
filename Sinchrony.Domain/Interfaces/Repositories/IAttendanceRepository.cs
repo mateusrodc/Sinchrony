@@ -9,7 +9,8 @@ public interface IAttendanceRepository
     Task<IEnumerable<AttendanceRecord>> ListByClassAsync(Guid classId, CancellationToken ct = default);
     Task AddAsync(AttendanceRecord record, CancellationToken ct = default);
     Task SaveAsync(CancellationToken ct = default);
-    Task<IEnumerable<AttendanceRecord>> ListAllAsync(CancellationToken ct = default);
+    Task<IEnumerable<AttendanceRecord>> ListAllAsync(CancellationToken ct = default,
+        DateOnly? from = null, DateOnly? to = null);
     Task<AttendanceRecord?> GetByBookingAsync(
     Guid bookingId, CancellationToken ct = default);
 

@@ -1,10 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sinchrony.Api.Extensions;
 using Sinchrony.Api.SwaggerExamples.Erp;
 using Sinchrony.Application.Attendance;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
@@ -18,6 +21,7 @@ public class ErpCheckinController(
     IAttendanceRepository attendanceRepository,
     IBookingRepository bookingRepository,
     IClassRepository classRepository,
+    IUnitContext unitContext,
     AttendanceChangeService attendanceChangeService) : ControllerBase
 {
     private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -26,9 +30,11 @@ public class ErpCheckinController(
     [HttpGet]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(CheckinListResponseExample))]
-    public async Task<IActionResult> List(CancellationToken ct)
+    public async Task<IActionResult> List(
+        [FromQuery] string? from, [FromQuery] string? to, CancellationToken ct)
     {
-        var all = await attendanceRepository.ListAllAsync(ct);
+        var (fromDate, toDate) = DateParams.ParseRange(from, to);
+        var all = await attendanceRepository.ListAllAsync(ct, fromDate, toDate);
         return Ok(new { data = all.Select(MapCheckin) });
     }
 
@@ -61,18 +67,63 @@ public class ErpCheckinController(
         return Ok(MapCheckin(record));
     }
 
+    // Contagem só dos registros que ainda valem: reserva não cancelada e ainda nesta aula
+    // (registro de reserva cancelada ou remarcada não entra).
     [HttpGet("summary")]
     [ProducesResponseType(typeof(object), 200)]
     [SwaggerResponseExample(200, typeof(CheckinSummaryResponseExample))]
     public async Task<IActionResult> Summary([FromQuery] Guid classId, CancellationToken ct)
     {
-        var records = (await attendanceRepository.ListByClassAsync(classId, ct)).ToList();
+        var records = (await attendanceRepository.ListByClassAsync(classId, ct))
+            .Where(r => r.Booking is { } b && b.Status != BookingStatus.cancelled && b.ClassId == classId)
+            .ToList();
         return Ok(new
         {
-            confirmed = records.Count(r => r.Status == Domain.Enums.BookingStatus.confirmed),
-            attended = records.Count(r => r.Status == Domain.Enums.BookingStatus.attended),
-            noShow = records.Count(r => r.Status == Domain.Enums.BookingStatus.no_show),
-            cancelledWithinDeadline = records.Count(r => r.Status == BookingStatus.cancelled)
+            confirmed = records.Count(r => r.Status == BookingStatus.confirmed),
+            attended = records.Count(r => r.Status == BookingStatus.attended),
+            noShow = records.Count(r => r.Status == BookingStatus.no_show),
+            cancelledWithinDeadline = (await bookingRepository.ListByClassAsync(classId, ct))
+                .Count(b => b.Status == BookingStatus.cancelled)
+        });
+    }
+
+    // Uma linha por aula do dia, com os totais contados a partir das reservas não canceladas —
+    // a mesma regra para a lista e para os detalhes. Padrão: hoje (horário de Brasília).
+    [HttpGet("classes")]
+    [ProducesResponseType(typeof(object), 200)]
+    public async Task<IActionResult> Classes([FromQuery] string? date, CancellationToken ct)
+    {
+        var day = DateOnly.TryParse(date, out var parsed) ? parsed : BrasiliaTime.ToDate(DateTime.UtcNow);
+        var classes = await classRepository.ListAsync(day, null, null, ct);
+
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
+        {
+            var unitId = unitContext.UnitId.Value;
+            classes = classes.Where(c => c.Studio != null && c.Studio.UnitId == unitId);
+        }
+
+        return Ok(new
+        {
+            data = classes.Select(c =>
+            {
+                var active = c.Bookings.Where(b => b.Status != BookingStatus.cancelled).ToList();
+                return new
+                {
+                    classId = c.Id,
+                    className = c.Name,
+                    date = c.Date.ToString("yyyy-MM-dd"),
+                    startTime = c.StartTime,
+                    endTime = c.EndTime,
+                    status = c.Status.ToString(),
+                    teacherName = c.Teacher?.Name,
+                    studioName = c.Studio?.Name,
+                    totalSpots = c.TotalSpots,
+                    booked = active.Count,
+                    pending = active.Count(b => b.Status == BookingStatus.confirmed),
+                    attended = active.Count(b => b.Status == BookingStatus.attended),
+                    noShow = active.Count(b => b.Status == BookingStatus.no_show)
+                };
+            })
         });
     }
 
@@ -86,7 +137,8 @@ public class ErpCheckinController(
         studentAvatar = r.Student?.Avatar,
         studentPhone = r.Student?.Phone,
         className = r.Class?.Name,
-        date = r.CreatedAt.ToString("yyyy-MM-dd"),
+        // Data da aula (não a da criação do registro), a mesma que a lista de reservas usa.
+        date = r.Class is not null ? r.Class.Date.ToString("yyyy-MM-dd") : r.CreatedAt.ToString("yyyy-MM-dd"),
         time = r.ConfirmedAt?.ToString("HH:mm"),
         status = r.Status.ToString(),
         confirmedBy = r.ConfirmedBy?.Name,

@@ -12,6 +12,7 @@ public record RescheduleBookingCommand(Guid StudentId, Guid BookingId, Guid NewC
 public class RescheduleBookingCommandHandler(
     IBookingRepository bookingRepository,
     IClassRepository classRepository,
+    IAttendanceRepository attendanceRepository,
     IStudentPackageRepository studentPackageRepository,
     ISettingsRepository settingsRepository) : IRequestHandler<RescheduleBookingCommand>
 {
@@ -56,6 +57,12 @@ public class RescheduleBookingCommandHandler(
 
         // Troca a aula — sem debitar/estornar crédito
         booking.Reschedule(request.NewClassId);
+
+        // O registro de presença vai junto, senão continua aparecendo nos detalhes da aula antiga.
+        var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
+        attendance?.MoveToClass(request.NewClassId);
+
         await bookingRepository.SaveAsync(ct);
+        await attendanceRepository.SaveAsync(ct);
     }
 }
