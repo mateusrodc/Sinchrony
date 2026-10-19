@@ -14,6 +14,7 @@ using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 using System.Net.NetworkInformation;
 using System.Security.Claims;
@@ -46,11 +47,9 @@ public class ErpClassesController(
         var (fromDate, toDate) = DateParams.ParseRange(from, to);
         var classes = await classRepository.ListAsync(parsedDate, type, studioId, ct, fromDate, toDate);
         // Admin de unidade vê só aulas dos studios da sua unidade
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
-        {
-            var unitId = unitContext.UnitId.Value;
-            classes = classes.Where(c => c.Studio != null && c.Studio.UnitId == unitId);
-        }
+        var scope = await unitContext.GetScopeAsync(ct);
+        if (scope is not null)
+            classes = classes.Where(c => c.Studio?.UnitId is { } unitId && scope.Contains(unitId));
 
         if (!string.IsNullOrEmpty(status))
             classes = classes.Where(c => c.Status.ToString() == status);

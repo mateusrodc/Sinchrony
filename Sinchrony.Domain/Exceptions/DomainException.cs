@@ -24,4 +24,11 @@ public class DomainException : Exception
     public static DomainException Unauthorized(string message) => new("UNAUTHORIZED", message, 401);
     public static DomainException Forbidden(string message) => new("FORBIDDEN", message, 403);
     public static DomainException Validation(string code, string message) => new(code, message, 422);
+
+    // 403 sempre com código e mensagem: o ERP e o App mostram o motivo em vez de tratar como "sem acesso".
+    public static DomainException NoUnitAssigned() => new("NO_UNIT_ASSIGNED",
+        "Seu usuário não está vinculado a nenhuma unidade. Peça ao administrador para marcar a unidade no seu cadastro.", 403);
+    public static DomainException UnitForbidden() => new("UNIT_FORBIDDEN", "Este registro é de outra unidade.", 403);
+    public static DomainException GlobalAdminRequired() => new("GLOBAL_ADMIN_REQUIRED",
+        "Esta ação é restrita ao administrador global.", 403);
 }

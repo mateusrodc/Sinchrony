@@ -50,8 +50,8 @@ public class PurchaseRepository(ApplicationDbContext db) : IPurchaseRepository
             query = query.Where(p => p.PaymentMethod == filter.PaymentMethod);
         if (!string.IsNullOrEmpty(filter.Channel))
             query = query.Where(p => p.Channel == filter.Channel);
-        if (filter.UnitId.HasValue)
-            query = query.Where(p => p.User!.UnitId == filter.UnitId.Value);
+        if (filter.UnitIds is not null)
+            query = query.Where(p => p.User!.UnitId != null && filter.UnitIds.Contains(p.User.UnitId.Value));
         if (!string.IsNullOrWhiteSpace(filter.StudentSearch))
         {
             // Escapa curingas do LIKE para o termo digitado ser tratado como texto literal

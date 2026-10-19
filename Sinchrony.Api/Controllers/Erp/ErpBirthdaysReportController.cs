@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -25,11 +26,9 @@ public class ErpBirthdaysReportController(
         if (m is < 1 or > 12)
             throw DomainException.Validation("INVALID_MONTH", "month deve estar entre 1 e 12.");
 
-        Guid? unitId = unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue
-            ? null
-            : unitContext.UnitId.Value;
+        var unitIds = await unitContext.GetScopeAsync(ct);
 
-        var students = await userRepository.ListBirthdaysAsync(m, unitId, ct);
+        var students = await userRepository.ListBirthdaysAsync(m, unitIds, ct);
 
         var data = students.Select(u => new
         {

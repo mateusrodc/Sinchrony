@@ -6,6 +6,7 @@ using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
@@ -52,8 +53,9 @@ public class ErpUnitsController(
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var units = await unitRepository.ListAsync(ct);
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
-            units = units.Where(u => u.Id == unitContext.UnitId.Value);
+        var scope = await unitContext.GetScopeAsync(ct);
+        if (scope is not null)
+            units = units.Where(u => scope.Contains(u.Id));
         return Ok(new { data = units.Select(MapUnit) });
     }
 
@@ -62,8 +64,7 @@ public class ErpUnitsController(
     [SwaggerResponseExample(200, typeof(UnitListResponseExample))]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId != id)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(id, ct);
         var unit = await unitRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Unit not found.");
         return Ok(MapUnit(unit));
@@ -74,8 +75,7 @@ public class ErpUnitsController(
     [SwaggerResponseExample(200, typeof(UnitDashboardResponseExample))]
     public async Task<IActionResult> Dashboard(Guid id, CancellationToken ct)
     {
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId != id)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(id, ct);
 
         var unit = await unitRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Unit not found.");
@@ -124,7 +124,7 @@ public class ErpUnitsController(
     [RequirePermission("unit", "create")]
     public async Task<IActionResult> Create([FromBody] UnitRequest req, CancellationToken ct)
     {
-        if (!unitContext.IsGlobalAdmin) return Forbid();
+        if (!unitContext.IsGlobalAdmin) throw DomainException.GlobalAdminRequired();
         var unit = Unit.Create(req.name, req.address, req.phone, req.email);
         unit.UpdateAddress(req.cep, req.logradouro, req.numero,
             req.complemento, req.bairro, req.cidade, req.estado);
@@ -142,7 +142,7 @@ public class ErpUnitsController(
     [RequirePermission("unit", "edit")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UnitRequest req, CancellationToken ct)
     {
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId != id) return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(id, ct);
         var unit = await unitRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Unit not found.");
         unit.Update(req.name, req.address, req.phone, req.email, req.active ?? true);
@@ -167,7 +167,7 @@ public class ErpUnitsController(
 
     private async Task<IActionResult> SetActive(Guid id, bool active, CancellationToken ct)
     {
-        if (!unitContext.IsGlobalAdmin) return Forbid();
+        if (!unitContext.IsGlobalAdmin) throw DomainException.GlobalAdminRequired();
 
         var unit = await unitRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Unit not found.");

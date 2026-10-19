@@ -28,11 +28,12 @@ public class ErpReportsController(
     // studios daquela unidade. null = sem restrição (admin global).
     private async Task<HashSet<Guid>?> GetUnitStudioIdsAsync(CancellationToken ct)
     {
-        if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
+        var scope = await unitContext.GetScopeAsync(ct);
+        if (scope is null)
             return null;
 
         var studios = await studioRepository.ListAsync(ct);
-        return studios.Where(s => s.UnitId == unitContext.UnitId.Value).Select(s => s.Id).ToHashSet();
+        return studios.Where(s => s.UnitId.HasValue && scope.Contains(s.UnitId.Value)).Select(s => s.Id).ToHashSet();
     }
 
     [HttpGet("summary")]
@@ -52,7 +53,7 @@ public class ErpReportsController(
 
         var students = unitStudioIds is null
             ? (await userRepository.ListStudentsAsync(null, ct)).ToList()
-            : (await userRepository.ListStudentsByUnitAsync(unitContext.UnitId!.Value, ct)).ToList();
+            : (await userRepository.ListStudentsByUnitsAsync(await unitContext.GetManagedUnitIdsAsync(ct), ct)).ToList();
 
         var monthClasses = (await classRepository.ListForReportsAsync(
             firstOfMonth, lastOfMonth, studioId, teacherId, classTypeId, unitStudioIds, ct)).ToList();

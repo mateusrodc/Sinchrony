@@ -5,6 +5,7 @@ using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -37,15 +38,16 @@ public class ErpDashboardController(
         IEnumerable<Domain.Entities.User> students;
         IEnumerable<Domain.Entities.User> teachers;
 
-        if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
+        var scope = await unitContext.GetScopeAsync(ct);
+        if (scope is null)
         {
             students = await userRepository.ListStudentsAsync(null, ct);
             teachers = await userRepository.ListTeachersAsync(null, ct: ct);
         }
         else
         {
-            students = await userRepository.ListStudentsByUnitAsync(unitContext.UnitId.Value, ct);
-            teachers = await userRepository.ListTeachersByUnitAsync(unitContext.UnitId.Value, ct);
+            students = await userRepository.ListStudentsByUnitsAsync(scope, ct);
+            teachers = await userRepository.ListTeachersByUnitsAsync(scope, ct);
         }
 
         var studios = await studioRepository.ListAsync(ct);
@@ -54,10 +56,10 @@ public class ErpDashboardController(
         var allBookings = await bookingRepository.ListErpAsync(null, null, null, ct);
 
         // Filtra por unidade se admin de unidade
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
+        if (scope is not null)
         {
             var unitStudioIds = studios
-                .Where(s => s.UnitId == unitContext.UnitId.Value)
+                .Where(s => s.UnitId.HasValue && scope.Contains(s.UnitId.Value))
                 .Select(s => s.Id).ToHashSet();
 
             classes = classes.Where(c => unitStudioIds.Contains(c.StudioId));

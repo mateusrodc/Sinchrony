@@ -6,6 +6,7 @@ using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
@@ -46,8 +47,9 @@ public class ErpStudiosController(
         var studios = await studioRepository.ListAsync(ct);
 
         // Admin de unidade vê só os studios da sua unidade
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
-            studios = studios.Where(s => s.UnitId == unitContext.UnitId.Value);
+        var scope = await unitContext.GetScopeAsync(ct);
+        if (scope is not null)
+            studios = studios.Where(s => s.UnitId.HasValue && scope.Contains(s.UnitId.Value));
 
         return Ok(new { data = studios.Select(MapStudio) });
     }
@@ -60,9 +62,7 @@ public class ErpStudiosController(
         var studio = await studioRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Studio not found.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && studio.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(studio.UnitId, ct);
 
         return Ok(MapStudio(studio));
     }
@@ -75,7 +75,8 @@ public class ErpStudiosController(
             req.phone, req.email, req.openingTime, req.closingTime);
 
         // Vincula à unidade do admin ou à unidade informada
-        var unitId = req.unitId ?? unitContext.UnitId;
+        await unitContext.EnsureCanAccessUnitAsync(req.unitId, ct);
+        var unitId = req.unitId ?? await unitContext.ResolveDefaultUnitIdAsync(ct);
         if (unitId.HasValue)
             studio.SetUnit(unitId.Value);
 
@@ -94,9 +95,7 @@ public class ErpStudiosController(
         var studio = await studioRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Studio not found.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && studio.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(studio.UnitId, ct);
 
         studio.Update(req.name, req.address, req.capacity,
             req.phone, req.email, req.openingTime, req.closingTime, req.active);

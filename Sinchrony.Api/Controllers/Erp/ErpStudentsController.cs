@@ -102,7 +102,8 @@ public class ErpStudentsController(
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        if (unitContext.IsGlobalAdmin || !unitContext.UnitId.HasValue)
+        var scope = await unitContext.GetScopeAsync(ct);
+        if (scope is null)
         {
             var (items, total) = await userRepository.ListStudentsPagedAsync(
                 status, page, pageSize, ct, paymentStatus);
@@ -111,7 +112,7 @@ public class ErpStudentsController(
         }
         else
         {
-            var all = await userRepository.ListStudentsByUnitAsync(unitContext.UnitId.Value, ct);
+            var all = await userRepository.ListStudentsByUnitsAsync(scope, ct);
             if (!string.IsNullOrEmpty(status))
                 all = all.Where(u => u.Status.ToString() == status);
 
@@ -168,9 +169,7 @@ public class ErpStudentsController(
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Student not found.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && student.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(student.UnitId, ct);
 
         // Deriva o plano do StudentPackage ativo
         var activePackage = await studentPackageRepository.GetActiveByStudentAsync(id, ct);
@@ -185,9 +184,7 @@ public class ErpStudentsController(
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Student not found.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && student.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(student.UnitId, ct);
 
         return Ok(new { data = new List<object>() });
     }
@@ -232,7 +229,8 @@ public class ErpStudentsController(
             req.complemento, req.bairro, req.cidade, req.estado);
 
         // Vincula à unidade do admin ou à unidade informada
-        var unitId = req.unitId ?? unitContext.UnitId;
+        await unitContext.EnsureCanAccessUnitAsync(req.unitId, ct);
+        var unitId = req.unitId ?? await unitContext.ResolveDefaultUnitIdAsync(ct);
         if (unitId.HasValue)
             student.SetUnit(unitId.Value);
 
@@ -253,9 +251,7 @@ public class ErpStudentsController(
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Student not found.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && student.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(student.UnitId, ct);
 
         // Valida permissões ANTES de mutar qualquer coisa.
         EnsureBirthDateEditable(req.birthDate, student.BirthDate);
@@ -387,11 +383,9 @@ public class ErpStudentsController(
         if (!package.Active)
             throw DomainException.Validation("PACKAGE_INACTIVE", "Package is not available.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
-        {
-            if (package.UnitId.HasValue && package.UnitId != unitContext.UnitId)
+        var grantScope = await unitContext.GetScopeAsync(ct);
+        if (grantScope is not null && package.UnitId.HasValue && !grantScope.Contains(package.UnitId.Value))
                 throw DomainException.Forbidden("Você não tem permissão para conceder pacotes de outra unidade.");
-        }
 
         var amount = req.paymentMethod == "courtesy" ? 0 : (req.amount ?? 0);
 
@@ -483,11 +477,9 @@ public class ErpStudentsController(
 
         // Multiunidade
         var package = await packageRepository.GetByIdAsync(sp.PackageId, ct);
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
-        {
-            if (package?.UnitId.HasValue == true && package.UnitId != unitContext.UnitId)
+        var removeScope = await unitContext.GetScopeAsync(ct);
+        if (removeScope is not null && package?.UnitId is { } packageUnitId && !removeScope.Contains(packageUnitId))
                 throw DomainException.Forbidden("Você não tem permissão para remover pacotes de outra unidade.");
-        }
 
         // Carrega aluno
         var student = await userRepository.GetByIdAsync(studentId, ct)
@@ -561,9 +553,7 @@ public class ErpStudentsController(
 
         // Mesmo isolamento multi-unidade já aplicado em Get/Update deste controller — sem
         // isso, um admin de uma unidade poderia ajustar crédito de aluno de outra unidade.
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && student.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(student.UnitId, ct);
 
         if (req.extendDays is <= 0)
             throw DomainException.Validation("INVALID_DAYS",
@@ -632,9 +622,7 @@ public class ErpStudentsController(
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Student not found.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && student.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(student.UnitId, ct);
 
         var transactions = await creditTransactionRepository.ListByUserAsync(id, ct);
         return Ok(new

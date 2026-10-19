@@ -55,6 +55,7 @@ try
     builder.Services.AddApiExtensions(builder.Configuration);
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, Sinchrony.Api.Middlewares.JsonForbiddenResultHandler>();
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddHealthChecks()

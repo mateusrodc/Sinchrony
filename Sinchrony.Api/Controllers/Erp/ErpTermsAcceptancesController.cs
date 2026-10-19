@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 
 namespace Sinchrony.Api.Controllers.Erp;
 
@@ -22,9 +23,7 @@ public class ErpTermsAcceptancesController(
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Aluno não encontrado.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && student.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(student.UnitId, ct);
 
         var items = await termsAcceptanceRepository.ListByUserAsync(id, ct);
 

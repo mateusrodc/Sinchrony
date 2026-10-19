@@ -5,6 +5,7 @@ using Sinchrony.Application.Common;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -38,15 +39,9 @@ public class ErpPurchasesController(
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        // Falha fechado: quem não é admin global e não tem unidade no token não pode
-        // enxergar valores financeiros de todas as unidades.
-        Guid? unitId = null;
-        if (!unitContext.IsGlobalAdmin)
-        {
-            if (!unitContext.UnitId.HasValue)
-                return Forbid();
-            unitId = unitContext.UnitId.Value;
-        }
+        // Falha fechado: quem não é admin global só enxerga as unidades do próprio cadastro
+        // (User.UnitId ou "Unidades (filiais)"); sem nenhuma, 403 NO_UNIT_ASSIGNED.
+        var unitIds = await unitContext.GetScopeAsync(ct);
 
         var normalizedStatus = status?.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(normalizedStatus) && !ValidStatuses.Contains(normalizedStatus))
@@ -76,7 +71,7 @@ public class ErpPurchasesController(
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
         var filter = new PurchaseListFilter(
-            fromUtc, toExclusiveUtc, normalizedStatus, normalizedMethod, studentSearch, unitId, normalizedChannel);
+            fromUtc, toExclusiveUtc, normalizedStatus, normalizedMethod, studentSearch, unitIds, normalizedChannel);
         var result = await purchaseRepository.ListErpPagedAsync(filter, page, pageSize, ct);
 
         var data = result.Items.Select(p => new

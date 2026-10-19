@@ -2,14 +2,14 @@
 
 namespace Sinchrony.Domain.Interfaces.Repositories;
 
-// Filtros da listagem do ERP. Todos opcionais; UnitId restringe às compras de alunos daquela unidade.
+// Filtros da listagem do ERP. Todos opcionais; UnitIds restringe às compras de alunos dessas unidades.
 public record PurchaseListFilter(
     DateTime? From = null,
     DateTime? ToExclusive = null,
     string? Status = null,
     string? PaymentMethod = null,
     string? StudentSearch = null,
-    Guid? UnitId = null,
+    IReadOnlyCollection<Guid>? UnitIds = null,
     string? Channel = null);
 
 // TotalAmount/ConfirmedAmount somam o recorte filtrado inteiro (não só a página atual).

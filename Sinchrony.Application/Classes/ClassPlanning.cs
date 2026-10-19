@@ -40,10 +40,7 @@ public class ClassPlanning(
         return studio;
     }
 
-    public static DomainException NoUnitError()
-        => new("NO_UNIT_ASSIGNED",
-            "Seu usuário não está vinculado a nenhuma unidade. Peça ao administrador para marcar a unidade no seu cadastro.",
-            403);
+    public static DomainException NoUnitError() => DomainException.NoUnitAssigned();
 
     public async Task RequireReferencesAsync(Guid classTypeId, Guid teacherId, CancellationToken ct)
     {

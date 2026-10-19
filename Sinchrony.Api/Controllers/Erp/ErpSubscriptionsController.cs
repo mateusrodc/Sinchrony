@@ -42,20 +42,21 @@ public class ErpSubscriptionsController(
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        // Falha fechado: quem não é admin global só enxerga a própria unidade, igual às demais
-        // telas financeiras do ERP (ver ErpPurchasesController).
-        Guid? effectiveUnitId = unitId;
-        if (!unitContext.IsGlobalAdmin)
+        // Falha fechado: quem não é admin global só enxerga as unidades do próprio cadastro, igual às
+        // demais telas financeiras do ERP (ver ErpPurchasesController). `unitId` (filtro da tela) só
+        // afunila dentro dessas unidades.
+        var scope = await unitContext.GetScopeAsync(ct);
+        IReadOnlyCollection<Guid>? effectiveUnitIds = scope;
+        if (unitId.HasValue)
         {
-            if (!unitContext.UnitId.HasValue)
-                return Forbid();
-            effectiveUnitId = unitContext.UnitId.Value;
+            await unitContext.EnsureCanAccessUnitAsync(unitId, ct);
+            effectiveUnitIds = [unitId.Value];
         }
 
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
-        var filter = new SubscriptionListFilter(status, search, effectiveUnitId, dueFrom, dueTo);
+        var filter = new SubscriptionListFilter(status, search, effectiveUnitIds, dueFrom, dueTo);
         var result = await studentPackageRepository.ListSubscriptionsPagedAsync(filter, page, pageSize, ct);
 
         // O cartão exibido tem que ser o que de fato é cobrado (RenewalCardId) — só cai pro
@@ -98,9 +99,7 @@ public class ErpSubscriptionsController(
         var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(id, ct)
             ?? throw DomainException.NotFound("Aluno não possui assinatura recorrente.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && sp.Student?.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(sp.Student?.UnitId, ct);
 
         var card = await ResolveRenewalCardAsync(sp, ct);
         var (payments, _) = await purchaseRepository.ListByStudentPackagePagedAsync(sp.Id, 1, 6, ct);
@@ -119,9 +118,7 @@ public class ErpSubscriptionsController(
         var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(id, ct)
             ?? throw DomainException.NotFound("Aluno não possui assinatura recorrente.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && sp.Student?.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(sp.Student?.UnitId, ct);
 
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
@@ -164,9 +161,7 @@ public class ErpSubscriptionsController(
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Aluno não encontrado.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && student.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(student.UnitId, ct);
 
         var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(id, ct)
             ?? throw DomainException.NotFound("Aluno não possui assinatura recorrente.");
@@ -208,9 +203,7 @@ public class ErpSubscriptionsController(
         var student = await userRepository.GetByIdAsync(id, ct)
             ?? throw DomainException.NotFound("Aluno não encontrado.");
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && student.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(student.UnitId, ct);
 
         var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(id, ct)
             ?? throw DomainException.NotFound("Aluno não possui assinatura recorrente.");

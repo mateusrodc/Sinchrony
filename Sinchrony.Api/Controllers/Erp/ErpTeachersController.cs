@@ -85,10 +85,18 @@ public class ErpTeachersController(
         var teachers = await userRepository.ListTeachersAsync(null, includeAdmins, ct);
 
         // Filtro por unidade
-        var filterUnitId = unitId ?? (!unitContext.IsGlobalAdmin ? unitContext.UnitId : null);
-        if (filterUnitId.HasValue)
+        var scope = await unitContext.GetScopeAsync(ct);
+        if (unitId.HasValue)
+        {
+            await unitContext.EnsureCanAccessUnitAsync(unitId, ct);
+            teachers = teachers.Where(t => t.TeacherUnits.Any(tu => tu.UnitId == unitId.Value));
+        }
+        else if (scope is not null)
+        {
             teachers = teachers.Where(t =>
-                t.TeacherUnits.Any(tu => tu.UnitId == filterUnitId.Value));
+                t.UnitId.HasValue && scope.Contains(t.UnitId.Value) ||
+                t.TeacherUnits.Any(tu => scope.Contains(tu.UnitId)));
+        }
 
         if (active.HasValue)
             teachers = teachers.Where(t => t.Active == active.Value);
@@ -143,8 +151,8 @@ public class ErpTeachersController(
 
         // Vincula às unidades
         var unitIds = req.unitIds ?? [];
-        if (!unitIds.Any() && unitContext.UnitId.HasValue)
-            unitIds = [unitContext.UnitId.Value];
+        if (!unitIds.Any() && await unitContext.ResolveDefaultUnitIdAsync(ct) is { } defaultUnitId)
+            unitIds = [defaultUnitId];
 
         if (unitIds.Any())
         {

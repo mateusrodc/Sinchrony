@@ -2,12 +2,12 @@
 
 namespace Sinchrony.Domain.Interfaces.Repositories;
 
-// Filtros da listagem de assinaturas do ERP. UnitId restringe às assinaturas de alunos daquela
-// unidade. Status filtra por SubscriptionPaymentStatus (up_to_date|retrying|overdue|cancelled).
+// Filtros da listagem de assinaturas do ERP. UnitIds restringe às assinaturas de alunos dessas
+// unidades. Status filtra por SubscriptionPaymentStatus (up_to_date|retrying|overdue|cancelled).
 public record SubscriptionListFilter(
     string? Status = null,
     string? StudentSearch = null,
-    Guid? UnitId = null,
+    IReadOnlyCollection<Guid>? UnitIds = null,
     DateOnly? DueFrom = null,
     DateOnly? DueTo = null);
 

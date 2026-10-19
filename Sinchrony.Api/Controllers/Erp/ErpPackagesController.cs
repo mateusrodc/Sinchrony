@@ -11,6 +11,7 @@ using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
@@ -38,8 +39,12 @@ public class ErpPackagesController(
 
         if (unitId.HasValue)
             result = result.Where(p => p.UnitId == unitId.Value);
-        else if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
-            result = result.Where(p => p.UnitId == unitContext.UnitId.Value || p.UnitId == null);
+        else
+        {
+            var scope = await unitContext.GetScopeAsync(ct);
+            if (scope is not null)
+                result = result.Where(p => p.UnitId == null || scope.Contains(p.UnitId.Value));
+        }
 
         return Ok(new { data = result });
     }
@@ -77,7 +82,8 @@ public class ErpPackagesController(
             req.freeNoShowsPerPackage, req.minimumCycles, req.earlyCancellationFeePercent), ct);
 
 
-        var unitId = req.unitId ?? unitContext.UnitId;
+        await unitContext.EnsureCanAccessUnitAsync(req.unitId, ct);
+        var unitId = req.unitId ?? await unitContext.ResolveDefaultUnitIdAsync(ct);
 
         await auditService.LogAsync("package.created", "Package", result.Id, AdminId, $"Name: {result.Name}", ct: ct);
 

@@ -5,6 +5,7 @@ using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using System.Security.Claims;
 
 namespace Sinchrony.Api.Controllers.Erp;
@@ -44,13 +45,13 @@ public class ErpUserAvatarController(
                 "Você não tem permissão para executar esta ação.", 403);
 
         // Admin que não é global só altera usuário das suas unidades (User.UnitId ou "Unidades
-        // (filiais)" do cadastro, dos dois lados). Sem unidade nenhuma segue a regra das outras rotas.
-        if (!unitContext.IsGlobalAdmin)
+        // (filiais)" do cadastro, dos dois lados). Sem unidade nenhuma: 403 NO_UNIT_ASSIGNED.
+        var managed = await unitContext.GetScopeAsync(ct);
+        if (managed is not null)
         {
-            var managed = await unitContext.GetManagedUnitIdsAsync(ct);
             var targetUnits = target.TeacherUnits.Select(tu => (Guid?)tu.UnitId).Append(target.UnitId);
-            if (managed.Count > 0 && !targetUnits.Any(u => u.HasValue && managed.Contains(u.Value)))
-                return Forbid();
+            if (!targetUnits.Any(u => u.HasValue && managed.Contains(u.Value)))
+                throw DomainException.UnitForbidden();
         }
 
         // Remove a foto anterior do usuário alvo (não a de quem está logado).

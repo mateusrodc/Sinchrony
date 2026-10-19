@@ -7,6 +7,7 @@ using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Sinchrony.Infrastructure.Persistence.Repositories;
 using Sinchrony.Infrastructure.Services;
 using Swashbuckle.AspNetCore.Filters;
@@ -35,9 +36,7 @@ public class ErpBikesController(
             ?? throw DomainException.NotFound("Studio not found.");
 
         // Admin de unidade só vê bikes dos seus studios
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
-            && studio.UnitId != unitContext.UnitId)
-            return Forbid();
+        await unitContext.EnsureCanAccessUnitAsync(studio.UnitId, ct);
 
         var bikes = await bikeRepository.ListByStudioAsync(studioId, ct);
         return Ok(new

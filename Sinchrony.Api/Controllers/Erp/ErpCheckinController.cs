@@ -8,6 +8,7 @@ using Sinchrony.Domain.Exceptions;
 using Sinchrony.Application.Common;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
 
@@ -96,11 +97,9 @@ public class ErpCheckinController(
         var day = DateOnly.TryParse(date, out var parsed) ? parsed : BrasiliaTime.ToDate(DateTime.UtcNow);
         var classes = await classRepository.ListAsync(day, null, null, ct);
 
-        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue)
-        {
-            var unitId = unitContext.UnitId.Value;
-            classes = classes.Where(c => c.Studio != null && c.Studio.UnitId == unitId);
-        }
+        var scope = await unitContext.GetScopeAsync(ct);
+        if (scope is not null)
+            classes = classes.Where(c => c.Studio?.UnitId is { } unitId && scope.Contains(unitId));
 
         return Ok(new
         {
