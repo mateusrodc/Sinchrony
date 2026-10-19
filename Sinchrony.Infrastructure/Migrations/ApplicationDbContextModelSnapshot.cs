@@ -790,6 +790,13 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.Property<int?>("EarlyAccessHours")
                         .HasColumnType("integer");
 
+                    b.Property<decimal?>("EarlyCancellationFeePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<int?>("FreeNoShowsPerPackage")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsRecurring")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -819,6 +826,9 @@ namespace Sinchrony.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int?>("MaxNoShowsBeforeBlock")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MinimumCycles")
                         .HasColumnType("integer");
 
                     b.Property<string>("Name")
@@ -926,6 +936,9 @@ namespace Sinchrony.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int?>("DefaultEarlyAccessHours")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DefaultFreeNoShowsPerPackage")
                         .HasColumnType("integer");
 
                     b.Property<int?>("DefaultMaxBookingsPerDay")
@@ -1257,6 +1270,17 @@ namespace Sinchrony.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<decimal?>("EarlyCancellationFeeAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("EarlyCancellationFeeWaiveReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool?>("EarlyCancellationFeeWaived")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -1424,6 +1448,50 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.HasIndex("UnitId");
 
                     b.ToTable("teacher_units", (string)null);
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.TermsAcceptance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AppVersion")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("ClientAcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<string>("TermsVersion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "AcceptedAt");
+
+                    b.ToTable("terms_acceptances", (string)null);
                 });
 
             modelBuilder.Entity("Sinchrony.Domain.Entities.Unit", b =>
@@ -2107,6 +2175,17 @@ namespace Sinchrony.Infrastructure.Migrations
                     b.Navigation("Teacher");
 
                     b.Navigation("Unit");
+                });
+
+            modelBuilder.Entity("Sinchrony.Domain.Entities.TermsAcceptance", b =>
+                {
+                    b.HasOne("Sinchrony.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Sinchrony.Domain.Entities.User", b =>

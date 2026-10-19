@@ -35,7 +35,10 @@ public record CreatePackageCommand(
     int? MaxInstallments = null,
     bool? IsSingleClass = null,
     bool? IsRecurring = null,
-    bool? OncePerStudent = null) : IRequest<PackageDto>;
+    bool? OncePerStudent = null,
+    int? FreeNoShowsPerPackage = null,
+    int? MinimumCycles = null,
+    decimal? EarlyCancellationFeePercent = null) : IRequest<PackageDto>;
 
 public class CreatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -78,6 +81,12 @@ public class CreatePackageCommandHandler(
         package.SetSingleClass(request.IsSingleClass ?? false);
         package.SetRecurring(request.IsRecurring ?? false);
         package.SetOncePerStudent(request.OncePerStudent ?? false);
+
+        PackageTermsRulesValidator.Validate(
+            request.FreeNoShowsPerPackage, request.MinimumCycles,
+            request.EarlyCancellationFeePercent, package.IsRecurring);
+        package.SetTermsRules(
+            request.FreeNoShowsPerPackage, request.MinimumCycles, request.EarlyCancellationFeePercent);
 
         await packageRepository.AddAsync(package, ct);
 

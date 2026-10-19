@@ -40,7 +40,8 @@ public class ErpPackageTypesController(
         defaultReschedulingAllowed = pt.DefaultReschedulingAllowed,
         defaultReschedulingDeadlineHours = pt.DefaultReschedulingDeadlineHours,
         defaultNoShowCreditPenalty = pt.DefaultNoShowCreditPenalty,
-        defaultMaxNoShowsBeforeBlock = pt.DefaultMaxNoShowsBeforeBlock
+        defaultMaxNoShowsBeforeBlock = pt.DefaultMaxNoShowsBeforeBlock,
+        defaultFreeNoShowsPerPackage = pt.DefaultFreeNoShowsPerPackage
     };
 
     [HttpGet]
@@ -73,7 +74,8 @@ public class ErpPackageTypesController(
             req.defaultCancellationDeadlineHours, req.defaultBookingWindowDays,
             req.defaultEarlyAccessHours, req.defaultAllowWaitlist,
             req.defaultReschedulingAllowed, req.defaultReschedulingDeadlineHours,
-            req.defaultNoShowCreditPenalty, req.defaultMaxNoShowsBeforeBlock);
+            req.defaultNoShowCreditPenalty, req.defaultMaxNoShowsBeforeBlock,
+            req.defaultFreeNoShowsPerPackage);
         await packageTypeRepository.AddAsync(pt, ct);
         await packageTypeRepository.SaveAsync(ct);
 
@@ -102,7 +104,8 @@ public class ErpPackageTypesController(
             req.defaultReschedulingAllowed ?? pt.DefaultReschedulingAllowed,
             req.defaultReschedulingDeadlineHours ?? pt.DefaultReschedulingDeadlineHours,
             req.defaultNoShowCreditPenalty ?? pt.DefaultNoShowCreditPenalty,
-            req.defaultMaxNoShowsBeforeBlock ?? pt.DefaultMaxNoShowsBeforeBlock);
+            req.defaultMaxNoShowsBeforeBlock ?? pt.DefaultMaxNoShowsBeforeBlock,
+            req.defaultFreeNoShowsPerPackage ?? pt.DefaultFreeNoShowsPerPackage);
         await packageTypeRepository.SaveAsync(ct);
 
         await auditService.LogAsync("package_type.updated", "PackageType", pt.Id, AdminId, $"Name: {pt.Name}", ct: ct);
@@ -142,4 +145,5 @@ public record PackageTypeRequest(
     int? defaultCancellationDeadlineHours = null, int? defaultBookingWindowDays = null,
     int? defaultEarlyAccessHours = null, bool? defaultAllowWaitlist = null,
     bool? defaultReschedulingAllowed = null, int? defaultReschedulingDeadlineHours = null,
-    bool? defaultNoShowCreditPenalty = null, int? defaultMaxNoShowsBeforeBlock = null);
+    bool? defaultNoShowCreditPenalty = null, int? defaultMaxNoShowsBeforeBlock = null,
+    int? defaultFreeNoShowsPerPackage = null);

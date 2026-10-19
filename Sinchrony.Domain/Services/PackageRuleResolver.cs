@@ -54,6 +54,12 @@ public static class PackageRuleResolver
         ?? sp?.Package?.PackageType?.DefaultNoShowCreditPenalty
         ?? true;
 
+    // Faltas dentro da validade do pacote que ainda devolvem o crédito (0 = nenhuma).
+    public static int GetFreeNoShowsPerPackage(StudentPackage? sp)
+        => sp?.Package?.FreeNoShowsPerPackage
+        ?? sp?.Package?.PackageType?.DefaultFreeNoShowsPerPackage
+        ?? 0;
+
     public static int? GetMaxNoShowsBeforeBlock(StudentPackage? sp)
         => sp?.Package?.MaxNoShowsBeforeBlock
         ?? sp?.Package?.PackageType?.DefaultMaxNoShowsBeforeBlock;

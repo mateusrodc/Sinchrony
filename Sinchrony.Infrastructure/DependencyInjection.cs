@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<ICreditTransactionRepository, CreditTransactionRepository>();
         services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<ITermsAcceptanceRepository, TermsAcceptanceRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IAppSettings, AppSettings>();

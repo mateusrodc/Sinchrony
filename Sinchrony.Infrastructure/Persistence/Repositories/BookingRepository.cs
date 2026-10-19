@@ -176,4 +176,13 @@ public class BookingRepository(ApplicationDbContext db) : IBookingRepository
                 b.Status == BookingStatus.confirmed &&
                 b.Class != null &&
                 b.Class.Date.Month == month && b.Class.Date.Year == year, ct);
+
+    public async Task<int> CountNoShowsSinceAsync(
+        Guid studentId, Guid? dependentId, DateOnly sinceDate, CancellationToken ct = default)
+        => await db.Bookings.CountAsync(b =>
+            b.StudentId == studentId &&
+            b.DependentId == dependentId &&
+            b.Status == BookingStatus.no_show &&
+            b.Class != null &&
+            b.Class.Date >= sinceDate, ct);
 }

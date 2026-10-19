@@ -20,6 +20,7 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
         builder.Property(p => p.OncePerStudent).HasDefaultValue(false);
         builder.Property(p => p.NoShowCreditPenalty).HasDefaultValue(true);
         builder.Property(p => p.NoShowBlockWindowDays).HasDefaultValue(30);
+        builder.Property(p => p.EarlyCancellationFeePercent).HasPrecision(5, 2);
 
         builder.Property(p => p.AllowsPix).HasDefaultValue(true);
         builder.Property(p => p.AllowsCard).HasDefaultValue(true);

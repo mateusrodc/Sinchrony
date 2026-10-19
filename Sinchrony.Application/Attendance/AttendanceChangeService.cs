@@ -116,8 +116,8 @@ public class AttendanceChangeService(
         var created = 0;
         var updated = 0;
         var warnings = new List<string>();
-        var newlyNoShow = new List<Guid>();
-        var undoneNoShow = new List<Guid>();
+        var newlyNoShow = new List<(Guid StudentId, Guid? DependentId)>();
+        var undoneNoShow = new List<(Guid StudentId, Guid? DependentId)>();
         var audits = new List<(AttendanceRecord Record, Guid StudentId, string Previous, string New)>();
 
         for (var i = 0; i < items.Count; i++)
@@ -163,9 +163,9 @@ public class AttendanceChangeService(
             audits.Add((attendance, booking.StudentId, previous.ToString(), target.ToString()));
 
             if (target == BookingStatus.no_show && !wasNoShow)
-                newlyNoShow.Add(booking.StudentId);
+                newlyNoShow.Add((booking.StudentId, booking.DependentId));
             else if (target != BookingStatus.no_show && wasNoShow)
-                undoneNoShow.Add(booking.StudentId);
+                undoneNoShow.Add((booking.StudentId, booking.DependentId));
         }
 
         await attendanceRepository.SaveAsync(ct);
@@ -179,16 +179,16 @@ public class AttendanceChangeService(
                 ct: ct);
         }
 
-        foreach (var studentId in newlyNoShow)
+        foreach (var (studentId, dependentId) in newlyNoShow)
         {
-            await noShowPenaltyService.ApplyAsync(studentId, ct);
+            await noShowPenaltyService.ApplyAsync(studentId, dependentId, ct);
             // Sempre uma aula só — mesma @class pra todo mundo.
             await waitlistPromotionService.PromoteNextAsync(@class.Id, @class.Name, ct);
         }
 
-        foreach (var studentId in undoneNoShow)
+        foreach (var (studentId, dependentId) in undoneNoShow)
         {
-            if (!await noShowPenaltyService.ReverseAsync(studentId, ct)
+            if (!await noShowPenaltyService.ReverseAsync(studentId, dependentId, ct)
                 && !warnings.Contains(CreditNotRevertedWarning))
                 warnings.Add(CreditNotRevertedWarning);
         }

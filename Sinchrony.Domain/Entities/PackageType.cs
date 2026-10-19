@@ -19,6 +19,7 @@ public class PackageType
     public int? DefaultReschedulingDeadlineHours { get; private set; }
     public bool? DefaultNoShowCreditPenalty { get; private set; }
     public int? DefaultMaxNoShowsBeforeBlock { get; private set; }
+    public int? DefaultFreeNoShowsPerPackage { get; private set; }
 
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
@@ -40,7 +41,8 @@ public class PackageType
         int? defaultCancellationDeadlineHours, int? defaultBookingWindowDays,
         int? defaultEarlyAccessHours, bool? defaultAllowWaitlist,
         bool? defaultReschedulingAllowed, int? defaultReschedulingDeadlineHours,
-        bool? defaultNoShowCreditPenalty, int? defaultMaxNoShowsBeforeBlock)
+        bool? defaultNoShowCreditPenalty, int? defaultMaxNoShowsBeforeBlock,
+        int? defaultFreeNoShowsPerPackage = null)
     {
         Name = name;
         Active = active;
@@ -58,6 +60,7 @@ public class PackageType
         DefaultReschedulingDeadlineHours = defaultReschedulingDeadlineHours;
         DefaultNoShowCreditPenalty = defaultNoShowCreditPenalty;
         DefaultMaxNoShowsBeforeBlock = defaultMaxNoShowsBeforeBlock;
+        DefaultFreeNoShowsPerPackage = defaultFreeNoShowsPerPackage;
         UpdatedAt = DateTime.UtcNow;
     }
 }

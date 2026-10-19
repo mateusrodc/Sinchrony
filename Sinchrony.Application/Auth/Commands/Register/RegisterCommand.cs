@@ -9,4 +9,7 @@ public record RegisterCommand(
     string? Cep, string? Logradouro, string? Numero,
     string? Complemento, string? Bairro, string? Cidade, string? Estado,
     Guid? UnitId, DateTime? TermsAcceptedAt = null,
-    string? TermsVersion = null) : IRequest<AuthResponseDto>;
+    string? TermsVersion = null,
+    string? AppVersion = null,
+    string? IpAddress = null,
+    string? UserAgent = null) : IRequest<AuthResponseDto>;

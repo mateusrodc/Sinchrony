@@ -85,10 +85,14 @@ public class ToleranceEnforcementService(
                 .FirstOrDefaultAsync(a => a.BookingId == booking.Id, ct);
             attendance?.MarkNoShow();
 
+            // A falta precisa estar gravada antes da regra: FreeNoShowsPerPackage conta as faltas
+            // do banco (inclusive a anterior do mesmo aluno neste mesmo lote).
+            await db.SaveChangesAsync(ct);
+
             // Devolve o crédito se o pacote do aluno tiver NoShowCreditPenalty = false. Seguro
             // chamar sem checar status anterior aqui: o filtro de "candidates" acima já garante
             // que só entram reservas que estavam "confirmed", nunca reprocessa a mesma falta.
-            await noShowPenaltyService.ApplyAsync(booking.StudentId, ct);
+            await noShowPenaltyService.ApplyAsync(booking.StudentId, booking.DependentId, ct);
 
             await auditService.LogAsync(
                 "booking.auto_no_show", "Booking", booking.Id, null,

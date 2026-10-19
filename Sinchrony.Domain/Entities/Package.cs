@@ -35,6 +35,15 @@ public class Package
     public int? MaxNoShowsBeforeBlock { get; private set; }
     public int NoShowBlockWindowDays { get; private set; } = 30;
 
+    // Termos v4, cl. 11.2: quantas faltas dentro da validade do pacote ainda devolvem o crédito
+    // antes de passar a perdê-lo. null/0 = comportamento antigo (só NoShowCreditPenalty decide).
+    public int? FreeNoShowsPerPackage { get; private set; }
+
+    // Termos v4, cl. 5.4 (plano recorrente promocional): permanência mínima em ciclos pagos e
+    // multa (% sobre a soma das mensalidades restantes) para cancelamento antecipado.
+    public int? MinimumCycles { get; private set; }
+    public decimal? EarlyCancellationFeePercent { get; private set; }
+
     // Formas de pagamento aceitas por este pacote (ex.: plano recorrente só aceita cartão)
     public bool AllowsPix { get; private set; } = true;
     public bool AllowsCard { get; private set; } = true;
@@ -156,6 +165,14 @@ public class Package
     }
 
     public void Toggle() { Active = !Active; UpdatedAt = DateTime.UtcNow; }
+
+    public void SetTermsRules(int? freeNoShowsPerPackage, int? minimumCycles, decimal? earlyCancellationFeePercent)
+    {
+        FreeNoShowsPerPackage = freeNoShowsPerPackage;
+        MinimumCycles = minimumCycles;
+        EarlyCancellationFeePercent = earlyCancellationFeePercent;
+        UpdatedAt = DateTime.UtcNow;
+    }
 
     public void SetSingleClass(bool isSingleClass)
     {

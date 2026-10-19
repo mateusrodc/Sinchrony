@@ -5,6 +5,7 @@ using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
+using Sinchrony.Domain.Services;
 using Sinchrony.Infrastructure.Services;
 using System.Security.Claims;
 
@@ -151,7 +152,49 @@ public class ErpSubscriptionsController(
         return Ok(new { data = MapListItem(sp, card) });
     }
 
-    public record CancelSubscriptionRequest(string? reason);
+    public record CancelSubscriptionRequest(string? reason, bool? waiveFee = null, string? waiveReason = null);
+
+    // Prévia do cancelamento (Termos v4, cl. 5.4): ciclos já cobrados, ciclos que faltam para a
+    // permanência mínima e a multa — percentual × valor do ciclo × ciclos restantes.
+    [HttpGet("api/students/{id}/subscription/cancel-preview")]
+    [Authorize(Roles = "admin")]
+    [ProducesResponseType(typeof(object), 200)]
+    public async Task<IActionResult> CancelPreview(Guid id, CancellationToken ct)
+    {
+        var student = await userRepository.GetByIdAsync(id, ct)
+            ?? throw DomainException.NotFound("Aluno não encontrado.");
+
+        if (!unitContext.IsGlobalAdmin && unitContext.UnitId.HasValue
+            && student.UnitId != unitContext.UnitId)
+            return Forbid();
+
+        var sp = await studentPackageRepository.GetSubscriptionByStudentAsync(id, ct)
+            ?? throw DomainException.NotFound("Aluno não possui assinatura recorrente.");
+
+        var fee = await CalculateEarlyCancellationFeeAsync(sp, ct);
+        return Ok(new { data = MapFeePreview(sp, fee) });
+    }
+
+    // O ciclo inicial conta como o 1º ciclo pago; a ele se somam as renovações confirmadas.
+    private async Task<EarlyCancellationFee> CalculateEarlyCancellationFeeAsync(
+        StudentPackage sp, CancellationToken ct)
+    {
+        var paidCycles = 1 + await purchaseRepository.CountConfirmedRenewalsAsync(sp.Id, ct);
+        return EarlyCancellationFeeCalculator.Calculate(sp.Package!, paidCycles);
+    }
+
+    private static object MapFeePreview(StudentPackage sp, EarlyCancellationFee fee) => new
+    {
+        studentPackageId = sp.Id,
+        autoRenew = sp.AutoRenew,
+        minimumCycles = fee.MinimumCycles,
+        paidCycles = fee.PaidCycles,
+        remainingCycles = fee.RemainingCycles,
+        feePercent = fee.FeePercent,
+        cycleAmount = fee.CycleAmount,
+        feeAmount = fee.FeeAmount,
+        feeApplies = fee.FeeAmount > 0
+    };
 
     // Só o admin cancela a renovação automática (DEMANDA_CANCELAMENTO_RENOVACAO_SO_ADMIN_BACKEND.md)
     // — o aluno não tem mais essa rota, fala com o estúdio. O pacote continua válido até o
@@ -176,12 +219,31 @@ public class ErpSubscriptionsController(
             throw DomainException.Validation("RENEWAL_ALREADY_CANCELLED",
                 "A renovação automática já está cancelada.");
 
+        // Multa de permanência mínima (Termos v4, cl. 5.4): com multa devida o admin precisa
+        // decidir explicitamente entre cobrar e isentar; isentar exige o motivo (cl. 16.3).
+        var fee = await CalculateEarlyCancellationFeeAsync(sp, ct);
+        var waiveReason = string.IsNullOrWhiteSpace(request?.waiveReason) ? null : request.waiveReason.Trim();
+        if (fee.FeeAmount > 0)
+        {
+            if (request?.waiveFee is null)
+                throw DomainException.Validation("EARLY_CANCELLATION_FEE_DECISION_REQUIRED",
+                    $"O cancelamento antes da permanência mínima gera multa de {fee.FeeAmount:F2}. " +
+                    "Informe waiveFee (true para isentar, false para cobrar).");
+
+            if (request.waiveFee == true && waiveReason is null)
+                throw DomainException.Validation("WAIVE_REASON_REQUIRED",
+                    "Informe o motivo (waiveReason) para isentar a multa.");
+        }
+
         // Legado: se ainda vem de uma assinatura Asaas, encerra a cobrança por lá primeiro — o
         // modelo atual (AutoRenew) não depende da Asaas pra isso, é só cobrança direta no cartão.
         if (sp.AsaasSubscriptionId is not null)
             await asaasService.CancelSubscriptionAsync(sp.AsaasSubscriptionId, ct);
 
         sp.CancelRenewal();
+        var feeWaived = fee.FeeAmount > 0 && request!.waiveFee == true;
+        if (fee.FeeAmount > 0)
+            sp.RegisterEarlyCancellationFee(fee.FeeAmount, feeWaived, waiveReason);
         await studentPackageRepository.SaveAsync(ct);
 
         // Diferente do antigo cancelamento pelo aluno: aqui NÃO desbloqueia automaticamente quem
@@ -192,9 +254,32 @@ public class ErpSubscriptionsController(
             reason is null ? $"StudentId: {id}" : $"StudentId: {id}, Motivo: {reason}",
             ct: ct);
 
+        if (fee.FeeAmount > 0)
+        {
+            await auditService.LogAsync(
+                feeWaived ? "subscription.early_cancellation_fee_waived" : "subscription.early_cancellation_fee_charged",
+                "StudentPackage", sp.Id, AdminId,
+                $"StudentId: {id}, Valor: {fee.FeeAmount:F2}, CiclosPagos: {fee.PaidCycles}, " +
+                $"CiclosMinimos: {fee.MinimumCycles}, CiclosRestantes: {fee.RemainingCycles}" +
+                (feeWaived ? $", MotivoIsencao: {waiveReason}" : ", Cobranca: manual pela recepcao"),
+                ct: ct);
+        }
+
         var card = await ResolveRenewalCardAsync(sp, ct);
-        return Ok(new { data = MapListItem(sp, card) });
+        return Ok(new { data = MapListItem(sp, card), earlyCancellationFee = MapFeeResult(sp, fee) });
     }
+
+    private static object? MapFeeResult(StudentPackage sp, EarlyCancellationFee fee)
+        => fee.FeeAmount > 0
+            ? new
+            {
+                amount = fee.FeeAmount,
+                waived = sp.EarlyCancellationFeeWaived,
+                waiveReason = sp.EarlyCancellationFeeWaiveReason,
+                remainingCycles = fee.RemainingCycles,
+                collection = sp.EarlyCancellationFeeWaived == true ? "waived" : "manual"
+            }
+            : null;
 
     // O cartão exibido tem que ser o que de fato é cobrado (RenewalCardId) — só cai pro padrão
     // do aluno quando a assinatura ainda não tem um definido.

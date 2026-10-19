@@ -23,7 +23,9 @@ public record PackageDto(
     string? UnitName,
     bool AllowsPix, bool AllowsCard, bool AllowsInstallments, int? MaxInstallments,
     bool IsSingleClass = false, bool IsRecurring = false,
-    bool OncePerStudent = false);
+    bool OncePerStudent = false,
+    int? FreeNoShowsPerPackage = null, int? MinimumCycles = null,
+    decimal? EarlyCancellationFeePercent = null);
 
 public record ListPackagesQuery(bool? ActiveOnly) : IRequest<IEnumerable<PackageDto>>;
 
@@ -55,5 +57,6 @@ public class ListPackagesQueryHandler(IPackageRepository packageRepository)
             p.UnitId,
             p.Unit?.Name,
             p.AllowsPix, p.AllowsCard, p.AllowsInstallments, p.MaxInstallments,
-            p.IsSingleClass, p.IsRecurring, p.OncePerStudent);
+            p.IsSingleClass, p.IsRecurring, p.OncePerStudent,
+            p.FreeNoShowsPerPackage, p.MinimumCycles, p.EarlyCancellationFeePercent);
 }

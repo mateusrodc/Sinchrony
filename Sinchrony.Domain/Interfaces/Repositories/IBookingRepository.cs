@@ -30,4 +30,8 @@ public interface IBookingRepository
     Task<int> CountBookingsOnDateAsync(Guid studentId, DateOnly date, CancellationToken ct = default);
     Task<int> CountBookingsInWeekAsync(Guid studentId, DateOnly date, CancellationToken ct = default);
     Task<int> CountBookingsInMonthAsync(Guid studentId, int month, int year, CancellationToken ct = default);
+
+    // Faltas (no_show) da pessoa em aulas a partir de `sinceDate` (data local, BRT) — base da regra
+    // FreeNoShowsPerPackage. dependentId null conta só as reservas do próprio aluno.
+    Task<int> CountNoShowsSinceAsync(Guid studentId, Guid? dependentId, DateOnly sinceDate, CancellationToken ct = default);
 }

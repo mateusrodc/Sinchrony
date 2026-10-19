@@ -41,8 +41,25 @@ public class AuthController(IMediator mediator) : ControllerBase
         req.complemento, req.bairro, req.cidade, req.estado,
         req.unitId,
         req.termsAcceptedAt,
-        req.termsVersion), ct);
+        req.termsVersion,
+        req.appVersion,
+        ClientIp(),
+        Request.Headers.UserAgent.ToString()), ct);
         return StatusCode(201, result);
+    }
+
+    // Atrás do Nginx o RemoteIpAddress é o do proxy: o IP do aluno vem no primeiro item do
+    // X-Forwarded-For (o mais à esquerda é o cliente original).
+    private string? ClientIp()
+    {
+        var forwarded = Request.Headers["X-Forwarded-For"].ToString();
+        if (!string.IsNullOrWhiteSpace(forwarded))
+        {
+            var first = forwarded.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault();
+            if (!string.IsNullOrEmpty(first)) return first;
+        }
+        return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 
     [HttpPost("refresh")]
@@ -149,7 +166,8 @@ public record RegisterRequest(
     string? complemento, string? bairro, string? cidade, string? estado,
     Guid? unitId,
     DateTime? termsAcceptedAt = null,
-    string? termsVersion = null);
+    string? termsVersion = null,
+    string? appVersion = null);
 public record RefreshRequest(string refresh_token);
 public record ForgotPasswordRequest(string email);
 public record ResetPasswordRequest(string token, string newPassword);

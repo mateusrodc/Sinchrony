@@ -92,7 +92,7 @@ public class AttendanceChangeServiceTests
         public Mock<IAuditService> Audit = new();
 
         public Fixture() =>
-            Penalty.Setup(p => p.ReverseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+            Penalty.Setup(p => p.ReverseAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         public AttendanceChangeService Service => new(
             Attendance.Object, Bookings.Object, Settings.Object,
@@ -116,14 +116,14 @@ public class AttendanceChangeServiceTests
         await f.Service.ApplyAsync(c, [new AttendanceChangeItem(booking, "no_show")], Guid.NewGuid(), "single", default);
         booking.Status.Should().Be(BookingStatus.no_show);
         record.Status.Should().Be(BookingStatus.no_show);
-        f.Penalty.Verify(p => p.ApplyAsync(booking.StudentId, It.IsAny<CancellationToken>()), Times.Once);
+        f.Penalty.Verify(p => p.ApplyAsync(booking.StudentId, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Once);
         f.Waitlist.Verify(w => w.PromoteNextAsync(c.Id, c.Name, It.IsAny<CancellationToken>()), Times.Once);
 
         var result = await f.Service.ApplyAsync(c, [new AttendanceChangeItem(booking, "pending")], Guid.NewGuid(), "single", default);
         booking.Status.Should().Be(BookingStatus.confirmed);
         booking.CheckedIn.Should().BeFalse();
         record.Status.Should().Be(BookingStatus.confirmed);
-        f.Penalty.Verify(p => p.ReverseAsync(booking.StudentId, It.IsAny<CancellationToken>()), Times.Once);
+        f.Penalty.Verify(p => p.ReverseAsync(booking.StudentId, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Once);
         result.Warnings.Should().Contain(AttendanceChangeService.WaitlistNotUndoneWarning);
 
         f.Audit.Verify(a => a.LogAsync("attendance.updated", "AttendanceRecord", record.Id, It.IsAny<Guid?>(),

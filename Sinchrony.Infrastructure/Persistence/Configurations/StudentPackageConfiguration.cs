@@ -22,6 +22,8 @@ namespace Sinchrony.Infrastructure.Persistence.Configurations
             builder.Property(sp => sp.PaymentStatus).HasConversion<string>().HasMaxLength(20);
             builder.Property(sp => sp.LastPaidAmount).HasPrecision(10, 2);
             builder.Property(sp => sp.LastFailureReason).HasMaxLength(500);
+            builder.Property(sp => sp.EarlyCancellationFeeAmount).HasPrecision(10, 2);
+            builder.Property(sp => sp.EarlyCancellationFeeWaiveReason).HasMaxLength(500);
             builder.Property(sp => sp.AutoRenew).HasDefaultValue(false);
             builder.Property(sp => sp.RenewalAttempts).HasDefaultValue(0);
             builder.Property(sp => sp.RenewalPaidForCycle).HasDefaultValue(false);

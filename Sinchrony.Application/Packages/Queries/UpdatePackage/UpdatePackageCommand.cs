@@ -35,7 +35,10 @@ public record UpdatePackageCommand(
     int? MaxInstallments = null,
     bool? IsSingleClass = null,
     bool? IsRecurring = null,
-    bool? OncePerStudent = null) : IRequest<PackageDto>;
+    bool? OncePerStudent = null,
+    int? FreeNoShowsPerPackage = null,
+    int? MinimumCycles = null,
+    decimal? EarlyCancellationFeePercent = null) : IRequest<PackageDto>;
 
 public class UpdatePackageCommandHandler(
     IPackageRepository packageRepository,
@@ -80,6 +83,13 @@ public class UpdatePackageCommandHandler(
 
         if (request.OncePerStudent.HasValue)
             package.SetOncePerStudent(request.OncePerStudent.Value);
+
+        // O PUT grava o registro inteiro: quem não envia os campos novos os zera.
+        PackageTermsRulesValidator.Validate(
+            request.FreeNoShowsPerPackage, request.MinimumCycles,
+            request.EarlyCancellationFeePercent, package.IsRecurring);
+        package.SetTermsRules(
+            request.FreeNoShowsPerPackage, request.MinimumCycles, request.EarlyCancellationFeePercent);
 
         await packageRepository.UpdateBenefitsAsync(request.Id, request.BenefitIds, ct);
         await packageRepository.SaveAsync(ct);

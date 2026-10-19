@@ -112,6 +112,12 @@ public class PurchaseRepository(ApplicationDbContext db) : IPurchaseRepository
         return (items, total);
     }
 
+    public async Task<int> CountConfirmedRenewalsAsync(Guid studentPackageId, CancellationToken ct = default)
+        => await db.Purchases.CountAsync(p =>
+            p.StudentPackageId == studentPackageId &&
+            p.Kind == "renewal" &&
+            p.Status == "confirmed", ct);
+
     public async Task<bool> HasActiveRenewalForCycleAsync(
         Guid studentPackageId, DateTime cycleStart, CancellationToken ct = default)
         => await db.Purchases.AnyAsync(p =>

@@ -23,6 +23,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Settings> Settings => Set<Settings>();
     public DbSet<Bike> Bikes => Set<Bike>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<TermsAcceptance> TermsAcceptances => Set<TermsAcceptance>();
     public DbSet<CreditTransaction> CreditTransactions => Set<CreditTransaction>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<PackageType> PackageTypes => Set<PackageType>();

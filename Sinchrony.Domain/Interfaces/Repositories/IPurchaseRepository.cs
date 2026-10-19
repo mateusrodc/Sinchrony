@@ -35,6 +35,9 @@ public interface IPurchaseRepository
 
     // Já existe uma renovação (Kind=renewal) pending ou confirmed pro ciclo atual desse pacote?
     // Evita cobrar duas vezes o mesmo ciclo (RecurringRenewalService.ProcessRenewalAsync).
+    // Renovações automáticas já cobradas com sucesso (o ciclo inicial não entra na conta).
+    Task<int> CountConfirmedRenewalsAsync(Guid studentPackageId, CancellationToken ct = default);
+
     Task<bool> HasActiveRenewalForCycleAsync(
         Guid studentPackageId, DateTime cycleStart, CancellationToken ct = default);
 

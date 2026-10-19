@@ -53,6 +53,19 @@ public class StudentPackage
     public string? LastFailureReason { get; private set; }
     public DateTime? LastSyncedAt { get; private set; }
 
+    // Multa de cancelamento antecipado (Termos v4, cl. 5.4) registrada no cancelamento da
+    // renovação. Fase 1: só calcula e registra — a cobrança é manual, pela recepção.
+    public decimal? EarlyCancellationFeeAmount { get; private set; }
+    public bool? EarlyCancellationFeeWaived { get; private set; }
+    public string? EarlyCancellationFeeWaiveReason { get; private set; }
+
+    public void RegisterEarlyCancellationFee(decimal amount, bool waived, string? waiveReason)
+    {
+        EarlyCancellationFeeAmount = amount;
+        EarlyCancellationFeeWaived = waived;
+        EarlyCancellationFeeWaiveReason = waived ? waiveReason : null;
+    }
+
     protected StudentPackage() { }
 
     public static StudentPackage Create(Guid studentId, Guid packageId, int validityDays)

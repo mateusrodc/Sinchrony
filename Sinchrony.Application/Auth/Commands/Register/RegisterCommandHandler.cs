@@ -1,6 +1,4 @@
 ﻿using MediatR;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Sinchrony.Application.Auth.Commands.Login;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
@@ -15,11 +13,17 @@ public class RegisterCommandHandler(
     IUserRepository userRepository,
     IPasswordService passwordService,
     ITokenService tokenService,
-    IConfiguration configuration,
-    ILogger<RegisterCommandHandler> logger) : IRequestHandler<RegisterCommand, AuthResponseDto>
+    ITermsAcceptanceRepository termsAcceptanceRepository,
+    IAuditService auditService) : IRequestHandler<RegisterCommand, AuthResponseDto>
 {
     public async Task<AuthResponseDto> Handle(RegisterCommand request, CancellationToken ct)
     {
+        // Sem aceite informado não há cadastro: a API não presume o consentimento.
+        var termsVersion = request.TermsVersion?.Trim();
+        if (string.IsNullOrEmpty(termsVersion))
+            throw DomainException.Validation("TERMS_NOT_ACCEPTED",
+                "É necessário aceitar os Termos e Condições de Uso para se cadastrar.");
+
         var existing = await userRepository.GetByEmailAsync(request.Email, ct);
         if (existing is not null)
             throw DomainException.Conflict("EMAIL_IN_USE", "Email already in use.");
@@ -33,24 +37,6 @@ public class RegisterCommandHandler(
                 throw DomainException.Conflict("CPF_ALREADY_IN_USE", "CPF já cadastrado.");
         }
 
-        // O app (SinchronyApp/RegisterScreen.tsx) já bloqueia o botão "Criar Conta" até o
-        // checkbox "Li e aceito os Termos..." ser marcado — mas o authService.register()
-        // ainda não manda termsAcceptedAt/termsVersion no corpo, então esses campos chegam
-        // vazios aqui. Como o consentimento já foi capturado na UI antes do POST ser
-        // disparado, o servidor assume aceite no momento do próprio registro em vez de
-        // travar o cadastro com 422 por um campo que o cliente nunca envia. Isso é uma
-        // aproximação (perde o timestamp exato do clique) — o certo continua sendo o app
-        // implementar o envio real (ver DEMANDA_TERMOS_DE_USO_CADASTRO_BACKEND.md).
-        var termsAcceptedAt = request.TermsAcceptedAt ?? DateTime.UtcNow;
-        var termsVersion = string.IsNullOrEmpty(request.TermsVersion)
-            ? configuration["Terms:CurrentVersion"] ?? "1.0"
-            : request.TermsVersion;
-
-        if (request.TermsAcceptedAt is null || string.IsNullOrEmpty(request.TermsVersion))
-            logger.LogWarning(
-                "Register: cliente não mandou termsAcceptedAt/termsVersion; assumindo aceite padrão (versão {Version}) para {Email}.",
-                termsVersion, request.Email);
-
         var hash = passwordService.HashPassword(request.Password);
         var user = User.Create(request.Name, request.Email, request.Phone, hash, Role.student, request.Cpf);
 
@@ -60,10 +46,21 @@ public class RegisterCommandHandler(
         user.UpdateAddress(request.Cep, request.Logradouro, request.Numero,
             request.Complemento, request.Bairro, request.Cidade, request.Estado);
 
-        user.AcceptTerms(termsAcceptedAt, termsVersion);
+        // Aceite comprovável: hora do servidor, nunca a do aparelho. A linha de terms_acceptances
+        // e o espelho em User vão no mesmo SaveAsync do cadastro.
+        var acceptance = TermsAcceptance.Create(
+            user.Id, termsVersion, TermsAcceptance.ChannelAppRegister,
+            request.TermsAcceptedAt, request.IpAddress, request.UserAgent, request.AppVersion);
+        user.AcceptTerms(acceptance.AcceptedAt, termsVersion);
 
         await userRepository.AddAsync(user, ct);
+        await termsAcceptanceRepository.AddAsync(acceptance, ct);
         await userRepository.SaveAsync(ct);
+
+        await auditService.LogAsync(
+            "terms.accepted", "TermsAcceptance", acceptance.Id, user.Id,
+            $"Version: {termsVersion}, Channel: {acceptance.Channel}",
+            acceptance.IpAddress, ct);
 
         var accessToken = tokenService.GenerateAccessToken(user);
         var refreshStr = tokenService.GenerateRefreshToken();

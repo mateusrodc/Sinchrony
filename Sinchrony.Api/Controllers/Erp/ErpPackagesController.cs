@@ -73,7 +73,8 @@ public class ErpPackagesController(
             req.benefitIds,
             req.allowsPix, req.allowsCard,
             req.allowsInstallments, req.maxInstallments,
-            req.isSingleClass, req.isRecurring, req.oncePerStudent), ct);
+            req.isSingleClass, req.isRecurring, req.oncePerStudent,
+            req.freeNoShowsPerPackage, req.minimumCycles, req.earlyCancellationFeePercent), ct);
 
 
         var unitId = req.unitId ?? unitContext.UnitId;
@@ -110,7 +111,8 @@ public class ErpPackagesController(
             req.benefitIds ?? [],
             req.allowsPix ?? true, req.allowsCard ?? true,
             req.allowsInstallments ?? true, req.maxInstallments,
-            req.isSingleClass, req.isRecurring, req.oncePerStudent), ct);
+            req.isSingleClass, req.isRecurring, req.oncePerStudent,
+            req.freeNoShowsPerPackage, req.minimumCycles, req.earlyCancellationFeePercent), ct);
 
         // Afeta preço/regras de compras futuras — sem rastro até este retrofit.
         await auditService.LogAsync("package.updated", "Package", id, AdminId, $"Name: {result.Name}", ct: ct);
@@ -167,7 +169,10 @@ public record CreatePackageRequest(
     int? maxInstallments = null,
     bool? isSingleClass = null,
     bool? isRecurring = null,
-    bool? oncePerStudent = null);
+    bool? oncePerStudent = null,
+    int? freeNoShowsPerPackage = null,
+    int? minimumCycles = null,
+    decimal? earlyCancellationFeePercent = null);
 
 public record UpdatePackageRequest(
     string name, string? description, int credits, decimal price,
@@ -198,4 +203,7 @@ public record UpdatePackageRequest(
     int? maxInstallments = null,
     bool? isSingleClass = null,
     bool? isRecurring = null,
-    bool? oncePerStudent = null);
+    bool? oncePerStudent = null,
+    int? freeNoShowsPerPackage = null,
+    int? minimumCycles = null,
+    decimal? earlyCancellationFeePercent = null);
