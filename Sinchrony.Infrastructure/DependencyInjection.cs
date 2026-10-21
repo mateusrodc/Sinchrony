@@ -65,6 +65,7 @@ public static class DependencyInjection
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddHostedService<ToleranceEnforcementService>();
         services.AddScoped<StudentPackageLifecycleService>();
+        services.AddScoped<IPackageQueueService>(sp => sp.GetRequiredService<StudentPackageLifecycleService>());
         services.AddHostedService<PackageExpirationService>();
         services.AddScoped<IAdminAlertRepository, AdminAlertRepository>();
         services.AddScoped<ITeacherRateRepository, TeacherRateRepository>();

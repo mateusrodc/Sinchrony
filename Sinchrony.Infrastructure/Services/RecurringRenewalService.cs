@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Sinchrony.Application.Common;
 using Sinchrony.Application.Subscriptions;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
@@ -259,7 +260,7 @@ public class RecurringRenewalService(
             var transactionId = purchase?.TransactionId
                 ?? $"renewal-overdue_{sp.Id}_{sp.EndDate:yyyyMMdd}";
             await subscriptionOverdueService.BlockAndAlertAsync(
-                user, sp, transactionId, sp.Package?.Price ?? 0m, DateOnly.FromDateTime(sp.EndDate), ct);
+                user, sp, transactionId, sp.Package?.Price ?? 0m, BrasiliaTime.ToDate(sp.EndDate), ct);
             return;
         }
 

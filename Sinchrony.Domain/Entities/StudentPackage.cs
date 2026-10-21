@@ -1,3 +1,5 @@
+using Sinchrony.Domain.Services;
+
 namespace Sinchrony.Domain.Entities;
 
 public enum StudentPackageStatus { active, queued, expired, cancelled }
@@ -76,7 +78,7 @@ public class StudentPackage
             StudentId = studentId,
             PackageId = packageId,
             StartDate = start,
-            EndDate = start.AddDays(validityDays),
+            EndDate = PackageValidity.End(start, validityDays),
             Status = StudentPackageStatus.active
         };
     }
@@ -132,11 +134,13 @@ public class StudentPackage
     {
         Status = StudentPackageStatus.active;
         StartDate = DateTime.UtcNow;
-        EndDate = StartDate.AddDays((Package?.ValidityDays) ?? 30);
+        EndDate = PackageValidity.End(StartDate, (Package?.ValidityDays) ?? 30);
     }
+    // Conta a partir do último dia atual — e já leva pra 23:59:59 BRT um EndDate antigo que
+    // ainda terminava no horário da compra.
     public void ExtendValidity(int days)
     {
-        EndDate = EndDate.AddDays(days);
+        EndDate = PackageValidity.End(EndDate, days);
     }
 
     public void SetAsaasSubscriptionId(string subscriptionId)
@@ -173,7 +177,7 @@ public class StudentPackage
     {
         Status = StudentPackageStatus.active;
         StartDate = DateTime.UtcNow;
-        EndDate = StartDate.AddDays((Package?.ValidityDays) ?? 30);
+        EndDate = PackageValidity.End(StartDate, (Package?.ValidityDays) ?? 30);
     }
 
     // Renovação cobrada com sucesso: o próximo ciclo começa exatamente onde o anterior terminou
@@ -192,7 +196,7 @@ public class StudentPackage
         var now = DateTime.UtcNow;
         Status = StudentPackageStatus.active;
         StartDate = previousEnd > now ? previousEnd : now;
-        EndDate = StartDate.AddDays((Package?.ValidityDays) ?? 30);
+        EndDate = PackageValidity.End(StartDate, (Package?.ValidityDays) ?? 30);
         RenewalAttempts = 0;
         NextRenewalAttemptAt = null;
         RenewalPaidForCycle = false;

@@ -32,6 +32,7 @@ public class ErpStudentsController(
     PurchasePackageService purchasePackageService,
     IAuditService auditService,
     IUnitOfWork unitOfWork,
+    IPackageQueueService packageQueueService,
     IPermissionService permissionService,
     OncePerStudentGuard oncePerStudentGuard) : ControllerBase
 {
@@ -591,13 +592,17 @@ public class ErpStudentsController(
             await creditTransactionRepository.AddAsync(creditTx, ct);
             await creditTransactionRepository.SaveAsync(ct);
 
+            // Ajuste para baixo que zerou o saldo do pacote ativo: o da fila entra na hora.
+            if (req.delta < 0)
+                await packageQueueService.PromoteIfCreditsExhaustedAsync(student.Id, ct);
+
             await auditService.LogAsync(
                 "credit.manually_adjusted", "User",
                 student.Id, AdminId,
                 $"Delta: {req.delta}, Reason: {req.reason}, NewBalance: {student.Credits}" +
                 (extendedPackage is null
                     ? ""
-                    : $", ExtendDays: {req.extendDays}, NewEndDate: {extendedPackage.EndDate:yyyy-MM-dd}"),
+                    : $", ExtendDays: {req.extendDays}, NewEndDate: {BrasiliaTime.ToDate(extendedPackage.EndDate):yyyy-MM-dd}"),
                 ct: ct);
 
             await unitOfWork.CommitAsync(ct);

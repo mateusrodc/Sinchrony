@@ -18,6 +18,7 @@ public class CreateBookingCommandHandler(
     ISettingsRepository settingsRepository,
     IDependentRepository dependentRepository,
     IAuditService auditService,
+    IPackageQueueService packageQueueService,
     IUnitOfWork unitOfWork) : IRequestHandler<CreateBookingCommand, BookingDto>
 {
     public async Task<BookingDto> Handle(CreateBookingCommand request, CancellationToken ct)
@@ -160,6 +161,10 @@ public class CreateBookingCommandHandler(
 
             await userRepository.SaveAsync(ct);
             await creditTransactionRepository.SaveAsync(ct);
+
+            // Se essa reserva consumiu o último crédito do pacote ativo, o pacote da fila entra
+            // já nesta transação — o aluno consegue reservar a próxima aula logo em seguida.
+            await packageQueueService.PromoteIfCreditsExhaustedAsync(request.CallerId, ct);
 
             await auditService.LogAsync(
                 "booking.created", "Booking",

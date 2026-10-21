@@ -11,6 +11,7 @@ public class NoShowPenaltyService(
     IStudentPackageRepository studentPackageRepository,
     IUserRepository userRepository,
     IBookingRepository bookingRepository,
+    IPackageQueueService packageQueueService,
     ILogger<NoShowPenaltyService> logger) : INoShowPenaltyService
 {
     public async Task ApplyAsync(Guid studentId, Guid? dependentId = null, CancellationToken ct = default)
@@ -54,6 +55,8 @@ public class NoShowPenaltyService(
 
         user.DeductCredits(1);
         await userRepository.SaveAsync(ct);
+        // Retirar o crédito devolvido pode zerar o saldo do pacote ativo: o da fila entra na hora.
+        await packageQueueService.PromoteIfCreditsExhaustedAsync(studentId, ct);
         return true;
     }
 

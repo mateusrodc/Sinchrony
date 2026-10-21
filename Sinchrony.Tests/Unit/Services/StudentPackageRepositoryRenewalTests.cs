@@ -52,7 +52,7 @@ public class StudentPackageRepositoryRenewalTests
     [Fact]
     public async Task DueWithin24hAndNoRetrySchedule_IsSelected()
     {
-        var sp = AddAutoRenewing(x => x.ExtendValidity(-29)); // EndDate em ~1 dia
+        var sp = AddAutoRenewing(x => x.ExtendValidity(-30)); // EndDate hoje às 23:59:59 BRT (< 24h)
 
         (await IsDueAsync(sp)).Should().BeTrue();
     }
@@ -72,7 +72,7 @@ public class StudentPackageRepositoryRenewalTests
         // seguinte, ignorando a retentativa agendada pra +1 dia.
         var sp = AddAutoRenewing(x =>
         {
-            x.ExtendValidity(-29); // EndDate em ~1 dia — dentro da janela de 24h
+            x.ExtendValidity(-30); // EndDate hoje às 23:59:59 BRT — dentro da janela de 24h
             x.RecordRenewalFailure("Cartão recusado"); // agenda NextRenewalAttemptAt = +1 dia
         });
 
@@ -124,7 +124,7 @@ public class StudentPackageRepositoryRenewalTests
     public async Task NotAutoRenewing_IsNeverSelected()
     {
         var sp = StudentPackage.Create(_student.Id, _package.Id, validityDays: 30);
-        sp.ExtendValidity(-29);
+        sp.ExtendValidity(-30); // dentro da janela de 24h
         _db.StudentPackages.Add(sp);
         await _db.SaveChangesAsync();
 

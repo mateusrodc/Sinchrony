@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Sinchrony.Application.Common;
+using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -18,6 +19,7 @@ public class CancelBookingCommandHandler(
     IStudentPackageRepository studentPackageRepository,
     ISettingsRepository settingsRepository,
     IAuditService auditService,
+    ICreditTransactionRepository creditTransactionRepository,
     IWaitlistPromotionService waitlistPromotionService) : IRequestHandler<CancelBookingCommand>
 {
     public async Task Handle(CancelBookingCommand request, CancellationToken ct)
@@ -76,6 +78,13 @@ public class CancelBookingCommandHandler(
         booking.Cancel();
         creditOwner.AddCredits(1);
 
+        // O crédito volta pro saldo atual — se o pacote da fila já foi ativado porque essa
+        // reserva tinha consumido o último crédito, ele entra no pacote novo. Fica no extrato.
+        await creditTransactionRepository.AddAsync(CreditTransaction.Create(
+            creditOwner.Id, 1, creditOwner.Credits,
+            $"Reserva cancelada: {booking.Class?.Name ?? "aula"} em {booking.Class?.Date:dd/MM/yyyy}",
+            "refund", booking.Id), ct);
+
         // Sincroniza attendance → no_show
         var attendance = await attendanceRepository.GetByBookingAsync(booking.Id, ct);
         if (attendance is not null)
@@ -84,6 +93,7 @@ public class CancelBookingCommandHandler(
         await bookingRepository.SaveAsync(ct);
         await userRepository.SaveAsync(ct);
         await attendanceRepository.SaveAsync(ct);
+        await creditTransactionRepository.SaveAsync(ct);
 
         await auditService.LogAsync(
             "booking.cancelled", "Booking",

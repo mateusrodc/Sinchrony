@@ -9,7 +9,8 @@ namespace Sinchrony.Infrastructure.Services;
 // StudentPackageLifecycleService pra regra): pacotes vencidos que expiram de vez, e renovações
 // automáticas já pagas cujo EndDate chegou (Termos 6.3 — a cobrança acontece até 24h antes do
 // vencimento, mas os créditos só trocam quando o ciclo pago de fato termina). Mesmo molde do
-// ToleranceEnforcementService: BackgroundService puro, sem dependência de job.
+// ToleranceEnforcementService: BackgroundService puro, sem dependência de job. Desde 21/10/2026
+// também promove a fila de quem ficou com o pacote ativo sem créditos.
 // Kill switch: "PackageExpiration:Enabled" = false desliga o processamento sem redeploy de código
 // (útil no primeiro deploy, que expira de uma vez todo pacote que já estava vencido).
 public class PackageExpirationService(
@@ -90,5 +91,34 @@ public class PackageExpirationService(
 
         if (turnedOverCount > 0)
             logger.LogInformation("PackageExpirationService: {Count} ciclo(s) de renovação virado(s).", turnedOverCount);
+
+        // Regra 2 (21/10/2026): pacote ativo com os créditos esgotados cede lugar ao da fila sem
+        // esperar a data. O débito (reserva, ajuste) já promove na hora; aqui é a rede de proteção
+        // pra qualquer débito que escape — e, no primeiro deploy, quem já estava esperando.
+        List<Guid> queuedStudentIds;
+        using (var scope = scopeFactory.CreateScope())
+        {
+            var lifecycle = scope.ServiceProvider.GetRequiredService<StudentPackageLifecycleService>();
+            queuedStudentIds = await lifecycle.ListStudentsWithQueueBehindActiveAsync(ct);
+        }
+
+        var promotedCount = 0;
+        foreach (var studentId in queuedStudentIds)
+        {
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                var lifecycle = scope.ServiceProvider.GetRequiredService<StudentPackageLifecycleService>();
+                if (await lifecycle.PromoteIfCreditsExhaustedAsync(studentId, ct))
+                    promotedCount++;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "PackageExpirationService: falha ao promover a fila do aluno {StudentId} (créditos esgotados).", studentId);
+            }
+        }
+
+        if (promotedCount > 0)
+            logger.LogInformation("PackageExpirationService: {Count} pacote(s) da fila ativado(s) por créditos esgotados.", promotedCount);
     }
 }

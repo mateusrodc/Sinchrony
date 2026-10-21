@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Sinchrony.Application.Common;
 using Sinchrony.Domain.Entities;
+using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Infrastructure.Persistence;
 
 namespace Sinchrony.Infrastructure.Services;
@@ -18,7 +21,10 @@ namespace Sinchrony.Infrastructure.Services;
 //
 // Os dois casos compartilham a mecânica de "expira o que sobrou" e "credita o ciclo novo" via
 // ExpireCycleCreditsAsync/GrantCycleCreditsAsync, pra não divergir de novo.
-public class StudentPackageLifecycleService(ApplicationDbContext db)
+//
+// Desde 21/10/2026 há um terceiro caminho: PromoteIfCreditsExhaustedAsync — o ativo encerra
+// quando os créditos acabam (não só pela data) e o próximo da fila entra na hora.
+public class StudentPackageLifecycleService(ApplicationDbContext db) : IPackageQueueService
 {
     public async Task<List<Guid>> ListExpiredIdsAsync(DateTime now, CancellationToken ct = default)
         => await db.StudentPackages
@@ -44,6 +50,14 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
     // estendido/cancelado desde que o id foi listado).
     public async Task<bool> ExpireAsync(Guid studentPackageId, DateTime now, CancellationToken ct = default)
     {
+        var studentId = await db.StudentPackages
+            .Where(x => x.Id == studentPackageId)
+            .Select(x => (Guid?)x.StudentId)
+            .FirstOrDefaultAsync(ct);
+        if (studentId is null) return false;
+
+        await using var tx = await LockStudentAsync(studentId.Value, ct);
+
         var sp = await db.StudentPackages
             .Include(x => x.Package)
             .Include(x => x.Allocations)
@@ -59,17 +73,99 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
         if (sp is null) return false;
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == sp.StudentId, ct);
+        var queue = await LoadQueueAsync(sp.StudentId, ct);
 
+        sp.Expire();
+        ExpireCycleCredits(sp, user, keep: queue.PrepaidCredits,
+            $"Créditos expirados: {sp.Package?.Name ?? "pacote"} venceu em {BrasiliaTime.ToDate(sp.EndDate):dd/MM/yyyy}");
+
+        var next = queue.Next;
+        if (next is not null)
+            await PromoteAsync(next, user, queue.IsPixPrepaid(next), "ativado da fila", ct);
+
+        await db.SaveChangesAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
+        return true;
+    }
+
+    // Regra 2 (21/10/2026 — DEMANDA_VALIDADE_FIM_DO_DIA_E_FILA_AO_ZERAR_CREDITOS_BACKEND.md): o
+    // pacote da fila não espera mais a data do ativo — entra assim que os créditos do ativo
+    // acabam. Rede de proteção do job: alunos com pacote ativo não recorrente e algo na fila. A
+    // checagem de saldo/cotas/Pix fica toda em PromoteIfCreditsExhaustedAsync.
+    public async Task<List<Guid>> ListStudentsWithQueueBehindActiveAsync(CancellationToken ct = default)
+        => await db.StudentPackages
+            .Where(sp => sp.Status == StudentPackageStatus.active
+                && !sp.AutoRenew && sp.AsaasSubscriptionId == null)
+            .Where(sp => db.StudentPackages.Any(q =>
+                q.StudentId == sp.StudentId && q.Status == StudentPackageStatus.queued))
+            .Select(sp => sp.StudentId)
+            .Distinct()
+            .ToListAsync(ct);
+
+    public async Task<bool> PromoteIfCreditsExhaustedAsync(Guid studentId, CancellationToken ct = default)
+    {
+        await using var tx = await LockStudentAsync(studentId, ct);
+
+        // Recorrente (AutoRenew, ou legado de assinatura Asaas) fica fora: o ciclo dele segue a
+        // renovação, não o saldo.
+        var sp = await db.StudentPackages
+            .Include(x => x.Package)
+            .Include(x => x.Allocations)
+            .FirstOrDefaultAsync(x => x.StudentId == studentId
+                && x.Status == StudentPackageStatus.active
+                && !x.AutoRenew && x.AsaasSubscriptionId == null, ct);
+        if (sp is null) return false;
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == studentId, ct);
+        if (user is null) return false;
+
+        var queue = await LoadQueueAsync(studentId, ct);
+        var next = queue.Next;
+        if (next is null) return false;
+
+        // Os créditos de um pacote da fila pago por Pix já entram no saldo na confirmação
+        // (PaymentConfirmationService) — eles não são do ativo, então não contam como "sobrou".
+        if (user.Credits - queue.PrepaidCredits > 0) return false;
+
+        // Plano família: só está esgotado quando nenhum dependente tem cota sobrando. A cota do
+        // titular é o próprio saldo (User.Credits), conferido acima.
+        if (sp.Allocations.Any(a => a.DependentId != null && a.CreditsRemaining > 0)) return false;
+
+        sp.Expire();
+        ExpireCycleCredits(sp, user, keep: queue.PrepaidCredits,
+            $"Créditos expirados: {sp.Package?.Name ?? "pacote"} encerrado (créditos esgotados)");
+
+        await PromoteAsync(next, user, queue.IsPixPrepaid(next), "ativado da fila (créditos esgotados)", ct);
+
+        db.AuditLogs.Add(AuditLog.Create(
+            "package.queue_promoted_credits_exhausted", "StudentPackage", next.Id, studentId,
+            $"Pacote ativo {sp.Package?.Name} ({sp.Id}, validade até " +
+            $"{BrasiliaTime.ToDate(sp.EndDate):dd/MM/yyyy}) encerrado com os créditos esgotados; " +
+            $"{next.Package?.Name} ({next.Id}) ativado da fila, válido até " +
+            $"{BrasiliaTime.ToDate(next.EndDate):dd/MM/yyyy}."));
+
+        await db.SaveChangesAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
+        return true;
+    }
+
+    // Fila do aluno, mais antiga primeiro. Pacote da fila pago por Pix já confirmado já teve os
+    // créditos somados ao saldo (PrepaidCredits); Pix ainda não confirmado não é promovido.
+    private sealed record QueueState(
+        StudentPackage? Next, int PrepaidCredits, Func<StudentPackage, bool> IsPixPrepaid);
+
+    private async Task<QueueState> LoadQueueAsync(Guid studentId, CancellationToken ct)
+    {
         var queue = await db.StudentPackages
             .Include(x => x.Package)
-            .Where(x => x.StudentId == sp.StudentId && x.Status == StudentPackageStatus.queued)
+            .Where(x => x.StudentId == studentId && x.Status == StudentPackageStatus.queued)
             .OrderBy(x => x.PurchasedAt)
             .ToListAsync(ct);
 
         var pixPurchases = queue.Count == 0
             ? []
             : await db.Purchases
-                .Where(p => p.UserId == sp.StudentId && p.PaymentMethod == "pix")
+                .Where(p => p.UserId == studentId && p.PaymentMethod == "pix")
                 .ToListAsync(ct);
 
         bool IsPixPrepaid(StudentPackage q) =>
@@ -77,18 +173,29 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
         bool IsPixPending(StudentPackage q) =>
             !IsPixPrepaid(q) && pixPurchases.Any(p => p.PackageId == q.PackageId);
 
-        var prepaidCredits = queue.Where(IsPixPrepaid).Sum(q => q.Package?.GetCreditsToGrant() ?? 0);
+        return new QueueState(
+            queue.FirstOrDefault(q => !IsPixPending(q) && q.Package is not null),
+            queue.Where(IsPixPrepaid).Sum(q => q.Package?.GetCreditsToGrant() ?? 0),
+            IsPixPrepaid);
+    }
 
-        sp.Expire();
-        ExpireCycleCredits(sp, user, keep: prepaidCredits,
-            $"Créditos expirados: {sp.Package?.Name ?? "pacote"} venceu em {sp.EndDate:dd/MM/yyyy}");
+    // Serializa as viradas de pacote de um mesmo aluno: o débito (reserva) e o job podem tentar
+    // promover a fila ao mesmo tempo, e sem a trava os dois creditariam o pacote novo. Trava a
+    // linha do aluno em users (não um advisory lock): a reserva já segura essa linha desde o
+    // UPDATE do saldo, então os dois caminhos travam na mesma ordem e não há deadlock. Usa a
+    // transação já aberta por quem chamou (reserva, ajuste) ou abre uma própria — devolvida pra
+    // quem chamou dar commit. Fora do Postgres (testes InMemory) não há trava.
+    private async Task<IDbContextTransaction?> LockStudentAsync(Guid studentId, CancellationToken ct)
+    {
+        if (!db.Database.IsRelational()) return null;
 
-        var next = queue.FirstOrDefault(q => !IsPixPending(q) && q.Package is not null);
-        if (next is not null)
-            await PromoteAsync(next, user, IsPixPrepaid(next), ct);
+        var own = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
 
-        await db.SaveChangesAsync(ct);
-        return true;
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT 1 FROM users WHERE \"Id\" = {studentId} FOR UPDATE", ct);
+        return own;
     }
 
     // Ids com renovação automática já paga cujo ciclo atual venceu — TurnoverAsync (não
@@ -131,7 +238,7 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
         var package = sp.Package!;
 
         ExpireCycleCredits(sp, user, keep: 0,
-            $"Créditos expirados: {package.Name} — ciclo encerrado em {sp.EndDate:dd/MM/yyyy}");
+            $"Créditos expirados: {package.Name} — ciclo encerrado em {BrasiliaTime.ToDate(sp.EndDate):dd/MM/yyyy}");
 
         sp.ChargeRenewed(); // novo StartDate/EndDate, Status=active, zera tentativas e RenewalPaidForCycle
 
@@ -140,13 +247,13 @@ public class StudentPackageLifecycleService(ApplicationDbContext db)
     }
 
     private async Task PromoteAsync(
-        StudentPackage next, User? user, bool creditsAlreadyInBalance, CancellationToken ct)
+        StudentPackage next, User? user, bool creditsAlreadyInBalance, string reason, CancellationToken ct)
     {
         var package = next.Package!;
         next.Activate();
 
         await GrantCycleCreditsAsync(next, package, user, creditsAlreadyInBalance,
-            $"Pacote {package.Name} ativado da fila", "queue_activation", ct);
+            $"Pacote {package.Name} {reason}", "queue_activation", ct);
     }
 
     // Debita as cotas antigas e expira o saldo restante do aluno (mantendo `keep`, usado só na

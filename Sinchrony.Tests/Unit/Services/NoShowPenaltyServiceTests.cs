@@ -5,6 +5,7 @@ using Moq;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
 using Sinchrony.Domain.Interfaces.Repositories;
+using Sinchrony.Domain.Interfaces.Services;
 using Sinchrony.Domain.Services;
 using Sinchrony.Infrastructure.Services;
 
@@ -40,7 +41,8 @@ public class NoShowPenaltyServiceTests
             .ReturnsAsync(noShowsInDb);
 
         return new NoShowPenaltyService(
-            _packages.Object, _users.Object, _bookings.Object, NullLogger<NoShowPenaltyService>.Instance);
+            _packages.Object, _users.Object, _bookings.Object, Mock.Of<IPackageQueueService>(),
+            NullLogger<NoShowPenaltyService>.Instance);
     }
 
     [Fact]

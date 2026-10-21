@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Enums;
+using Sinchrony.Domain.Services;
 using Sinchrony.Infrastructure.Persistence;
 using Sinchrony.Infrastructure.Services;
 using Xunit;
@@ -370,5 +371,145 @@ public class StudentPackageLifecycleServiceTests
         expired.Should().BeTrue();
         _student.Credits.Should().Be(0);
         (await _db.StudentPackages.FindAsync(sp.Id))!.Status.Should().Be(StudentPackageStatus.expired);
+    }
+
+    // ── Regra 2 (21/10/2026): o pacote da fila entra quando os créditos do ativo acabam ──────────
+
+    // Pacote ativo dentro da validade, com `balance` créditos no saldo do aluno.
+    private StudentPackage AddCurrentActive(Package package, int balance)
+    {
+        var sp = StudentPackage.Create(_student.Id, package.Id, validityDays: 30);
+        sp.SetSource("purchase", package.Credits);
+        _db.StudentPackages.Add(sp);
+        _db.DependentPackageAllocations.Add(DependentPackageAllocation.Create(sp.Id, null, package.Credits));
+        if (balance > 0) _student.AddCredits(balance);
+        return sp;
+    }
+
+    [Fact]
+    public async Task PromoteIfCreditsExhausted_ZeroBalanceWithQueue_ActivatesQueuedNow()
+    {
+        // Critério de aceite 2: os 2 créditos da 1ª Experiência foram usados; o da fila entra na
+        // hora, com os créditos dele e a validade contando a partir de agora (até 23:59:59 BRT).
+        var experiencia = AddPackage("1ª Experiência", credits: 2);
+        var promo = AddPackage("PROMOCIONAL 8 AULAS", credits: 8, validityDays: 60);
+        var active = AddCurrentActive(experiencia, balance: 0);
+        var queued = AddQueued(promo);
+        await _db.SaveChangesAsync();
+
+        var promoted = await _service.PromoteIfCreditsExhaustedAsync(_student.Id);
+
+        promoted.Should().BeTrue();
+        (await _db.StudentPackages.FindAsync(active.Id))!.Status.Should().Be(StudentPackageStatus.expired);
+        var reloaded = await _db.StudentPackages.Include(x => x.Allocations).SingleAsync(x => x.Id == queued.Id);
+        reloaded.Status.Should().Be(StudentPackageStatus.active);
+        reloaded.StartDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        reloaded.EndDate.Should().Be(PackageValidity.End(reloaded.StartDate, 60));
+        reloaded.Allocations.Should().ContainSingle().Which.CreditsRemaining.Should().Be(8);
+        _student.Credits.Should().Be(8);
+
+        var tx = await _db.CreditTransactions.SingleAsync();
+        tx.Amount.Should().Be(8);
+        tx.Type.Should().Be("queue_activation");
+        tx.Reason.Should().Be("Pacote PROMOCIONAL 8 AULAS ativado da fila (créditos esgotados)");
+
+        var audit = await _db.AuditLogs.SingleAsync();
+        audit.Event.Should().Be("package.queue_promoted_credits_exhausted");
+        audit.EntityId.Should().Be(queued.Id);
+    }
+
+    [Fact]
+    public async Task PromoteIfCreditsExhausted_BalanceLeft_DoesNothing()
+    {
+        var experiencia = AddPackage("1ª Experiência", credits: 2);
+        var active = AddCurrentActive(experiencia, balance: 1);
+        var queued = AddQueued(AddPackage("PROMOCIONAL 8 AULAS", credits: 8));
+        await _db.SaveChangesAsync();
+
+        (await _service.PromoteIfCreditsExhaustedAsync(_student.Id)).Should().BeFalse();
+
+        (await _db.StudentPackages.FindAsync(active.Id))!.Status.Should().Be(StudentPackageStatus.active);
+        (await _db.StudentPackages.FindAsync(queued.Id))!.Status.Should().Be(StudentPackageStatus.queued);
+    }
+
+    [Fact]
+    public async Task PromoteIfCreditsExhausted_FamilyDependentStillHasQuota_DoesNotPromote()
+    {
+        // Critério de aceite 3: titular zerado, mas um dependente ainda com cota.
+        var family = Package.Create("Plano Família", null, credits: 8, price: 300m,
+            validityDays: 30, popular: false, active: true, displayOrder: 0,
+            purchaseStrategy: "queue", maxDependents: 2);
+        _db.Packages.Add(family);
+        var dependent = Dependent.Create(_student.Id, "Filho");
+        _db.Dependents.Add(dependent);
+        var active = AddCurrentActive(family, balance: 0);
+        _db.DependentPackageAllocations.Add(DependentPackageAllocation.Create(active.Id, dependent.Id, 2));
+        AddQueued(AddPackage("PROMOCIONAL 8 AULAS", credits: 8));
+        await _db.SaveChangesAsync();
+
+        (await _service.PromoteIfCreditsExhaustedAsync(_student.Id)).Should().BeFalse();
+        (await _db.StudentPackages.FindAsync(active.Id))!.Status.Should().Be(StudentPackageStatus.active);
+    }
+
+    [Fact]
+    public async Task PromoteIfCreditsExhausted_PendingPixQueued_IsNotPromoted()
+    {
+        // Critério de aceite 4.
+        var active = AddCurrentActive(AddPackage("1ª Experiência", credits: 2), balance: 0);
+        var promo = AddPackage("PROMOCIONAL 8 AULAS", credits: 8);
+        var queued = AddQueued(promo, source: "purchase");
+        _db.Purchases.Add(Purchase.CreatePending(_student.Id, promo.Id, 100m, "pix", "tx-pend"));
+        await _db.SaveChangesAsync();
+
+        (await _service.PromoteIfCreditsExhaustedAsync(_student.Id)).Should().BeFalse();
+
+        (await _db.StudentPackages.FindAsync(active.Id))!.Status.Should().Be(StudentPackageStatus.active);
+        (await _db.StudentPackages.FindAsync(queued.Id))!.Status.Should().Be(StudentPackageStatus.queued);
+    }
+
+    [Fact]
+    public async Task PromoteIfCreditsExhausted_ConfirmedPixCreditsInBalance_CountAsExhaustedAndAreNotCreditedTwice()
+    {
+        // O Pix confirmado do pacote da fila já somou 8 ao saldo: o saldo do ATIVO é 0.
+        var active = AddCurrentActive(AddPackage("1ª Experiência", credits: 2), balance: 0);
+        var promo = AddPackage("PROMOCIONAL 8 AULAS", credits: 8);
+        var queued = AddQueued(promo, source: "purchase");
+        _db.Purchases.Add(Purchase.CreateConfirmed(_student.Id, promo.Id, 100m, "pix", "tx-ok"));
+        _student.AddCredits(8);
+        await _db.SaveChangesAsync();
+
+        (await _service.PromoteIfCreditsExhaustedAsync(_student.Id)).Should().BeTrue();
+
+        (await _db.StudentPackages.FindAsync(active.Id))!.Status.Should().Be(StudentPackageStatus.expired);
+        (await _db.StudentPackages.FindAsync(queued.Id))!.Status.Should().Be(StudentPackageStatus.active);
+        _student.Credits.Should().Be(8);
+        (await _db.CreditTransactions.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task PromoteIfCreditsExhausted_RecurringActive_IsNotAffected()
+    {
+        // Critério de aceite 5: o ciclo do recorrente segue a renovação.
+        var essence = AddPackage("Essence (Recorrente)", credits: 8);
+        var active = AddCurrentActive(essence, balance: 0);
+        active.EnableAutoRenew(null);
+        AddQueued(AddPackage("PROMOCIONAL 8 AULAS", credits: 8));
+        await _db.SaveChangesAsync();
+
+        (await _service.PromoteIfCreditsExhaustedAsync(_student.Id)).Should().BeFalse();
+        (await _service.ListStudentsWithQueueBehindActiveAsync()).Should().BeEmpty();
+        (await _db.StudentPackages.FindAsync(active.Id))!.Status.Should().Be(StudentPackageStatus.active);
+    }
+
+    [Fact]
+    public async Task ListStudentsWithQueueBehindActive_ReturnsOnlyStudentsWithQueue()
+    {
+        AddCurrentActive(AddPackage("1ª Experiência", credits: 2), balance: 0);
+        await _db.SaveChangesAsync();
+        (await _service.ListStudentsWithQueueBehindActiveAsync()).Should().BeEmpty();
+
+        AddQueued(AddPackage("PROMOCIONAL 8 AULAS", credits: 8));
+        await _db.SaveChangesAsync();
+        (await _service.ListStudentsWithQueueBehindActiveAsync()).Should().ContainSingle().Which.Should().Be(_student.Id);
     }
 }

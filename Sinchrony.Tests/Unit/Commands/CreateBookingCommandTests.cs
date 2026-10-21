@@ -17,7 +17,11 @@ public class CreateBookingCommandTests
     private readonly Mock<IBookingRepository> _bookingRepo = new();
     private readonly Mock<IAttendanceRepository> _attendanceRepo = new();
     private readonly Mock<ICreditTransactionRepository> _creditTxRepo = new();
+    private readonly Mock<IStudentPackageRepository> _studentPackageRepo = new();
+    private readonly Mock<ISettingsRepository> _settingsRepo = new();
+    private readonly Mock<IDependentRepository> _dependentRepo = new();
     private readonly Mock<IAuditService> _auditService = new();
+    private readonly Mock<IPackageQueueService> _packageQueue = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     public CreateBookingCommandTests()
@@ -40,7 +44,8 @@ public class CreateBookingCommandTests
     private CreateBookingCommandHandler CreateHandler() =>
         new(_userRepo.Object, _classRepo.Object, _bookingRepo.Object,
             _attendanceRepo.Object, _creditTxRepo.Object,
-            _auditService.Object, _unitOfWork.Object);
+            _studentPackageRepo.Object, _settingsRepo.Object, _dependentRepo.Object,
+            _auditService.Object, _packageQueue.Object, _unitOfWork.Object);
 
     private static User CreateStudent(int credits = 5)
     {
@@ -69,11 +74,13 @@ public class CreateBookingCommandTests
         _bookingRepo.Setup(r => r.AddAsync(It.IsAny<Booking>(), default)).Returns(Task.CompletedTask);
         _bookingRepo.Setup(r => r.SaveAsync(default)).Returns(Task.CompletedTask);
 
-        var result = await CreateHandler().Handle(new CreateBookingCommand(student.Id, @class.Id, null), default);
+        var result = await CreateHandler().Handle(new CreateBookingCommand(student.Id, student.Id, @class.Id, null), default);
 
         result.Should().NotBeNull();
         result.Status.Should().Be("confirmed");
         student.Credits.Should().Be(4);
+        // Regra 2 (21/10/2026): depois do débito, a reserva confere se o pacote da fila entra.
+        _packageQueue.Verify(q => q.PromoteIfCreditsExhaustedAsync(student.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -85,7 +92,7 @@ public class CreateBookingCommandTests
         _userRepo.Setup(r => r.GetByIdAsync(student.Id, default)).ReturnsAsync(student);
         _classRepo.Setup(r => r.GetByIdAsync(@class.Id, default)).ReturnsAsync(@class);
 
-        var act = () => CreateHandler().Handle(new CreateBookingCommand(student.Id, @class.Id, null), default);
+        var act = () => CreateHandler().Handle(new CreateBookingCommand(student.Id, student.Id, @class.Id, null), default);
 
         var ex = await act.Should().ThrowAsync<DomainException>();
         ex.Which.Code.Should().Be("INSUFFICIENT_CREDITS");
@@ -103,7 +110,7 @@ public class CreateBookingCommandTests
         _bookingRepo.Setup(r => r.HasTimeConflictAsync(student.Id, @class.Date, @class.StartTime, @class.EndTime, @class.Id, default)).ReturnsAsync(false);
         _classRepo.Setup(r => r.CountActiveBookingsWithLockAsync(@class.Id, default)).ReturnsAsync(5);
 
-        var act = () => CreateHandler().Handle(new CreateBookingCommand(student.Id, @class.Id, null), default);
+        var act = () => CreateHandler().Handle(new CreateBookingCommand(student.Id, student.Id, @class.Id, null), default);
 
         var ex = await act.Should().ThrowAsync<DomainException>();
         ex.Which.Code.Should().Be("CLASS_FULL");
@@ -119,7 +126,7 @@ public class CreateBookingCommandTests
         _classRepo.Setup(r => r.GetByIdAsync(@class.Id, default)).ReturnsAsync(@class);
         _bookingRepo.Setup(r => r.HasActiveBookingAsync(student.Id, @class.Id, default)).ReturnsAsync(true);
 
-        var act = () => CreateHandler().Handle(new CreateBookingCommand(student.Id, @class.Id, null), default);
+        var act = () => CreateHandler().Handle(new CreateBookingCommand(student.Id, student.Id, @class.Id, null), default);
 
         var ex = await act.Should().ThrowAsync<DomainException>();
         ex.Which.Code.Should().Be("BOOKING_CONFLICT");
@@ -136,7 +143,7 @@ public class CreateBookingCommandTests
         _bookingRepo.Setup(r => r.HasActiveBookingAsync(student.Id, @class.Id, default)).ReturnsAsync(false);
         _bookingRepo.Setup(r => r.HasTimeConflictAsync(student.Id, @class.Date, @class.StartTime, @class.EndTime, @class.Id, default)).ReturnsAsync(true);
 
-        var act = () => CreateHandler().Handle(new CreateBookingCommand(student.Id, @class.Id, null), default);
+        var act = () => CreateHandler().Handle(new CreateBookingCommand(student.Id, student.Id, @class.Id, null), default);
 
         var ex = await act.Should().ThrowAsync<DomainException>();
         ex.Which.Code.Should().Be("TIME_CONFLICT");

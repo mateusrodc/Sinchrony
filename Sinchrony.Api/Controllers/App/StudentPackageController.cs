@@ -199,7 +199,7 @@ public class StudentPackageController(
         await auditService.LogAsync(
             "package.validity_extended", "StudentPackage",
             sp.Id, AdminId,
-            $"Extensão de {req.days} dias. Motivo: {req.reason}. Nova validade: {sp.EndDate:yyyy-MM-dd}",
+            $"Extensão de {req.days} dias. Motivo: {req.reason}. Nova validade: {Application.Common.BrasiliaTime.ToDate(sp.EndDate):yyyy-MM-dd}",
             ct: ct);
 
         return Ok(new
