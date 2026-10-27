@@ -15,9 +15,14 @@ public class UserRepository(ApplicationDbContext db) : IUserRepository
         .FirstOrDefaultAsync(u => u.Id == id, ct);
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
-        => await db.Users
+    {
+        // Teclado do celular costuma deixar espaço no fim e maiúscula no início ("Ana@x.com "):
+        // sem normalizar, o e-mail "não existe" e a recuperação de senha falha em silêncio.
+        var normalized = email.Trim().ToLowerInvariant();
+        return await db.Users
             .Include(u => u.RefreshTokens)
-            .FirstOrDefaultAsync(u => u.Email == email.ToLower(), ct);
+            .FirstOrDefaultAsync(u => u.Email == normalized, ct);
+    }
 
     public async Task<User?> GetByRefreshTokenAsync(string token, CancellationToken ct = default)
         => await db.Users

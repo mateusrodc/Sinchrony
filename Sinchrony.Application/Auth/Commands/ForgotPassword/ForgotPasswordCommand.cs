@@ -20,10 +20,12 @@ public class ForgotPasswordCommandHandler(
     public async Task Handle(ForgotPasswordCommand request, CancellationToken ct)
     {
         var user = await userRepository.GetByEmailAsync(request.Email, ct);
-        if (user is null) return; // não revela se o email existe
-
-        var token = Guid.NewGuid().ToString("N");
-        var expiry = DateTime.UtcNow.AddHours(1);
+        if (user is null)
+        {
+            // Não revela ao cliente se o e-mail existe, mas deixa rastro no log para suporte.
+            logger.LogWarning("Redefinição de senha: nenhum usuário com o e-mail informado ({Email}).", request.Email.Trim());
+            return;
+        }
 
         var resetToken = PasswordResetToken.Create(user.Id, 60);
         await passwordResetRepository.AddAsync(resetToken, ct);

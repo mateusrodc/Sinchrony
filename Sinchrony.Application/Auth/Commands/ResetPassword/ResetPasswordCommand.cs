@@ -15,7 +15,8 @@ public class ResetPasswordCommandHandler(
 {
     public async Task Handle(ResetPasswordCommand request, CancellationToken ct)
     {
-        var resetToken = await tokenRepository.GetByTokenAsync(request.Token, ct);
+        // O link pode chegar com espaço ou quebra de linha colados (cliente de e-mail, copiar e colar).
+        var resetToken = await tokenRepository.GetByTokenAsync(request.Token.Trim(), ct);
 
         if (resetToken is null || !resetToken.IsValid())
             throw DomainException.Validation(
