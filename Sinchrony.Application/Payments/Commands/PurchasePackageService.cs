@@ -9,6 +9,8 @@ namespace Sinchrony.Application.Payments.Commands;
 // (0 quando o pacote entrou na fila ou só estendeu a validade).
 public record PackageGrantResult(StudentPackage? StudentPackage, int CreditsAdded);
 
+public record CartGrantResult(int CreditsAdded, bool FellBack);
+
 public class PurchasePackageService(
     IStudentPackageRepository studentPackageRepository,
     IDependentPackageAllocationRepository allocationRepository,
@@ -23,6 +25,28 @@ public class PurchasePackageService(
     {
         var user = await userRepository.GetByIdAsync(studentId, ct);
         return await ProcessAndCreditAsync(studentId, package, user, source, ct);
+    }
+
+    // Compra pelo carrinho do App (PayWithPix/PayWithCard): cria o StudentPackage como na compra de
+    // pacote único — sem isso a aluna só recebia créditos, sem pacote, validade nem regras.
+    // Roda DEPOIS do pagamento confirmado, então nunca pode deixar a aluna sem o que pagou: se a
+    // estratégia do pacote recusar (ex.: "block" com outro pacote ativo), cai no comportamento
+    // antigo (só credita) e devolve FellBack = true para o chamador registrar.
+    public async Task<CartGrantResult> GrantCartPackageAsync(
+        Guid studentId, Package package, CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await ProcessAsync(studentId, package, "purchase", ct);
+            return new CartGrantResult(result.CreditsAdded, false);
+        }
+        catch (DomainException)
+        {
+            var user = await userRepository.GetByIdAsync(studentId, ct);
+            if (user is null || package.Credits <= 0) return new CartGrantResult(0, true);
+            user.AddCredits(package.Credits);
+            return new CartGrantResult(package.Credits, true);
+        }
     }
 
     public async Task<StudentPackage> ProcessAndReturnAsync(

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Interfaces.Repositories;
 using Sinchrony.Domain.Interfaces.Services;
@@ -13,6 +14,7 @@ public class PaymentConfirmationService(
     IAuditService auditSvc,
     IAsaasService asaasService,
     RecurringRenewalService recurringRenewalService,
+    PurchasePackageService purchasePackageService,
     ILogger<PaymentConfirmationService> logger) : IPaymentConfirmationService
 {
     // Compra avulsa OU renovação automática (Purchase.Kind == "renewal"): confirma a Purchase
@@ -31,7 +33,10 @@ public class PaymentConfirmationService(
             return;
         }
 
-        var pendingPurchases = purchases.Where(p => p.Status == "pending").ToList();
+        var pendingPurchases = purchases.Where(p => p.Status == "pending")
+            // Plano real antes da Aula Avulsa: a avulsa não deve ocupar o lugar de pacote ativo.
+            .OrderBy(p => p.Package?.IsSingleClass == true)
+            .ToList();
 
         if (pendingPurchases.Count == 0)
         {
@@ -52,13 +57,32 @@ public class PaymentConfirmationService(
             var user = await userRepository.GetByIdAsync(purchase.UserId, ct);
             if (user is null) continue;
 
-            var credits = purchase.Package?.Credits ?? 0;
-            logger.LogInformation("Asaas webhook: adding {Credits} credits to user {UserId}.",
+            // Compra pelo carrinho do App (Pix/cartão) não cria StudentPackage na hora: aqui cria, como na
+            // compra de pacote único. Compra que já tem o pacote na fila (fluxo antigo) só credita e ativa.
+            var queuedPackage = await studentPackageRepository
+                .GetQueuedByStudentAsync(purchase.UserId, ct);
+            var hasQueuedForPurchase = queuedPackage is not null && queuedPackage.PackageId == purchase.PackageId;
+
+            int credits;
+            if (!hasQueuedForPurchase && purchase.Package is not null)
+            {
+                var grant = await purchasePackageService.GrantCartPackageAsync(user.Id, purchase.Package, ct);
+                credits = grant.CreditsAdded;
+                if (grant.FellBack)
+                    logger.LogWarning(
+                        "Asaas webhook: pacote {Package} da transação {Id} não pôde ser ativado; só os créditos foram concedidos.",
+                        purchase.Package.Name, transactionId);
+            }
+            else
+            {
+                credits = purchase.Package?.Credits ?? 0;
+                if (credits > 0) user.AddCredits(credits);
+            }
+            logger.LogInformation("Asaas webhook: {Credits} credits added to user {UserId}.",
                 credits, user.Id);
 
             if (credits > 0)
             {
-                user.AddCredits(credits);
                 var creditTx = CreditTransaction.Create(
                     user.Id, credits, user.Credits,
                     $"Card/PIX purchase confirmed: {transactionId}",
@@ -66,11 +90,8 @@ public class PaymentConfirmationService(
                 await creditTransactionRepository.AddAsync(creditTx, ct);
             }
 
-            // Ativa StudentPackage queued
-            var queuedPackage = await studentPackageRepository
-                .GetQueuedByStudentAsync(purchase.UserId, ct);
-
-            if (queuedPackage is not null && queuedPackage.PackageId == purchase.PackageId)
+            // Ativa StudentPackage queued (fluxo antigo)
+            if (hasQueuedForPurchase)
             {
                 var activePackage = await studentPackageRepository
                     .GetActiveByStudentAsync(purchase.UserId, ct);

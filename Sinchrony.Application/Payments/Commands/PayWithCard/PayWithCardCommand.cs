@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Logging;
+using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Exceptions;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -22,6 +24,8 @@ public class PayWithCardCommandHandler(
     ICardRepository cardRepository,
     IAsaasService asaasService,
     IAuditService auditService,
+    PurchasePackageService purchaseService,
+    ILogger<PayWithCardCommandHandler> logger,
     OncePerStudentGuard oncePerStudentGuard) : IRequestHandler<PayWithCardCommand, CardPaymentResponseDto>
 {
     public async Task<CardPaymentResponseDto> Handle(PayWithCardCommand request, CancellationToken ct)
@@ -93,20 +97,33 @@ public class PayWithCardCommandHandler(
 
             if (result.Status is "CONFIRMED" or "RECEIVED")
             {
-                // Cartão aprovado de forma síncrona — credita imediatamente
-                var totalCredits = packages.Sum(p => p.Credits);
-                user.AddCredits(totalCredits);
+                // Cartão aprovado de forma síncrona — cria o pacote do aluno e credita na hora. O pacote
+                // real (plano) entra antes da Aula Avulsa, para a avulsa não ocupar o lugar de pacote ativo.
+                var parts = PurchaseAmountSplitter.Split(packages, expectedAmount);
+                var totalCredits = 0;
+                foreach (var pkg in packages.OrderBy(p => p.IsSingleClass))
+                {
+                    var grant = await purchaseService.GrantCartPackageAsync(user.Id, pkg, ct);
+                    totalCredits += grant.CreditsAdded;
+                    if (grant.FellBack)
+                        logger.LogWarning(
+                            "Compra no cartão {Tx}: pacote {Package} não pôde ser ativado ({Strategy}); só os créditos foram concedidos.",
+                            result.TransactionId, pkg.Name, pkg.PurchaseStrategy);
+                }
 
-                var creditTx = CreditTransaction.Create(
-                    user.Id, totalCredits, user.Credits,
-                    $"Card purchase confirmed: {result.TransactionId}",
-                    "purchase", null);
-                await creditTransactionRepository.AddAsync(creditTx, ct);
+                if (totalCredits > 0)
+                {
+                    var creditTx = CreditTransaction.Create(
+                        user.Id, totalCredits, user.Credits,
+                        $"Card purchase confirmed: {result.TransactionId}",
+                        "purchase", null);
+                    await creditTransactionRepository.AddAsync(creditTx, ct);
+                }
 
-                foreach (var pkg in packages)
+                for (var i = 0; i < packages.Count; i++)
                 {
                     var purchase = Purchase.Create(
-                        user.Id, pkg.Id, expectedAmount, "card",
+                        user.Id, packages[i].Id, parts[i], "card",
                         result.TransactionId, coupon?.Id);
                     await purchaseRepository.AddAsync(purchase, ct);
                 }
@@ -126,10 +143,11 @@ public class PayWithCardCommandHandler(
                 // PENDING: aguardando análise antifraude — créditos só são concedidos quando o
                 // webhook confirmar (PAYMENT_CONFIRMED/PAYMENT_RECEIVED), evitando dar créditos
                 // por um cartão que a Asaas ainda pode reprovar.
-                foreach (var pkg in packages)
+                var pendingParts = PurchaseAmountSplitter.Split(packages, expectedAmount);
+                for (var i = 0; i < packages.Count; i++)
                 {
                     var purchase = Purchase.CreatePending(
-                        user.Id, pkg.Id, expectedAmount, "card",
+                        user.Id, packages[i].Id, pendingParts[i], "card",
                         result.TransactionId, coupon?.Id);
                     await purchaseRepository.AddAsync(purchase, ct);
                 }

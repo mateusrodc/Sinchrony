@@ -25,7 +25,7 @@ public class PurchaseRepository(ApplicationDbContext db) : IPurchaseRepository
     {
         var now = DateTime.UtcNow;
         return await db.Purchases
-            .Where(p => p.CreatedAt.Month == now.Month && p.CreatedAt.Year == now.Year)
+            .Where(p => p.Status == "confirmed" && p.CreatedAt.Month == now.Month && p.CreatedAt.Year == now.Year)
             .SumAsync(p => p.Amount, ct);
     }
 

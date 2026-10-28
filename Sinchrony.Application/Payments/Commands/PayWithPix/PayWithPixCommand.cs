@@ -94,10 +94,12 @@ public class PayWithPixCommandHandler(
                 customerId, expectedAmount, "4Sinchrony - Pacote de aulas", ct);
 
             // PIX: compra fica PENDING até confirmação via webhook
-            foreach (var pkg in packages)
+            var parts = PurchaseAmountSplitter.Split(packages, expectedAmount);
+            for (var i = 0; i < packages.Count; i++)
             {
+                var pkg = packages[i];
                 var purchase = Purchase.CreatePending(
-                    user.Id, pkg.Id, expectedAmount, "pix",
+                    user.Id, pkg.Id, parts[i], "pix",
                     result.TransactionId, coupon?.Id);
                 await purchaseRepository.AddAsync(purchase, ct);
             }
