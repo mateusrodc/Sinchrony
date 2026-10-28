@@ -162,10 +162,12 @@ public class StudentPackageLifecycleService(ApplicationDbContext db) : IPackageQ
             .OrderBy(x => x.PurchasedAt)
             .ToListAsync(ct);
 
+        // Só compras feitas pelo App entram: o balcão (Channel "balcao", inclusive método "pix") nunca
+        // credita pacote da fila na venda, então não pode ser tratado como pré-pago.
         var pixPurchases = queue.Count == 0
             ? []
             : await db.Purchases
-                .Where(p => p.UserId == studentId && p.PaymentMethod == "pix")
+                .Where(p => p.UserId == studentId && p.PaymentMethod == "pix" && p.Channel == "app")
                 .ToListAsync(ct);
 
         // Pacote criado pelo carrinho do App (compra ligada por StudentPackageId) entra na fila com 0

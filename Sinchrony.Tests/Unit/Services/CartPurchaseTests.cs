@@ -91,12 +91,19 @@ public class CartPurchaseTests
 
 public class CartPurchaseGuardTests
 {
-    private static Package Pkg(string name, string strategy = "block", bool single = false)
+    // Configuração real de produção (28/10): 1ª Experiência é avulsa + block; Aula Avulsa é avulsa +
+    // sum_credits; Start e os planos são não avulsos.
+    private static Package Pkg(string name, string strategy, bool single)
     {
         var p = Package.Create(name, null, 8, 100m, 30, false, true, 0, purchaseStrategy: strategy);
         p.SetSingleClass(single);
         return p;
     }
+
+    private static Package PrimeiraExperiencia() => Pkg("1ª Experiência", "block", single: true);
+    private static Package AulaAvulsa() => Pkg("Aula Avulsa", "sum_credits", single: true);
+    private static Package Start() => Pkg("Start", "queue", single: false);
+    private static Package PlanoBlock() => Pkg("Plano", "block", single: false);
 
     private static void ShouldBeRefused(Action act, string containing)
     {
@@ -107,27 +114,35 @@ public class CartPurchaseGuardTests
     }
 
     [Fact]
+    public void TainaraCart_AulaAvulsaPlusPrimeiraExperiencia_WithoutActive_IsAllowed()
+        => CartPurchaseGuard.EnsureCanBuy(null, false, [AulaAvulsa(), PrimeiraExperiencia()]);
+
+    [Fact]
+    public void GrantOrder_PutsBlockFirstThenSingleThenPlans()
+        => CartPurchaseGuard.GrantOrder([Start(), AulaAvulsa(), PrimeiraExperiencia()])
+            .Select(p => p.Name).Should().Equal("1ª Experiência", "Aula Avulsa", "Start");
+
+    [Fact]
     public void BlockPackage_WithActivePackage_IsRefusedWithItsName()
         => ShouldBeRefused(
-            () => CartPurchaseGuard.EnsureCanBuy(Pkg("Plano"), true, [Pkg("1ª Experiência")]),
+            () => CartPurchaseGuard.EnsureCanBuy(PlanoBlock(), true, [PrimeiraExperiencia()]),
             "1ª Experiência");
 
     [Fact]
-    public void TwoBlockPlansInTheSameCart_SecondIsRefused()
+    public void TwoBlockPackagesInTheSameCart_SecondIsRefused()
         => ShouldBeRefused(
-            () => CartPurchaseGuard.EnsureCanBuy(null, false, [Pkg("Start"), Pkg("1ª Experiência")]),
+            () => CartPurchaseGuard.EnsureCanBuy(null, false, [PlanoBlock(), PrimeiraExperiencia()]),
             "1ª Experiência");
 
     [Fact]
-    public void ActiveAulaAvulsa_DoesNotBlockARealPlan()
-        => CartPurchaseGuard.EnsureCanBuy(Pkg("Aula Avulsa", single: true), true, [Pkg("1ª Experiência")]);
-
-    [Fact]
-    public void AulaAvulsaPlusPlan_WithoutActive_IsAllowedEvenIfBothAreBlock()
-        => CartPurchaseGuard.EnsureCanBuy(
-            null, false, [Pkg("Aula Avulsa", single: true), Pkg("1ª Experiência")]);
+    public void AulaAvulsa_WithActivePlan_SumsCredits_IsAllowed()
+        => CartPurchaseGuard.EnsureCanBuy(PlanoBlock(), true, [AulaAvulsa()]);
 
     [Fact]
     public void QueueStrategy_WithActivePackage_IsAllowed()
-        => CartPurchaseGuard.EnsureCanBuy(Pkg("Plano"), true, [Pkg("Start", strategy: "queue")]);
+        => CartPurchaseGuard.EnsureCanBuy(PlanoBlock(), true, [Start()]);
+
+    [Fact]
+    public void ActiveAulaAvulsa_DoesNotBlockANonSinglePlan()
+        => CartPurchaseGuard.EnsureCanBuy(AulaAvulsa(), true, [PlanoBlock()]);
 }

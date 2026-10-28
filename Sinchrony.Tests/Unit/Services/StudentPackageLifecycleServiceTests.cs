@@ -523,6 +523,21 @@ public class StudentPackageLifecycleServiceTests
         _student.Credits.Should().Be(8);
     }
 
+    // Venda no balcão grava PaymentMethod "pix" mas nunca credita o pacote da fila na venda: não é pré-pago.
+    [Fact]
+    public async Task PromoteIfCreditsExhausted_CounterPixQueued_IsNotTreatedAsPrepaid()
+    {
+        var active = AddCurrentActive(AddPackage("Essence", credits: 8), balance: 5);
+        var start = AddPackage("Start", credits: 8);
+        AddQueued(start, source: "manual");
+        _db.Purchases.Add(Purchase.CreateCounterConfirmed(_student.Id, start.Id, 100m, "pix"));
+        await _db.SaveChangesAsync();
+
+        (await _service.PromoteIfCreditsExhaustedAsync(_student.Id)).Should().BeFalse();
+        (await _db.StudentPackages.FindAsync(active.Id))!.Status.Should().Be(StudentPackageStatus.active);
+        _student.Credits.Should().Be(5);
+    }
+
     [Fact]
     public async Task PromoteIfCreditsExhausted_RecurringActive_IsNotAffected()
     {

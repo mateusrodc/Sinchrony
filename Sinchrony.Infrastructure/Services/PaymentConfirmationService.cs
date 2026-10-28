@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Sinchrony.Application.Payments;
 using Sinchrony.Application.Payments.Commands;
 using Sinchrony.Domain.Entities;
 using Sinchrony.Domain.Interfaces.Repositories;
@@ -34,8 +35,8 @@ public class PaymentConfirmationService(
         }
 
         var pendingPurchases = purchases.Where(p => p.Status == "pending")
-            // Aula Avulsa antes do plano real: o plano a substitui como ativo (ReplacesActive) em vez de ser bloqueado por ela.
-            .OrderByDescending(p => p.Package?.IsSingleClass == true)
+            // Mesma ordem do carrinho no cartão e na checagem prévia: block, avulso, plano (CartPurchaseGuard).
+            .OrderBy(p => p.Package is null ? 2 : CartPurchaseGuard.GrantRank(p.Package))
             .ToList();
 
         if (pendingPurchases.Count == 0)
