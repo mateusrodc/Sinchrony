@@ -88,3 +88,46 @@ public class CartPurchaseTests
         _student.Credits.Should().Be(3);
     }
 }
+
+public class CartPurchaseGuardTests
+{
+    private static Package Pkg(string name, string strategy = "block", bool single = false)
+    {
+        var p = Package.Create(name, null, 8, 100m, 30, false, true, 0, purchaseStrategy: strategy);
+        p.SetSingleClass(single);
+        return p;
+    }
+
+    private static void ShouldBeRefused(Action act, string containing)
+    {
+        var ex = Assert.Throws<Sinchrony.Domain.Exceptions.DomainException>(act);
+        ex.Code.Should().Be("ACTIVE_PACKAGE_EXISTS");
+        ex.HttpStatus.Should().Be(409);
+        ex.Message.Should().Contain(containing);
+    }
+
+    [Fact]
+    public void BlockPackage_WithActivePackage_IsRefusedWithItsName()
+        => ShouldBeRefused(
+            () => CartPurchaseGuard.EnsureCanBuy(Pkg("Plano"), true, [Pkg("1ª Experiência")]),
+            "1ª Experiência");
+
+    [Fact]
+    public void TwoBlockPlansInTheSameCart_SecondIsRefused()
+        => ShouldBeRefused(
+            () => CartPurchaseGuard.EnsureCanBuy(null, false, [Pkg("Start"), Pkg("1ª Experiência")]),
+            "1ª Experiência");
+
+    [Fact]
+    public void ActiveAulaAvulsa_DoesNotBlockARealPlan()
+        => CartPurchaseGuard.EnsureCanBuy(Pkg("Aula Avulsa", single: true), true, [Pkg("1ª Experiência")]);
+
+    [Fact]
+    public void AulaAvulsaPlusPlan_WithoutActive_IsAllowedEvenIfBothAreBlock()
+        => CartPurchaseGuard.EnsureCanBuy(
+            null, false, [Pkg("Aula Avulsa", single: true), Pkg("1ª Experiência")]);
+
+    [Fact]
+    public void QueueStrategy_WithActivePackage_IsAllowed()
+        => CartPurchaseGuard.EnsureCanBuy(Pkg("Plano"), true, [Pkg("Start", strategy: "queue")]);
+}

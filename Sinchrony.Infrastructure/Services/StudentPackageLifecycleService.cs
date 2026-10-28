@@ -168,10 +168,17 @@ public class StudentPackageLifecycleService(ApplicationDbContext db) : IPackageQ
                 .Where(p => p.UserId == studentId && p.PaymentMethod == "pix")
                 .ToListAsync(ct);
 
+        // Pacote criado pelo carrinho do App (compra ligada por StudentPackageId) entra na fila com 0
+        // crédito: o saldo só é creditado na promoção, então NÃO é pré-pago — tratá-lo como pré-pago
+        // promovia sem creditar e a aluna perdia o que pagou. Só o fluxo antigo (compra sem ligação,
+        // casada pelo PackageId) credita no webhook.
+        bool IsCartLinked(StudentPackage q) => pixPurchases.Any(p => p.StudentPackageId == q.Id);
         bool IsPixPrepaid(StudentPackage q) =>
-            pixPurchases.Any(p => p.PackageId == q.PackageId && p.Status == "confirmed");
+            !IsCartLinked(q) &&
+            pixPurchases.Any(p => p.StudentPackageId == null && p.PackageId == q.PackageId && p.Status == "confirmed");
         bool IsPixPending(StudentPackage q) =>
-            !IsPixPrepaid(q) && pixPurchases.Any(p => p.PackageId == q.PackageId);
+            !IsCartLinked(q) && !IsPixPrepaid(q) &&
+            pixPurchases.Any(p => p.StudentPackageId == null && p.PackageId == q.PackageId);
 
         return new QueueState(
             queue.FirstOrDefault(q => !IsPixPending(q) && q.Package is not null),

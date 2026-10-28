@@ -48,6 +48,10 @@ public class Purchase
             StudentPackageId = studentPackageId
         };
 
+    // Compra do carrinho do App que gerou um pacote na fila: liga a compra ao pacote, para a fila
+    // saber que os créditos dele ainda não entraram no saldo (não é "Pix pré-pago").
+    public void LinkStudentPackage(Guid studentPackageId) => StudentPackageId = studentPackageId;
+
     public void Confirm()
     {
         Status = "confirmed";

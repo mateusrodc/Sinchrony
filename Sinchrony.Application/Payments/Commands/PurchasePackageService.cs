@@ -9,7 +9,7 @@ namespace Sinchrony.Application.Payments.Commands;
 // (0 quando o pacote entrou na fila ou só estendeu a validade).
 public record PackageGrantResult(StudentPackage? StudentPackage, int CreditsAdded);
 
-public record CartGrantResult(int CreditsAdded, bool FellBack);
+public record CartGrantResult(int CreditsAdded, bool FellBack, StudentPackage? Affected = null);
 
 public class PurchasePackageService(
     IStudentPackageRepository studentPackageRepository,
@@ -38,7 +38,7 @@ public class PurchasePackageService(
         try
         {
             var result = await ProcessAsync(studentId, package, "purchase", ct);
-            return new CartGrantResult(result.CreditsAdded, false);
+            return new CartGrantResult(result.CreditsAdded, false, result.StudentPackage);
         }
         catch (DomainException)
         {

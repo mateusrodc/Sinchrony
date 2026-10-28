@@ -16,6 +16,7 @@ public record PixPaymentResponseDto(bool Success, string TransactionId, string P
 
 public class PayWithPixCommandHandler(
     IUserRepository userRepository,
+    IStudentPackageRepository studentPackageRepository,
     IPackageRepository packageRepository,
     IPurchaseRepository purchaseRepository,
     ICouponRepository couponRepository,
@@ -83,6 +84,9 @@ public class PayWithPixCommandHandler(
                 var existing = await asaasService.GetPixQrCodeAsync(reusable.TransactionId!, ct);
                 return new PixPaymentResponseDto(true, existing.TransactionId, existing.PixCode, existing.QrCodeBase64, Reused: true);
             }
+
+            // Recusa ANTES de gerar o Pix o que a ativação depois não conseguiria cumprir.
+            await CartPurchaseGuard.EnsureCanBuyAsync(studentPackageRepository, user.Id, packages, ct);
 
             // Usa CPF do request se informado, senão usa o do cadastro
             var cpf = request.Cpf ?? user.Cpf;

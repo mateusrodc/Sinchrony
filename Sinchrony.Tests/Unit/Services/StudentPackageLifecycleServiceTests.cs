@@ -486,6 +486,43 @@ public class StudentPackageLifecycleServiceTests
         (await _db.CreditTransactions.CountAsync()).Should().Be(0);
     }
 
+    // Pacote criado pelo carrinho do App (compra ligada ao StudentPackage) entra na fila com 0 crédito:
+    // não é "Pix pré-pago". Antes, o Pix confirmado do mesmo PackageId o fazia passar por pré-pago, o job
+    // tirava os créditos do saldo e promovia sem creditar (a aluna perdia o que pagou).
+    [Fact]
+    public async Task PromoteIfCreditsExhausted_CartQueuedWithConfirmedPix_IsNotTreatedAsPrepaid()
+    {
+        var active = AddCurrentActive(AddPackage("Essence", credits: 8), balance: 5);
+        var start = AddPackage("Start", credits: 8);
+        var queued = AddQueued(start, source: "purchase");
+        var purchase = Purchase.CreateConfirmed(_student.Id, start.Id, 100m, "pix", "tx-cart");
+        purchase.LinkStudentPackage(queued.Id);
+        _db.Purchases.Add(purchase);
+        await _db.SaveChangesAsync();
+
+        // Ativo ainda tem 5 créditos: nada de promover.
+        (await _service.PromoteIfCreditsExhaustedAsync(_student.Id)).Should().BeFalse();
+        (await _db.StudentPackages.FindAsync(active.Id))!.Status.Should().Be(StudentPackageStatus.active);
+        _student.Credits.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task ExpireAsync_CartQueuedWithConfirmedPix_IsCreditedOnPromotion()
+    {
+        var expiring = AddExpiredActive(AddPackage("Essence", credits: 8));
+        var start = AddPackage("Start", credits: 8);
+        var queued = AddQueued(start, source: "purchase");
+        var purchase = Purchase.CreateConfirmed(_student.Id, start.Id, 100m, "pix", "tx-cart2");
+        purchase.LinkStudentPackage(queued.Id);
+        _db.Purchases.Add(purchase);
+        await _db.SaveChangesAsync();
+
+        await _service.ExpireAsync(expiring.Id, DateTime.UtcNow);
+
+        (await _db.StudentPackages.FindAsync(queued.Id))!.Status.Should().Be(StudentPackageStatus.active);
+        _student.Credits.Should().Be(8);
+    }
+
     [Fact]
     public async Task PromoteIfCreditsExhausted_RecurringActive_IsNotAffected()
     {

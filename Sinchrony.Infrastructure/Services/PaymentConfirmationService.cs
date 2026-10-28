@@ -34,8 +34,8 @@ public class PaymentConfirmationService(
         }
 
         var pendingPurchases = purchases.Where(p => p.Status == "pending")
-            // Plano real antes da Aula Avulsa: a avulsa não deve ocupar o lugar de pacote ativo.
-            .OrderBy(p => p.Package?.IsSingleClass == true)
+            // Aula Avulsa antes do plano real: o plano a substitui como ativo (ReplacesActive) em vez de ser bloqueado por ela.
+            .OrderByDescending(p => p.Package?.IsSingleClass == true)
             .ToList();
 
         if (pendingPurchases.Count == 0)
@@ -68,6 +68,8 @@ public class PaymentConfirmationService(
             {
                 var grant = await purchasePackageService.GrantCartPackageAsync(user.Id, purchase.Package, ct);
                 credits = grant.CreditsAdded;
+                if (grant.Affected is { Status: StudentPackageStatus.queued } queuedByCart)
+                    purchase.LinkStudentPackage(queuedByCart.Id);
                 if (grant.FellBack)
                     logger.LogWarning(
                         "Asaas webhook: pacote {Package} da transação {Id} não pôde ser ativado; só os créditos foram concedidos.",

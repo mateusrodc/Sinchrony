@@ -17,6 +17,7 @@ public record CardPaymentResponseDto(bool Success, string TransactionId, string 
 
 public class PayWithCardCommandHandler(
     IUserRepository userRepository,
+    IStudentPackageRepository studentPackageRepository,
     IPackageRepository packageRepository,
     IPurchaseRepository purchaseRepository,
     ICouponRepository couponRepository,
@@ -88,6 +89,9 @@ public class PayWithCardCommandHandler(
         {
             await oncePerStudentGuard.CheckAsync(user.Id, packages, PurchaseOrigin.AppCard, ct);
 
+            // Recusa ANTES de cobrar o que a ativação depois não conseguiria cumprir.
+            await CartPurchaseGuard.EnsureCanBuyAsync(studentPackageRepository, user.Id, packages, ct);
+
             var customerId = await asaasService.GetOrCreateCustomerAsync(
                 AsaasCustomerData.From(user), ct);
 
@@ -101,9 +105,11 @@ public class PayWithCardCommandHandler(
                 // real (plano) entra antes da Aula Avulsa, para a avulsa não ocupar o lugar de pacote ativo.
                 var parts = PurchaseAmountSplitter.Split(packages, expectedAmount);
                 var totalCredits = 0;
-                foreach (var pkg in packages.OrderBy(p => p.IsSingleClass))
+                var grants = new Dictionary<int, StudentPackage?>();
+                foreach (var pkg in CartPurchaseGuard.GrantOrder(packages))
                 {
                     var grant = await purchaseService.GrantCartPackageAsync(user.Id, pkg, ct);
+                    grants[packages.IndexOf(pkg)] = grant.Affected;
                     totalCredits += grant.CreditsAdded;
                     if (grant.FellBack)
                         logger.LogWarning(
@@ -125,6 +131,8 @@ public class PayWithCardCommandHandler(
                     var purchase = Purchase.Create(
                         user.Id, packages[i].Id, parts[i], "card",
                         result.TransactionId, coupon?.Id);
+                    if (grants.GetValueOrDefault(i) is { Status: StudentPackageStatus.queued } queuedByCart)
+                        purchase.LinkStudentPackage(queuedByCart.Id);
                     await purchaseRepository.AddAsync(purchase, ct);
                 }
 
